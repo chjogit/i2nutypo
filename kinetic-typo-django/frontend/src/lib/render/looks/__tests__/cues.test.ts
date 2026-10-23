@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CharacterCue } from "@/types/project";
-import { characterAt, sanitizeCues } from "../cues";
+import { characterAt, moveCueTime, sanitizeCues, shiftCue, visibleSpans } from "../cues";
 import { DEFAULT_ILLUSTRATION, sanitizeLookElements } from "../presets";
 
 const cue = (patch: Partial<CharacterCue>): CharacterCue => ({
@@ -67,5 +67,34 @@ describe("sanitizeLookElements", () => {
     });
     expect(out["album_jacket.vinyl"]).toEqual({ on: true, amount: 0.4, x: 0.2, y: -0.6, rot: 180 });
     expect(out["album_jacket.jacket"]).toEqual({ on: false, amount: 0.8 });
+  });
+});
+
+describe("cut (no effect)", () => {
+  const ill = { ...DEFAULT_ILLUSTRATION, charCues: [cue({ effect: "cut" })] };
+  it("leaves and comes back at once", () => {
+    expect(characterAt(ill, 9.99)).toMatchObject({ reveal: 1, cells: "user" });
+    expect(characterAt(ill, 10)).toMatchObject({ reveal: 0, cells: "off" });
+    expect(characterAt(ill, 20)).toMatchObject({ reveal: 1, cells: "moved", x: 0.8 });
+  });
+});
+
+describe("character lane", () => {
+  const cues = [cue({}), cue({ hideAt: 30, showAt: 40 })];
+  it("splits the song into the stretches the character is shown", () => {
+    expect(visibleSpans(cues, 60).map((s) => [s.start, s.end])).toEqual([
+      [0, 10],
+      [20, 30],
+      [40, 60],
+    ]);
+  });
+  it("keeps a dragged exit or return between its neighbors", () => {
+    expect(moveCueTime(cues, 1, "hide", 5, 60)[1].hideAt).toBe(20);
+    expect(moveCueTime(cues, 0, "show", 35, 60)[0].showAt).toBe(30);
+    expect(moveCueTime(cues, 1, "show", 99, 60)[1].showAt).toBe(60);
+  });
+  it("moves a whole gap keeping its length", () => {
+    expect(shiftCue(cues, 0, 15, 60)[0]).toMatchObject({ hideAt: 20, showAt: 30 });
+    expect(shiftCue(cues, 0, -50, 60)[0]).toMatchObject({ hideAt: 0, showAt: 10 });
   });
 });

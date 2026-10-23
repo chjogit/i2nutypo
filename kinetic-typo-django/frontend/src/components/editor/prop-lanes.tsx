@@ -99,7 +99,7 @@ export function PropLanes({ pps, timeAt }: { pps: number; timeAt: (clientX: numb
   };
 
   return (
-    <div className="shrink-0 border-t border-zinc-800/80 pt-0.5">
+    <div>
       {lanes.map((p) => (
         <div
           key={p.id}

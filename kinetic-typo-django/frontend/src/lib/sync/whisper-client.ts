@@ -59,6 +59,7 @@ export function transcribeInWorker(
   modelId: string,
   language: WhisperLanguage,
   callbacks: TranscribeCallbacks,
+  options: Pick<WhisperRequest, "lyrics" | "vocalsOnly"> = {},
 ): TranscribeHandle {
   // Built next to the editor bundle: static/js/whisper-worker.js
   const worker = new Worker(new URL("./whisper-worker.js", import.meta.url), { type: "module" });
@@ -85,7 +86,7 @@ export function transcribeInWorker(
     };
   });
 
-  const req: WhisperRequest = { type: "transcribe", modelId, language, audio };
+  const req: WhisperRequest = { type: "transcribe", modelId, language, audio, ...options };
   worker.postMessage(req, [audio.buffer]);
 
   return {

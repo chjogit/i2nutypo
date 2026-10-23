@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { FEATURES_NOW } from "@/lib/mode/mode";
 import { useProjectStore } from "@/store/project-store";
 import { AudioInput } from "./audio-input";
 import { ExportPanel } from "./export-panel";
@@ -120,7 +121,13 @@ export function StudioShell() {
           className="divide-y divide-zinc-800 lg:order-3 lg:border-l lg:border-zinc-800"
         >
           <IllustrationPanel />
-          <PropsPanel />
+          {FEATURES_NOW.characters ? (
+            <PropsPanel />
+          ) : (
+            <p className="px-4 py-4 text-[11px] leading-relaxed text-zinc-500">
+              캐릭터·소품 레이어와 등장·퇴장 연출은 숙련 단계에서 쓸 수 있습니다.
+            </p>
+          )}
         </aside>
       </div>
       <Timeline />

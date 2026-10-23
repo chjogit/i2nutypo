@@ -165,8 +165,8 @@ export interface IllustrationSettings {
   noTextCells: boolean[];
 }
 
-/** How the character leaves and comes back. */
-export type CueEffect = "fade" | "wipeDown" | "wipeSide" | "iris";
+/** How the character leaves and comes back; "cut" switches at once with no effect. */
+export type CueEffect = "cut" | "fade" | "wipeDown" | "wipeSide" | "iris";
 
 export interface CharacterCue {
   /** Seconds on the song timeline when the character starts to leave. */

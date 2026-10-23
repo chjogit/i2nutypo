@@ -92,12 +92,112 @@ function foldEnglish(word: string): string {
   return w;
 }
 
+// Korean is sung (and written by recognizers) as it sounds, not as it is
+// spelled: 있어 is heard 이써, 없는 엄는, 같이 가치. Both the lyrics and the
+// transcript go through the same sound changes, so either spelling gives one key.
+
+/** Final consonant index → [part that stays, part that moves onto a following ㅇ]; null never moves (ㅇ). */
+// prettier-ignore
+const HANGUL_FINAL_LIAISON: ReadonlyArray<readonly [string, string] | null> = [
+  ["", ""], ["", "g"], ["", "k"], ["k", "s"], ["", "n"], ["n", "j"], ["n", ""], ["", "d"],
+  ["", "r"], ["l", "g"], ["l", "m"], ["l", "b"], ["l", "s"], ["l", "t"], ["l", "p"], ["l", ""],
+  ["", "m"], ["", "b"], ["p", "s"], ["", "s"], ["", "s"], null, ["", "j"], ["", "c"],
+  ["", "k"], ["", "t"], ["", "p"], ["", ""],
+];
+const SILENT_INITIAL = 11; // ㅇ
+const VOWEL_I = 20; // ㅣ
+const FINAL_H = 27; // ㅎ
+/** Plain initials that turn tense after a stop (웃고 → 웃꼬) or aspirated after ㅎ (좋다 → 조타). */
+const TENSE_OF: Record<string, string> = { g: "k", d: "t", b: "p", j: "j", s: "s" };
+const ASPIRATED_OF: Record<string, string> = { g: "k", d: "t", b: "p", j: "c" };
+/** A stop before ㄴ or ㅁ is said as the nasal of its place (없는 → 엄는, 국물 → 궁물). */
+const NASAL_OF: Record<string, string> = { k: "N", t: "n", p: "m" };
+
+interface HangulSyllable {
+  initialIdx: number;
+  initial: string;
+  vowelIdx: number;
+  vowel: string;
+  finalIdx: number;
+}
+
+function splitHangul(code: number): HangulSyllable {
+  const idx = code - HANGUL_START;
+  const vowelIdx = Math.floor((idx % 588) / 28);
+  const initialIdx = Math.floor(idx / 588);
+  return {
+    initialIdx,
+    initial: HANGUL_INITIAL_SOUNDS[initialIdx],
+    vowelIdx,
+    vowel: HANGUL_VOWEL_SOUNDS[vowelIdx],
+    finalIdx: idx % 28,
+  };
+}
+
+/** Sound of a run of Hangul syllables, with the sound changes between neighbouring syllables applied. */
+function hangulRunSound(run: readonly number[]): string {
+  const syl = run.map(splitHangul);
+  let out = "";
+  for (let i = 0; i < syl.length; i++) {
+    const cur = syl[i];
+    const next = syl[i + 1];
+    let fin = HANGUL_FINAL_SOUNDS[cur.finalIdx];
+    if (next && cur.finalIdx > 0) {
+      const liaison = HANGUL_FINAL_LIAISON[cur.finalIdx];
+      if (next.initialIdx === SILENT_INITIAL && liaison) {
+        // The final moves onto the vowel after it; ㄷ/ㅌ before ㅣ become ㅈ/ㅊ (굳이 → 구지, 같이 → 가치)
+        let moved = liaison[1];
+        if (next.vowelIdx === VOWEL_I) moved = moved === "d" ? "j" : moved === "t" ? "c" : moved;
+        fin = liaison[0];
+        next.initial = moved;
+      } else if (cur.finalIdx === FINAL_H || cur.finalIdx === 6 || cur.finalIdx === 15) {
+        // ㅎ (also in ㄶ, ㅀ) is not said but makes the next plain sound aspirated
+        fin = cur.finalIdx === FINAL_H ? "" : fin;
+        next.initial = ASPIRATED_OF[next.initial] ?? next.initial;
+      } else if (next.initial === "h" && NASAL_OF[fin]) {
+        // A stop before ㅎ merges with it into an aspirated sound (축하 → 추카)
+        next.initial = { k: "k", t: "t", p: "p" }[fin as "k" | "t" | "p"];
+        fin = "";
+      } else if ((next.initial === "n" || next.initial === "m") && NASAL_OF[fin]) {
+        fin = NASAL_OF[fin];
+      } else if (next.initial === "r") {
+        // ㄴ+ㄹ and ㄹ+ㄴ are said ㄹㄹ (신라 → 실라); after other finals ㄹ is said ㄴ (종로 → 종노)
+        if (fin === "n" || fin === "l") fin = "l";
+        else {
+          next.initial = "n";
+          if (NASAL_OF[fin]) fin = NASAL_OF[fin];
+        }
+      } else if (next.initial === "n" && fin === "l") {
+        next.initial = "l";
+      } else if (NASAL_OF[fin]) {
+        next.initial = TENSE_OF[next.initial] ?? next.initial;
+      }
+    }
+    out += cur.initial + cur.vowel + fin;
+  }
+  return out;
+}
+
+/**
+ * Readings of kanji learned from the lyrics themselves (see kanji-readings.ts):
+ * kanji run → sound key. Kanji have no reading without a dictionary, so this
+ * lets "愛してる" in the lyrics match "あいしてる" in the transcript.
+ */
+export interface KanjiReadings {
+  readings: ReadonlyMap<string, string>;
+  /** Longest kanji run in readings, in characters. */
+  maxLen: number;
+}
+
+export const isKanji = (ch: string) => /\p{Script=Han}/u.test(ch);
+
 /**
  * Reduces text to a sound key: one Latin letter (or kanji) per sound unit,
  * punctuation and spaces removed, repeated units collapsed because sung
- * vowels get stretched and recognizers write them once.
+ * vowels get stretched and recognizers write them once. Kanji with a learned
+ * reading are replaced by it.
  */
-export function toPronunciationKey(text: string): string {
+export function toPronunciationKey(text: string, kanji?: KanjiReadings): string {
   const s = text
     .normalize("NFC")
     .toLowerCase()
@@ -111,17 +211,34 @@ export function toPronunciationKey(text: string): string {
     const ch = chars[i];
     const code = ch.charCodeAt(0);
     if (code >= HANGUL_START && code <= HANGUL_END) {
-      const idx = code - HANGUL_START;
-      out +=
-        HANGUL_INITIAL_SOUNDS[Math.floor(idx / 588)] +
-        HANGUL_VOWEL_SOUNDS[Math.floor((idx % 588) / 28)] +
-        HANGUL_FINAL_SOUNDS[idx % 28];
+      const run: number[] = [];
+      while (
+        i < chars.length &&
+        chars[i].charCodeAt(0) >= HANGUL_START &&
+        chars[i].charCodeAt(0) <= HANGUL_END
+      ) {
+        run.push(chars[i].charCodeAt(0));
+        i++;
+      }
+      i--;
+      out += hangulRunSound(run);
     } else if (KANA_SOUNDS[ch] !== undefined) {
       const small = SMALL_Y[chars[i + 1] ?? ""];
       out += small ? KANA_SOUNDS[ch].slice(0, -1) + "y" + small : KANA_SOUNDS[ch];
       if (small) i++;
     } else if (ch === "っ" || ch === "ー") {
       // Geminate and long-vowel marks lengthen the neighbouring sound only
+    } else if (kanji && isKanji(ch)) {
+      let len = Math.min(kanji.maxLen, chars.length - i);
+      let reading: string | undefined;
+      for (; len > 0; len--) {
+        reading = kanji.readings.get(chars.slice(i, i + len).join(""));
+        if (reading !== undefined) break;
+      }
+      if (reading !== undefined) {
+        out += reading;
+        i += len - 1;
+      } else out += ch;
     } else if (/[\p{L}\p{N}]/u.test(ch)) {
       out += ch;
     }

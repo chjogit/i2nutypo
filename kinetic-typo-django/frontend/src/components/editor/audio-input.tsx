@@ -8,9 +8,9 @@ import { useProjectStore } from "@/store/project-store";
  * Picks a local audio file (it stays in the browser; only an object URL is
  * kept). Once loaded, the section shows the song's player bar, which is also
  * the clock for the canvas preview, and a button to pick another file, which
- * also clears the lyrics.
+ * also clears the lyrics. The beginner page shows it without its heading, inside a step card.
  */
-export function AudioInput() {
+export function AudioInput({ heading = true }: { heading?: boolean }) {
   const audio = useProjectStore((s) => s.audio);
   const setAudio = useProjectStore((s) => s.setAudio);
   const clearLyrics = useProjectStore((s) => s.clearLyrics);
@@ -95,7 +95,7 @@ export function AudioInput() {
 
   return (
     <section aria-label="음원" className="space-y-2 px-4 py-4">
-      <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-400">음원</h2>
+      {heading && <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-400">음원</h2>}
       <input
         ref={fileInputRef}
         type="file"

@@ -5,6 +5,8 @@ import { forgetImage } from "@/lib/render/looks/image-cache";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
+import { Fold } from "./fold";
+import { CharacterEditor } from "./illustration-panel";
 import { TimeField } from "./time-field";
 
 const now = () => usePlaybackStore.getState().currentTime;
@@ -55,7 +57,7 @@ const CLIP_SLIDERS: Array<{
     reset: 1,
     format: (v) => `${Math.round(v * 100)}%`,
   },
-  { key: "fade", label: "페이드", min: 0, max: 3, step: 0.1, reset: 0.3, format: (v) => `${v.toFixed(1)}s` },
+  { key: "fade", label: "페이드", min: 0, max: 3, step: 0.1, reset: 0, format: (v) => `${v.toFixed(1)}s` },
 ];
 
 function Check({
@@ -96,6 +98,13 @@ export function PropsPanel() {
   const updatePropClip = useProjectStore((s) => s.updatePropClip);
   const removePropClip = useProjectStore((s) => s.removePropClip);
   const selected = usePropUiStore((s) => s.selected);
+  const charPicked = usePropUiStore((s) => s.character);
+  const selectCharacter = usePropUiStore((s) => s.selectCharacter);
+  const character = useProjectStore((s) => s.images.character);
+  const ill = useProjectStore((s) => s.style.illustration);
+  const setIllustration = useProjectStore((s) => s.setIllustration);
+  const setImage = useProjectStore((s) => s.setImage);
+  const charOn = character !== null && ill.showCharacter;
   const select = usePropUiStore((s) => s.select);
   const [open, setOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +158,14 @@ export function PropsPanel() {
     urlsRef.current.delete(p.objectUrl);
   };
 
+  const removeCharacter = () => {
+    if (!character) return;
+    selectCharacter(false);
+    forgetImage(character.objectUrl);
+    URL.revokeObjectURL(character.objectUrl);
+    setImage("character", null);
+  };
+
   const selProp = selected ? props.find((p) => p.id === selected.propId && p.onTimeline) : undefined;
   const selClip = selProp?.clips.find((c) => c.id === selected?.clipId);
   const onTimeline = props.filter((p) => p.onTimeline).length;
@@ -156,7 +173,7 @@ export function PropsPanel() {
   return (
     <section className="space-y-3 px-4 py-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold tracking-wide text-zinc-400">소품 · 외부 소재</h2>
+        <h2 className="text-xs font-semibold tracking-wide text-zinc-400">일러스트</h2>
         <label className="cursor-pointer rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-200 hover:border-indigo-500">
           + 올리기
           <input
@@ -172,8 +189,9 @@ export function PropsPanel() {
         </label>
       </div>
       <p className="text-[11px] leading-snug text-zinc-500">
-        소품, 스티커, 오브젝트 그림(PNG 권장)을 여러 개 올릴 수 있습니다. 올린 그림마다 아래 타임라인에
-        일러스트 줄이 하나씩 생기고, 재생 위치에서 4초 구간으로 시작합니다.
+        캐릭터와 소품, 스티커 같은 그림(PNG 권장)을 관리합니다. 그림마다 아래 타임라인에 일러스트 줄이 하나씩
+        생기고, 새로 올린 소품은 재생 위치에서 4초 구간으로 시작합니다. 목록에서 이름을 누르면 상세 설정이
+        열립니다.
       </p>
       {error && <p className="text-xs text-red-400">{error}</p>}
 
@@ -187,7 +205,7 @@ export function PropsPanel() {
         >
           <span className="font-semibold text-zinc-200">소재 목록</span>
           <span className="font-mono text-[10px] text-zinc-500">
-            {props.length}개 · 타임라인 {onTimeline}
+            {props.length + (character ? 1 : 0)}개 · 타임라인 {onTimeline + (charOn ? 1 : 0)}
           </span>
           <span
             aria-hidden
@@ -198,9 +216,7 @@ export function PropsPanel() {
         </button>
         {open && (
           <div id="prop-list" className="border-t border-zinc-800">
-            {props.length === 0 ? (
-              <p className="px-2.5 py-2 text-[11px] text-zinc-500">아직 올린 소재가 없습니다.</p>
-            ) : (
+            {
               <table className="w-full table-fixed text-[11px]">
                 <thead className="text-left text-zinc-500">
                   <tr>
@@ -219,6 +235,61 @@ export function PropsPanel() {
                   </tr>
                 </thead>
                 <tbody>
+                  <tr className={`border-t border-zinc-800/70 ${charPicked ? "bg-sky-500/5" : ""}`}>
+                    <td className="px-1.5 py-1">
+                      {character ? (
+                        <img
+                          src={character.objectUrl}
+                          alt=""
+                          className="h-7 w-7 rounded border border-zinc-800 bg-zinc-900 object-contain"
+                        />
+                      ) : (
+                        <span className="flex h-7 w-7 items-center justify-center rounded border border-dashed border-zinc-700">
+                          🧍
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-1 py-1">
+                      <button
+                        type="button"
+                        onClick={() => selectCharacter(!charPicked)}
+                        aria-pressed={charPicked}
+                        className="block w-full truncate text-left text-sky-200 hover:underline"
+                      >
+                        캐릭터
+                      </button>
+                      <span className="block truncate text-[10px] text-zinc-500">
+                        {character ? character.fileName : "눌러서 PNG 올리기"}
+                      </span>
+                    </td>
+                    <td className="px-1 py-1">
+                      <button
+                        type="button"
+                        disabled={!character}
+                        onClick={() => setIllustration({ showCharacter: !ill.showCharacter })}
+                        aria-label={`캐릭터 ${charOn ? "타임라인에서 빼기" : "타임라인에 추가"}`}
+                        className={`w-full rounded border px-1 py-0.5 disabled:opacity-40 ${
+                          charOn || !character
+                            ? "border-zinc-700 text-zinc-300 hover:border-indigo-500"
+                            : "border-indigo-500 bg-indigo-500/10 text-indigo-200"
+                        }`}
+                      >
+                        {charOn || !character ? "빼기" : "추가"}
+                      </button>
+                    </td>
+                    <td className="px-1 py-1">
+                      <button
+                        type="button"
+                        disabled={!character}
+                        onClick={removeCharacter}
+                        aria-label="캐릭터 프로젝트에서 제거"
+                        title="프로젝트에서 제거"
+                        className="w-full rounded border border-zinc-800 px-1 py-0.5 text-red-300 hover:border-red-400 disabled:opacity-40"
+                      >
+                        제거
+                      </button>
+                    </td>
+                  </tr>
                   {props.map((p) => (
                     <tr key={p.id} className="border-t border-zinc-800/70">
                       <td className="px-1.5 py-1">
@@ -229,9 +300,15 @@ export function PropsPanel() {
                         />
                       </td>
                       <td className="px-1 py-1">
-                        <span className="block truncate text-zinc-200" title={p.fileName}>
+                        <button
+                          type="button"
+                          disabled={!p.onTimeline || p.clips.length === 0}
+                          onClick={() => select({ propId: p.id, clipId: p.clips[0].id })}
+                          title={p.fileName}
+                          className="block w-full truncate text-left text-zinc-200 enabled:hover:underline"
+                        >
                           {p.fileName}
-                        </span>
+                        </button>
                         <span className="text-[10px] text-zinc-500">
                           {p.onTimeline ? `구간 ${p.clips.length}개` : "타임라인에서 뺌"}
                         </span>
@@ -268,10 +345,26 @@ export function PropsPanel() {
                   ))}
                 </tbody>
               </table>
-            )}
+            }
           </div>
         )}
       </div>
+
+      {charPicked && (
+        <div className="space-y-2 rounded-md border border-sky-500/50 px-2 py-2">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="font-semibold text-sky-200">🧍 캐릭터</span>
+            <button
+              type="button"
+              onClick={() => selectCharacter(false)}
+              className="text-indigo-400 hover:underline"
+            >
+              닫기
+            </button>
+          </div>
+          <CharacterEditor />
+        </div>
+      )}
 
       {selProp && selClip ? (
         <div className="space-y-1.5 rounded-md border border-emerald-500/50 px-2 py-2">
@@ -301,47 +394,53 @@ export function PropsPanel() {
               </button>
             </span>
           </div>
-          <TimeField
-            label="시작"
-            value={selClip.start}
-            onCommit={(v) => updatePropClip(selProp.id, selClip.id, { start: v })}
-          />
-          <TimeField
-            label="끝"
-            value={selClip.end}
-            onCommit={(v) => updatePropClip(selProp.id, selClip.id, { end: v })}
-          />
-          {CLIP_SLIDERS.map((m) => (
-            <label key={m.key} className="flex items-center gap-2 text-[11px] text-zinc-400">
-              <span className="w-12 shrink-0">{m.label}</span>
-              <input
-                type="range"
-                min={m.min}
-                max={m.max}
-                step={m.step}
-                value={selClip[m.key]}
-                onChange={(e) => updatePropClip(selProp.id, selClip.id, { [m.key]: Number(e.target.value) })}
-                onDoubleClick={() => updatePropClip(selProp.id, selClip.id, { [m.key]: m.reset })}
-                aria-label={`소품 ${m.label}`}
-                className="min-w-0 flex-1 accent-indigo-500"
-              />
-              <span className="w-10 text-right font-mono text-zinc-300">{m.format(selClip[m.key])}</span>
-            </label>
-          ))}
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-200">
-            <Check
-              checked={selClip.front}
-              onChange={(v) => updatePropClip(selProp.id, selClip.id, { front: v })}
-            >
-              가사 앞에 놓기
-            </Check>
-            <Check
-              checked={selClip.flip}
-              onChange={(v) => updatePropClip(selProp.id, selClip.id, { flip: v })}
-            >
-              좌우 반전
-            </Check>
-          </div>
+          <Fold title="시간" className="space-y-1.5 border-t border-zinc-800/70 pt-2">
+            <TimeField
+              label="시작"
+              value={selClip.start}
+              onCommit={(v) => updatePropClip(selProp.id, selClip.id, { start: v })}
+            />
+            <TimeField
+              label="끝"
+              value={selClip.end}
+              onCommit={(v) => updatePropClip(selProp.id, selClip.id, { end: v })}
+            />
+          </Fold>
+          <Fold title="위치 · 크기 · 모양" className="space-y-1.5 border-t border-zinc-800/70 pt-2">
+            {CLIP_SLIDERS.map((m) => (
+              <label key={m.key} className="flex items-center gap-2 text-[11px] text-zinc-400">
+                <span className="w-12 shrink-0">{m.label}</span>
+                <input
+                  type="range"
+                  min={m.min}
+                  max={m.max}
+                  step={m.step}
+                  value={selClip[m.key]}
+                  onChange={(e) =>
+                    updatePropClip(selProp.id, selClip.id, { [m.key]: Number(e.target.value) })
+                  }
+                  onDoubleClick={() => updatePropClip(selProp.id, selClip.id, { [m.key]: m.reset })}
+                  aria-label={`소품 ${m.label}`}
+                  className="min-w-0 flex-1 accent-indigo-500"
+                />
+                <span className="w-10 text-right font-mono text-zinc-300">{m.format(selClip[m.key])}</span>
+              </label>
+            ))}
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-200">
+              <Check
+                checked={selClip.front}
+                onChange={(v) => updatePropClip(selProp.id, selClip.id, { front: v })}
+              >
+                가사 앞에 놓기
+              </Check>
+              <Check
+                checked={selClip.flip}
+                onChange={(v) => updatePropClip(selProp.id, selClip.id, { flip: v })}
+              >
+                좌우 반전
+              </Check>
+            </div>
+          </Fold>
         </div>
       ) : (
         onTimeline > 0 && (

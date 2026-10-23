@@ -11,6 +11,10 @@ export type WhisperRequest = {
   language: WhisperLanguage;
   /** Mono PCM at 16 kHz. */
   audio: Float32Array;
+  /** The sung lines, to steer decoding toward the lyrics (see lyric-bias.ts). */
+  lyrics?: string[];
+  /** audio holds separated vocals only: windows follow the singing and skip silence. */
+  vocalsOnly?: boolean;
 };
 
 export type WhisperResponse =

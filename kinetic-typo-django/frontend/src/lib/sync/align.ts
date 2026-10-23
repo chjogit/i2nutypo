@@ -1,7 +1,8 @@
 import type { LyricLine } from "@/types/project";
 import { formatLrcTime } from "@/lib/lyrics/parse";
 import { markOverlap } from "@/lib/lyrics/triplet";
-import { soundSubstitutionCost, toPronunciationKey } from "./pronunciation";
+import { learnKanjiReadings } from "./kanji-readings";
+import { soundSubstitutionCost, toPronunciationKey, type KanjiReadings } from "./pronunciation";
 
 /** A recognized stretch of audio with its text, in song seconds. */
 export interface TranscriptChunk {
@@ -49,9 +50,16 @@ const STRAY_MATCH_SEC = 0.6;
 /** Below this share of matched sounds a line's aligned position is a guess and is not used. */
 export const MIN_ESTIMATE_SIMILARITY = 0.3;
 
-/** Sound key of a line's main text. A Japanese block is matched on the Japanese line only. */
-export function lineSoundKey(line: Pick<LyricLine, "cleanText">): string {
-  return toPronunciationKey(line.cleanText);
+/**
+ * Sound key of a line's main text. Kanji take the readings learned from the
+ * pronunciation rows; a line whose kanji stay unread is matched on its
+ * pronunciation row instead, when that row is kana or Hangul.
+ */
+export function lineSoundKey(line: Pick<LyricLine, "cleanText" | "pronText">, kanji?: KanjiReadings): string {
+  const key = toPronunciationKey(line.cleanText, kanji);
+  if (!/\p{Script=Han}/u.test(key) || !line.pronText) return key;
+  const pron = toPronunciationKey(line.pronText);
+  return pron && !/\p{Script=Han}/u.test(pron) ? pron : key;
 }
 
 interface HeardTrack {
@@ -62,12 +70,12 @@ interface HeardTrack {
   chunkOf: number[];
 }
 
-function buildHeardTrack(chunks: readonly TranscriptChunk[]): HeardTrack {
+function buildHeardTrack(chunks: readonly TranscriptChunk[], kanji?: KanjiReadings): HeardTrack {
   let key = "";
   const times: number[] = [];
   const chunkOf: number[] = [];
   chunks.forEach((chunk, ci) => {
-    const k = toPronunciationKey(chunk.text);
+    const k = toPronunciationKey(chunk.text, kanji);
     const span = Math.max(0, chunk.end - chunk.start);
     for (let i = 0; i < k.length; i++) {
       // Units are spread evenly across the chunk's time span (a word, or a whole segment)
@@ -97,8 +105,9 @@ export function alignLinesToTranscript(
   chunks: readonly TranscriptChunk[],
   threshold: number,
 ): LineAlignment[] {
-  const heard = buildHeardTrack(chunks);
-  const lineKeys = lines.map(lineSoundKey);
+  const kanji = learnKanjiReadings(lines);
+  const heard = buildHeardTrack(chunks, kanji);
+  const lineKeys = lines.map((l) => lineSoundKey(l, kanji));
   const lyric = lineKeys.join("");
   const lineStart: number[] = [];
   let acc = 0;

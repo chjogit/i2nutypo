@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { BEGINNER_THEMES, FEATURES_NOW, MODE, projectStorageKey } from "@/lib/mode/mode";
 import type {
   AudioSource,
   FxToggleKey,
@@ -409,7 +410,7 @@ export const useProjectStore = create<ProjectStore>()(
         }),
     }),
     {
-      name: "kinetic-typo-project-v1",
+      name: projectStorageKey(MODE),
       // Rehydrated from the client (StudioShell) so the server-rendered HTML matches the first paint.
       skipHydration: true,
       storage: createJSONStorage(() => localStorage),
@@ -461,6 +462,14 @@ export const useProjectStore = create<ProjectStore>()(
           },
           fx: sanitizeFxToggles(p.fx),
         };
+        // A beginner works with one of the three beginner themes and nothing mixed in
+        if (!FEATURES_NOW.themeMix) {
+          const st = merged.style;
+          const base = (BEGINNER_THEMES as readonly LookPresetId[]).includes(st.lookPreset)
+            ? st.lookPreset
+            : DEFAULT_STYLE.lookPreset;
+          merged.style = { ...st, lookPreset: base, mixLooks: [], lyricLook: null };
+        }
         return { ...merged, lines: reparse(merged) };
       },
     },

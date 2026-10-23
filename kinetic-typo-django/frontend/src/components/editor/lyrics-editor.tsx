@@ -30,9 +30,10 @@ const PLACEHOLDER = [
 /**
  * Lyrics card: the box is for typing lyrics only (times are edited on the
  * timeline). Once entered it folds to a summary with an edit button. The
- * automatic sync controls live in the same card.
+ * automatic sync controls live in the same card. The beginner page drops the
+ * heading (its step card has one) and shows the font picker with the subtitle step.
  */
-export function LyricsEditor() {
+export function LyricsEditor({ heading = true, fontPicker = true }: { heading?: boolean; fontPicker?: boolean }) {
   const lines = useProjectStore((s) => s.lines);
   const collapsed = useProjectStore((s) => s.lyricsCollapsed);
   const commitLyricsInput = useProjectStore((s) => s.commitLyricsInput);
@@ -52,7 +53,7 @@ export function LyricsEditor() {
   return (
     <section aria-label="가사" className="space-y-3 px-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-400 mb-0">가사</h2>
+        {heading && <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-400 mb-0">가사</h2>}
         {collapsed && (
           <button
             type="button"
@@ -129,7 +130,7 @@ export function LyricsEditor() {
         </div>
       )}
 
-      <LyricFontPicker />
+      {fontPicker && <LyricFontPicker />}
 
       <SyncPanel />
     </section>

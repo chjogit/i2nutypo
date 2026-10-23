@@ -17,6 +17,7 @@ import {
   type ThemedPresetId,
 } from "@/lib/render/looks/presets";
 import { useProjectStore } from "@/store/project-store";
+import { Fold } from "./fold";
 import { FinishPanel } from "./finish-panel";
 
 const COLOR_FIELDS: Array<{
@@ -348,11 +349,10 @@ function ThemeBlock({ id, count }: { id: ThemedPresetId; count: number }) {
   );
 
   return (
-    <div className="space-y-1.5 border-t border-zinc-800/70 pt-3">
-      <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
-        <span className="truncate font-semibold text-zinc-200">
-          {p.emoji} {p.label}
-        </span>
+    <Fold
+      className="space-y-1.5 border-t border-zinc-800/70 pt-3"
+      title={`${p.emoji} ${p.label}`}
+      right={
         <span className="flex shrink-0 gap-2">
           <button type="button" onClick={reset} className="text-indigo-400 hover:underline">
             기본값
@@ -363,7 +363,8 @@ function ThemeBlock({ id, count }: { id: ThemedPresetId; count: number }) {
             </button>
           )}
         </span>
-      </div>
+      }
+    >
       <div className="flex flex-wrap gap-1">
         {roleButton(isBase ? "배경 테마" : "배경으로", isBase, () => setBaseLook(id))}
         {roleButton(isLyric ? "가사 테마" : "가사로", isLyric, () => setLyricLook(isBase ? null : id))}
@@ -378,7 +379,7 @@ function ThemeBlock({ id, count }: { id: ThemedPresetId; count: number }) {
           onChange={(patch) => setLookElement(def.id, patch, id)}
         />
       ))}
-    </div>
+    </Fold>
   );
 }
 
@@ -401,7 +402,7 @@ function ThemeTab() {
       )}
 
       {picked.includes("album_jacket") && (
-        <div className="space-y-1.5 border-t border-zinc-800/70 pt-3">
+        <Fold className="space-y-1.5 border-t border-zinc-800/70 pt-3" title="앨범 자켓 제목 · 크레딧">
           <p className="text-[11px] leading-snug text-zinc-500">
             앨범 자켓: 오른쪽 일러스트 칸에서 앨범 커버를 따로 올릴 수 있고, 없으면 배경 이미지가 커버로
             쓰입니다. 제목을 비워 두면 제목 줄은 그리지 않습니다.
@@ -420,23 +421,25 @@ function ThemeTab() {
             aria-label="크레딧"
             className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
           />
-        </div>
+        </Fold>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-zinc-800/70 pt-3 text-xs text-zinc-400">
-        {COLOR_FIELDS.map((c) => (
-          <label key={c.key} className="inline-flex items-center gap-1.5">
-            <input
-              type="color"
-              value={style[c.key]}
-              onChange={(e) => setStyle({ [c.key]: e.target.value })}
-              aria-label={`${c.label} 색`}
-              className="h-6 w-8 cursor-pointer rounded border border-zinc-800 bg-zinc-950"
-            />
-            {c.label}
-          </label>
-        ))}
-      </div>
+      <Fold title="색">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+          {COLOR_FIELDS.map((c) => (
+            <label key={c.key} className="inline-flex items-center gap-1.5">
+              <input
+                type="color"
+                value={style[c.key]}
+                onChange={(e) => setStyle({ [c.key]: e.target.value })}
+                aria-label={`${c.label} 색`}
+                className="h-6 w-8 cursor-pointer rounded border border-zinc-800 bg-zinc-950"
+              />
+              {c.label}
+            </label>
+          ))}
+        </div>
+      </Fold>
     </div>
   );
 }
@@ -484,19 +487,18 @@ function DetailTab() {
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        <p className="text-[11px] font-semibold text-zinc-400">효과</p>
+      <Fold title="효과" className="space-y-2">
         {DETAIL_SLIDERS.map((d) => slider(d.key, d.label, d.min, d.max, d.format))}
         <p className="text-[11px] leading-snug text-zinc-500">
           글리치는 슬라이스, RGB 분리, 화면 밀림에 걸립니다. 흔들림은 카메라 기울기, 창 흔들림, 캐릭터
           흔들림에 걸리고,
           {` ${Math.round(DEFAULT_DETAIL.shake * 100)}%`}보다 올리면 비트마다 화면 전체가 흔들립니다.
         </p>
-      </div>
+      </Fold>
 
-      <div className="space-y-2 border-t border-zinc-800/70 pt-3">
-        <div className="flex items-center justify-between text-[11px] text-zinc-400">
-          <span className="font-semibold">가사 위치 (전체)</span>
+      <Fold
+        title="가사 위치 (전체)"
+        right={
           <button
             type="button"
             onClick={() => setDetail({ lyricX: 0, lyricY: 0 })}
@@ -504,18 +506,19 @@ function DetailTab() {
           >
             가운데로
           </button>
-        </div>
+        }
+      >
         {slider("lyricX", "가로", -0.5, 0.5, signedPct)}
         {slider("lyricY", "세로", -0.5, 0.5, signedPct)}
         <p className="text-[11px] leading-snug text-zinc-500">
           줄마다 따로 옮기려면 아래 타임라인에서 자막 구간을 고르세요. 줄별 위치는 여기 전체 위치에
           더해집니다.
         </p>
-      </div>
+      </Fold>
 
-      <div className="space-y-2 border-t border-zinc-800/70 pt-3">
-        <div className="flex items-center justify-between text-[11px] text-zinc-400">
-          <span className="font-semibold">하단 자막 위치</span>
+      <Fold
+        title="하단 자막 위치"
+        right={
           <button
             type="button"
             onClick={() => setDetail({ subtitleX: 0, subtitleY: 0 })}
@@ -523,10 +526,11 @@ function DetailTab() {
           >
             원래대로
           </button>
-        </div>
+        }
+      >
         {slider("subtitleX", "가로", -0.5, 0.5, signedPct)}
         {slider("subtitleY", "세로", -0.5, 0.5, signedPct)}
-      </div>
+      </Fold>
     </div>
   );
 }

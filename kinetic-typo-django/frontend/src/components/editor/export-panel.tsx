@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FEATURES_NOW } from "@/lib/mode/mode";
 import {
   buildSubtitleFile,
   countSubtitleCues,
@@ -250,51 +251,53 @@ export function ExportPanel() {
         )}
       </div>
 
-      <div className="space-y-2">
-        <h3 className="text-xs font-medium text-zinc-200">자막 파일</h3>
-        <div
-          role="radiogroup"
-          aria-label="자막 형식"
-          className="grid grid-cols-4 rounded-md border border-zinc-800 text-xs"
-        >
-          {SUBTITLE_FORMATS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              role="radio"
-              aria-checked={f.value === format}
-              title={f.hint}
-              onClick={() => setFormat(f.value)}
-              className={chip(f.value === format)}
-            >
-              {f.label}
-            </button>
-          ))}
+      {FEATURES_NOW.subtitleFiles && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-medium text-zinc-200">자막 파일</h3>
+          <div
+            role="radiogroup"
+            aria-label="자막 형식"
+            className="grid grid-cols-4 rounded-md border border-zinc-800 text-xs"
+          >
+            {SUBTITLE_FORMATS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                role="radio"
+                aria-checked={f.value === format}
+                title={f.hint}
+                onClick={() => setFormat(f.value)}
+                className={chip(f.value === format)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-500">{SUBTITLE_FORMATS.find((f) => f.value === format)?.hint}</p>
+          <div className="flex items-center gap-4 text-xs text-zinc-200">
+            <span className="text-zinc-500">담을 줄</span>
+            {ROW_LABELS.map(({ key, label }) => (
+              <label key={key} className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  checked={rows[key]}
+                  onChange={(e) => setRows({ ...rows, [key]: e.target.checked })}
+                  className="accent-indigo-500"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          <button
+            type="button"
+            disabled={cueCount === 0}
+            onClick={saveSubtitles}
+            className="w-full rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:border-indigo-500 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {cueCount === 0 ? "저장할 자막이 없어요" : `${format.toUpperCase()} 자막 저장 (${cueCount}줄)`}
+          </button>
         </div>
-        <p className="text-xs text-zinc-500">{SUBTITLE_FORMATS.find((f) => f.value === format)?.hint}</p>
-        <div className="flex items-center gap-4 text-xs text-zinc-200">
-          <span className="text-zinc-500">담을 줄</span>
-          {ROW_LABELS.map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-1.5">
-              <input
-                type="checkbox"
-                checked={rows[key]}
-                onChange={(e) => setRows({ ...rows, [key]: e.target.checked })}
-                className="accent-indigo-500"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <button
-          type="button"
-          disabled={cueCount === 0}
-          onClick={saveSubtitles}
-          className="w-full rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:border-indigo-500 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {cueCount === 0 ? "저장할 자막이 없어요" : `${format.toUpperCase()} 자막 저장 (${cueCount}줄)`}
-        </button>
-      </div>
+      )}
     </section>
   );
 }

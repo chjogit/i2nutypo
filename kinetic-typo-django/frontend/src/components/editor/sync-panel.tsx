@@ -10,8 +10,14 @@ import {
   type TranscribeHandle,
 } from "@/lib/sync/whisper-client";
 import { detectAccelerator, type Accelerator } from "@/lib/sync/device";
+import { decodeStereo, encodeWav, separateInWorker } from "@/lib/separation/separation-client";
 import { isDesktopApp, transcribeLocal } from "@/lib/desktop/local-whisper";
-import { CPU_WHISPER_MODEL, DEFAULT_WHISPER_MODEL, type TimestampMode } from "@/lib/sync/whisper-protocol";
+import {
+  CPU_WHISPER_MODEL,
+  DEFAULT_WHISPER_MODEL,
+  WHISPER_SAMPLE_RATE,
+  type TimestampMode,
+} from "@/lib/sync/whisper-protocol";
 import { useEngineStore } from "@/store/engine-store";
 import { useProjectStore } from "@/store/project-store";
 import { LocalEnginePanel } from "./local-engine-panel";
@@ -19,6 +25,8 @@ import { LocalEnginePanel } from "./local-engine-panel";
 type Phase =
   | { kind: "idle" }
   | { kind: "decoding" }
+  | { kind: "loading-separator"; progress: number }
+  | { kind: "separating"; progress: number }
   | { kind: "loading-model"; progress: number }
   /** progress is only known for the local engine */
   | { kind: "transcribing"; progress?: number }
@@ -29,6 +37,9 @@ type Phase =
       transcript: string;
       /** Chunks removed as non-lyrics (stock phrases, loops) before aligning. */
       dropped: number;
+      /** Recognized from the separated vocals, or why separation was skipped. */
+      separated: boolean;
+      separationError?: string;
     }
   | { kind: "error"; message: string };
 
@@ -40,6 +51,13 @@ type Phase =
 const CONFIRM_THRESHOLD = 0.9;
 
 type SyncMode = "fast" | "normal" | "power";
+
+/** A song's separated vocals, kept so recognizing again (another model, edited lyrics) skips separation. */
+interface SeparatedVocals {
+  objectUrl: string;
+  vocals: Float32Array;
+  previewUrl: string;
+}
 
 const SYNC_MODES: ReadonlyArray<{ id: SyncMode; label: string; modelId: string; note: string }> = [
   { id: "fast", label: "FAST", modelId: CPU_WHISPER_MODEL, note: "빠름, 정확도 낮음" },
@@ -70,7 +88,11 @@ export function SyncPanel() {
   const modeTouchedRef = useRef(false);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const modelId = SYNC_MODES.find((m) => m.id === mode)?.modelId ?? DEFAULT_WHISPER_MODEL;
-  const jobRef = useRef<TranscribeHandle | null>(null);
+  /** The running worker job (separation or recognition), for cancelling. */
+  const jobRef = useRef<Pick<TranscribeHandle, "cancel"> | null>(null);
+  const [separate, setSeparate] = useState(true);
+  const separateTouchedRef = useRef(false);
+  const [separatedVocals, setSeparatedVocals] = useState<SeparatedVocals | null>(null);
   const [desktop, setDesktop] = useState(false);
   const engine = useEngineStore((s) => s.engine);
   const localModelId = useEngineStore((s) => s.localModelId);
@@ -88,6 +110,17 @@ export function SyncPanel() {
     setPhase({ kind: "idle" });
   }, [objectUrl]);
 
+  // Separated vocals belong to their song; the preview's object URL is freed with them
+  useEffect(() => {
+    if (separatedVocals && separatedVocals.objectUrl !== objectUrl) setSeparatedVocals(null);
+  }, [objectUrl, separatedVocals]);
+  useEffect(
+    () => () => {
+      if (separatedVocals) URL.revokeObjectURL(separatedVocals.previewUrl);
+    },
+    [separatedVocals],
+  );
+
   // Pick a model the device can handle, unless the user already chose one
   useEffect(() => {
     let alive = true;
@@ -95,6 +128,8 @@ export function SyncPanel() {
       if (!alive) return;
       setAccelerator(acc);
       if (acc === "cpu" && !modeTouchedRef.current) setMode("fast");
+      // Separation on the CPU takes several minutes, so it is opt-in there
+      if (acc === "cpu" && !separateTouchedRef.current) setSeparate(false);
     });
     return () => {
       alive = false;
@@ -103,15 +138,61 @@ export function SyncPanel() {
 
   const isLargeOnCpu = accelerator === "cpu" && mode === "power";
 
-  const busy = phase.kind === "decoding" || phase.kind === "loading-model" || phase.kind === "transcribing";
+  const busy =
+    phase.kind === "decoding" ||
+    phase.kind === "loading-separator" ||
+    phase.kind === "separating" ||
+    phase.kind === "loading-model" ||
+    phase.kind === "transcribing";
 
   const run = async () => {
     if (audio.kind !== "upload" || busy) return;
     const project = useProjectStore.getState();
     const language = WHISPER_LANGUAGE[detectLyricsLanguage(project.lines.map((l) => l.cleanText).join("\n"))];
+    const lyrics = project.lines.map((l) => l.cleanText).filter((t) => t.trim());
     try {
       setPhase({ kind: "decoding" });
-      const pcm = await decodeForWhisper(audio.objectUrl);
+      let pcm: Float32Array | null = null;
+      let separationError: string | undefined;
+      if (separate) {
+        const cached = separatedVocals?.objectUrl === audio.objectUrl ? separatedVocals : null;
+        if (cached) {
+          // The worker takes ownership of what it is sent, so the kept copy stays intact
+          pcm = cached.vocals.slice();
+        } else {
+          try {
+            const stereo = await decodeStereo(audio.objectUrl);
+            const job = separateInWorker(stereo.left, stereo.right, {
+              onStatus: (status) =>
+                setPhase(
+                  status === "loading-model"
+                    ? { kind: "loading-separator", progress: 0 }
+                    : { kind: "separating", progress: 0 },
+                ),
+              onLoadProgress: (progress) => setPhase({ kind: "loading-separator", progress }),
+              onProgress: (progress) => setPhase({ kind: "separating", progress }),
+            });
+            jobRef.current = job;
+            const { vocals } = await job.result;
+            jobRef.current = null;
+            const previewUrl = URL.createObjectURL(encodeWav(vocals, WHISPER_SAMPLE_RATE));
+            setSeparatedVocals({ objectUrl: audio.objectUrl, vocals, previewUrl });
+            pcm = vocals.slice();
+          } catch (err) {
+            jobRef.current = null;
+            const message = err instanceof Error ? err.message : String(err);
+            if (message === "cancelled") throw err;
+            // Recognition still runs, on the full song
+            console.warn("Vocal separation failed:", err);
+            separationError = /fetch|network/i.test(message) ? "분리 모델을 내려받지 못했습니다" : message;
+          }
+        }
+      }
+      const separated = pcm !== null;
+      if (!pcm) {
+        setPhase({ kind: "decoding" });
+        pcm = await decodeForWhisper(audio.objectUrl);
+      }
       const callbacks = {
         onStatus: (status: "loading-model" | "transcribing") =>
           setPhase((prev) =>
@@ -126,7 +207,7 @@ export function SyncPanel() {
       };
       const job = useLocal
         ? transcribeLocal(pcm, localModelId, language, callbacks)
-        : transcribeInWorker(pcm, modelId, language, callbacks);
+        : transcribeInWorker(pcm, modelId, language, callbacks, { lyrics, vocalsOnly: separated });
       jobRef.current = job;
       const { chunks, text, mode } = await job.result;
       jobRef.current = null;
@@ -138,6 +219,8 @@ export function SyncPanel() {
         mode,
         transcript: text,
         dropped: cleaned.dropped,
+        separated,
+        separationError,
       });
     } catch (err) {
       jobRef.current = null;
@@ -160,6 +243,11 @@ export function SyncPanel() {
   const estimated = result
     ? result.alignments.filter((a) => a.time === null && a.estimate !== null).length
     : 0;
+  // The share of lyric sounds that were heard where the alignment put them, over all lines
+  const averageMatch =
+    result && result.alignments.length
+      ? result.alignments.reduce((sum, a) => sum + a.similarity, 0) / result.alignments.length
+      : 0;
 
   return (
     <div className="space-y-2.5 border-t border-zinc-800/70 pt-3 text-xs">
@@ -170,6 +258,26 @@ export function SyncPanel() {
           맞춥니다. 음원은 밖으로 보내지 않습니다. 처음 한 번은 모델 파일을 내려받습니다.
         </p>
         {desktop && <LocalEnginePanel disabled={busy} />}
+        <label className="flex items-start gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-2">
+          <input
+            type="checkbox"
+            checked={separate}
+            disabled={busy}
+            onChange={(e) => {
+              separateTouchedRef.current = true;
+              setSeparate(e.target.checked);
+            }}
+            className="mt-0.5 accent-indigo-500"
+          />
+          <span>
+            <span className="font-semibold text-zinc-200">보컬만 분리해서 인식</span>{" "}
+            <span className="text-zinc-500">
+              반주를 걷어내고 목소리만 들려줘 인식이 훨씬 정확해집니다. 처음 한 번 분리 모델(67MB)을
+              내려받습니다.
+              {accelerator === "cpu" && " 이 브라우저는 GPU를 못 써서 곡 길이에 따라 몇 분 더 걸립니다."}
+            </span>
+          </span>
+        </label>
         {!useLocal && (
           <>
             <div role="radiogroup" aria-label="싱크 모드" className="grid grid-cols-3 gap-1">
@@ -238,6 +346,8 @@ export function SyncPanel() {
           <span className="text-zinc-400" role="status">
             {audio.kind !== "upload" && "먼저 음원을 선택하세요"}
             {phase.kind === "decoding" && "음원 읽는 중…"}
+            {phase.kind === "loading-separator" && `분리 모델 준비 중… ${Math.round(phase.progress * 100)}%`}
+            {phase.kind === "separating" && `보컬 분리 중… ${Math.round(phase.progress * 100)}%`}
             {phase.kind === "loading-model" && `모델 준비 중… ${Math.round(phase.progress * 100)}%`}
             {phase.kind === "transcribing" &&
               (phase.progress !== undefined
@@ -251,6 +361,9 @@ export function SyncPanel() {
         {done && (
           <div className="space-y-2">
             <p className="text-zinc-300">
+              평균 일치율{" "}
+              <span className="font-semibold text-indigo-200">{Math.round(averageMatch * 100)}%</span>
+              {done.separated ? " (보컬 분리 후 인식)" : " (원곡 그대로 인식)"}.{" "}
               {result?.alignments.length ?? 0}줄 중{" "}
               <span className="font-semibold text-emerald-300">{confirmed}줄</span>은 발음이 90% 이상 맞아
               확인했고, <span className="font-semibold text-amber-300">{estimated}줄</span>은 추정 위치에
@@ -263,6 +376,7 @@ export function SyncPanel() {
                 ? "단어 단위 시간으로 맞췄습니다."
                 : "이 모델은 단어 단위 시간을 지원하지 않아 구간 단위로 맞췄습니다. 줄 시작이 조금 어긋날 수 있습니다."}{" "}
               {done.dropped > 0 && `간주 등에서 가사가 아닌 인식 결과 ${done.dropped}개를 빼고 맞췄습니다. `}
+              {done.separationError && `보컬 분리를 못 해 원곡으로 인식했습니다 (${done.separationError}). `}
               가사를 고치면 다시 인식하지 않고 바로 다시 맞춥니다.
             </p>
             <ol className="max-h-56 space-y-1 overflow-y-auto rounded-md border border-zinc-800 bg-zinc-950 p-2">
@@ -311,6 +425,12 @@ export function SyncPanel() {
                 닫기
               </button>
             </div>
+            {done.separated && separatedVocals && (
+              <details>
+                <summary className="cursor-pointer text-zinc-500">분리된 보컬 들어 보기</summary>
+                <audio controls src={separatedVocals.previewUrl} className="mt-1 h-8 w-full" />
+              </details>
+            )}
             <details>
               <summary className="cursor-pointer text-zinc-500">인식된 전체 텍스트</summary>
               <p className="mt-1 whitespace-pre-wrap text-zinc-400">{done.transcript.trim() || "(없음)"}</p>

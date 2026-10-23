@@ -20,6 +20,8 @@ import { formatLrcTime, MIN_LINE_DURATION } from "@/lib/lyrics/parse";
 import { CELLS, GRID } from "@/lib/render/looks/layout";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
+import { FEATURES_NOW } from "@/lib/mode/mode";
+import { CharacterLane } from "./character-lane";
 import { PROP_LANE_HEIGHT, PropLanes } from "./prop-lanes";
 
 type DragKind = "move" | "start" | "end";
@@ -213,7 +215,9 @@ export function Timeline() {
   const updateLine = useProjectStore((s) => s.updateLine);
   const removeLine = useProjectStore((s) => s.removeLine);
   const fontScale = useProjectStore((s) => s.style.fontScale);
-  const charCues = useProjectStore((s) => s.style.illustration.charCues);
+  const characterLane = useProjectStore(
+    (s) => s.images.character !== null && s.style.illustration.showCharacter,
+  );
   const propLanes = useProjectStore((s) => s.props.filter((p) => p.onTimeline).length);
   const setStyle = useProjectStore((s) => s.setStyle);
   const isPlaying = usePlaybackStore((s) => s.isPlaying);
@@ -281,7 +285,9 @@ export function Timeline() {
   const sel = selected !== null && selected < lines.length ? selected : null;
   const shownHeight = Math.min(
     maxHeight,
-    height ?? (sel !== null ? DEFAULT_EDIT_HEIGHT : DEFAULT_HEIGHT) + propLanes * PROP_LANE_HEIGHT,
+    height ??
+      (sel !== null ? DEFAULT_EDIT_HEIGHT : DEFAULT_HEIGHT) +
+        (FEATURES_NOW.characters ? propLanes + (characterLane ? 1 : 0) : 0) * PROP_LANE_HEIGHT,
   );
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -561,16 +567,6 @@ export function Timeline() {
                 </div>
               ))}
 
-              {/* Stretches where the character is away (leaving through coming back), set in the illustration panel */}
-              {(charCues ?? []).map((c, i) => (
-                <div
-                  key={`cue-${i}`}
-                  aria-hidden
-                  className="pointer-events-none absolute bottom-0 h-[3px] rounded-full bg-amber-400/70"
-                  style={{ left: c.hideAt * pps, width: Math.max(4, (c.showAt + c.fade - c.hideAt) * pps) }}
-                />
-              ))}
-
               {twoLanes && (
                 <span className="pointer-events-none absolute bottom-1 left-1 top-[calc(50%+10px)] flex items-center text-[10px] font-semibold text-violet-300/60">
                   &
@@ -653,7 +649,12 @@ export function Timeline() {
                 );
               })}
             </div>
-            <PropLanes pps={pps} timeAt={timeAt} />
+            {FEATURES_NOW.characters && (
+              <div className="shrink-0 border-t border-zinc-800/80">
+                <CharacterLane pps={pps} timeAt={timeAt} />
+                <PropLanes pps={pps} timeAt={timeAt} />
+              </div>
+            )}
             {/* Playhead */}
             <div
               ref={headRef}

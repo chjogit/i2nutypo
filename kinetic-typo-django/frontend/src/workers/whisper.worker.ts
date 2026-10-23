@@ -1,12 +1,18 @@
 /// <reference lib="webworker" />
 import {
+  LogitsProcessor,
+  LogitsProcessorList,
   pipeline,
   type AutomaticSpeechRecognitionOutput,
   type AutomaticSpeechRecognitionPipeline,
   type PretrainedModelOptions,
+  type Tensor,
 } from "@huggingface/transformers";
+import { runSeparation } from "@/lib/separation/run-separation";
+import type { SeparateRequest, SeparateResponse } from "@/lib/separation/protocol";
 import type { TranscriptChunk } from "@/lib/sync/align";
-import { isSilent, placeWindowChunks, planWindows } from "@/lib/sync/windows";
+import { LyricBias } from "@/lib/sync/lyric-bias";
+import { isSilent, placeWindowChunks, planVoicedWindows, planWindows } from "@/lib/sync/windows";
 import {
   WHISPER_SAMPLE_RATE,
   type TimestampMode,
@@ -16,9 +22,11 @@ import {
 
 // Runs Whisper in the browser, one worker per job (terminated afterwards to
 // free memory). Model files are downloaded once from the Hugging Face hub and
-// cached by the browser; the audio itself never leaves the device.
+// cached by the browser; the audio itself never leaves the device. The same
+// worker also separates the vocals from the song before recognition
+// (lib/separation), sharing the ONNX runtime.
 
-const post = (msg: WhisperResponse) => self.postMessage(msg);
+const post = (msg: WhisperResponse | SeparateResponse) => self.postMessage(msg);
 
 // pipeline()'s generic overloads are too large for the type checker; pin the one task used here
 const createAsrPipeline = pipeline as unknown as (
@@ -83,6 +91,33 @@ async function loadOn(modelId: string, precision: Precision): Promise<AutomaticS
   });
 }
 
+/** Hands each row of next-token scores to the lyric bias. */
+class LyricBiasProcessor extends LogitsProcessor {
+  constructor(private readonly bias: LyricBias) {
+    super();
+  }
+
+  _call(inputIds: bigint[][], logits: Tensor): Tensor {
+    for (let i = 0; i < inputIds.length; i++) {
+      this.bias.apply(inputIds[i], (logits as unknown as { data: Float32Array }[])[i].data);
+    }
+    return logits;
+  }
+}
+
+function lyricBiasFor(pipe: AutomaticSpeechRecognitionPipeline, lyrics: readonly string[]): LyricBias | null {
+  if (lyrics.length === 0) return null;
+  const sequences: number[][] = [];
+  for (const line of lyrics) {
+    // A line can start a segment or follow a word, which tokenizes with or without a leading space
+    for (const text of [line, ` ${line}`]) {
+      sequences.push(pipe.tokenizer.encode(text, { add_special_tokens: false }));
+    }
+  }
+  const config = pipe.model.generation_config as { eos_token_id?: number } | undefined;
+  return new LyricBias(sequences, config?.eos_token_id ?? 50257);
+}
+
 /**
  * Transcribes the song window by window (see lib/sync/windows.ts). Each
  * window is decoded on its own, so a window of pure music cannot shift the
@@ -93,7 +128,10 @@ async function transcribe(
   req: WhisperRequest,
   mode: TimestampMode,
 ): Promise<{ chunks: TranscriptChunk[]; text: string }> {
-  const windows = planWindows(req.audio.length / WHISPER_SAMPLE_RATE);
+  const windows = req.vocalsOnly
+    ? planVoicedWindows(req.audio, WHISPER_SAMPLE_RATE)
+    : planWindows(req.audio.length / WHISPER_SAMPLE_RATE);
+  const bias = lyricBiasFor(pipe, req.lyrics ?? []);
   const chunks: TranscriptChunk[] = [];
   for (const [i, w] of windows.entries()) {
     const samples = req.audio.subarray(
@@ -101,11 +139,15 @@ async function transcribe(
       Math.ceil(w.end * WHISPER_SAMPLE_RATE),
     );
     if (!isSilent(samples)) {
+      // A new list per call: generate() appends its own processors to it
+      const logitsProcessor = new LogitsProcessorList();
+      if (bias) logitsProcessor.push(new LyricBiasProcessor(bias));
       const raw = await pipe(samples, {
         language: req.language,
         task: "transcribe",
         return_timestamps: mode === "word" ? "word" : true,
-      });
+        logits_processor: logitsProcessor,
+      } as Parameters<AutomaticSpeechRecognitionPipeline["_call"]>[1]);
       const result: AutomaticSpeechRecognitionOutput = Array.isArray(raw) ? raw[0] : raw;
       const relative = (result.chunks ?? [])
         .filter((c) => c.timestamp && c.text.trim())
@@ -125,8 +167,16 @@ async function transcribe(
   return { chunks, text };
 }
 
-self.onmessage = async (event: MessageEvent<WhisperRequest>) => {
+self.onmessage = async (event: MessageEvent<WhisperRequest | SeparateRequest>) => {
   const req = event.data;
+  if (req.type === "separate") {
+    try {
+      await runSeparation(req, post);
+    } catch (err) {
+      post({ type: "error", message: err instanceof Error ? err.message : String(err) });
+    }
+    return;
+  }
   if (req.type !== "transcribe") return;
   try {
     post({ type: "status", status: "loading-model" });

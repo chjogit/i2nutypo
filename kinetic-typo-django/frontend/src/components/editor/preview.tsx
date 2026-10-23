@@ -6,8 +6,10 @@ import { createParticles } from "@/lib/render/particles";
 import { CANVAS_SIZE } from "@/lib/render/canvas-size";
 import { bpmPulseEnergy, renderFrame } from "@/lib/render/render-frame";
 import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks/image-cache";
+import { FEATURES_NOW } from "@/lib/mode/mode";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
+import { IllustrationOverlay } from "./illustration-overlay";
 import { MiniPreview, useMiniPreviewEnabled } from "./mini-preview";
 import { applyOverride, TextBoxOverlay, type LineOverride } from "./text-box-overlay";
 
@@ -93,12 +95,15 @@ export function Preview() {
             className="block h-auto max-h-[480px] w-auto max-w-full border border-zinc-800"
           />
           <TextBoxOverlay canvasRef={canvasRef} boundsRef={boundsRef} overrideRef={overrideRef} />
+          {FEATURES_NOW.characters && <IllustrationOverlay canvasRef={canvasRef} />}
         </div>
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-zinc-500">
           가사 박스를 끌어 옮기고, 모서리로 글자 크기, 좌우 막대로 가로 폭(줄바꿈), 위아래 막대로 줄 간격을
           바꿉니다. 두 번 클릭하면 가사와 줄바꿈을 고칩니다.
+          {FEATURES_NOW.characters &&
+            " 일러스트 칸이나 타임라인에서 캐릭터·소품을 고르면 여기서 끌어 옮기고 모서리로 크기, 위쪽 점으로 회전을 바꿉니다."}
         </span>
         <label
           className="ml-auto flex shrink-0 items-center gap-1 text-xs text-zinc-500"

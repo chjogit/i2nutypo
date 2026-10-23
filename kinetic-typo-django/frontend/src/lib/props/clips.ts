@@ -24,7 +24,8 @@ export function makeClip(at: number, duration: number): PropClip {
     scale: 0.3,
     rot: 0,
     opacity: 1,
-    fade: 0.3,
+    // No fade by default, so a new clip shows at once where it was added
+    fade: 0,
     front: false,
     flip: false,
   };

@@ -1,5 +1,34 @@
 @import "tailwindcss" source("./");
+/* The landing page template uses the same stylesheet */
+@source "../../studio/jinja2";
 
 body {
   font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+
+/* Dark, thin scrollbars everywhere: a faint thumb on a clear track, so lists blend into the editor */
+:root {
+  color-scheme: dark;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(82 82 91 / 0.55) transparent;
+}
+*:hover {
+  scrollbar-color: rgb(113 113 122 / 0.8) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(82 82 91 / 0.55);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(129 140 248 / 0.6);
 }

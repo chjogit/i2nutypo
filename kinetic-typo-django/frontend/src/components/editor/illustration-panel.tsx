@@ -7,8 +7,10 @@ import { forgetImage, resolveIllustrationImages } from "@/lib/render/looks/image
 import { blockedCells, cellRect, CELLS, characterRect, GRID, sanitizeCells } from "@/lib/render/looks/layout";
 import { pickedLooks } from "@/lib/render/looks/presets";
 import { usePlaybackStore } from "@/store/playback-store";
+import { Fold } from "./fold";
 import { TimeField } from "./time-field";
 import { useProjectStore } from "@/store/project-store";
+import { usePropUiStore } from "@/store/prop-ui-store";
 
 type ImageSlot = "background" | "character" | "cover";
 type StageTool = "move" | "cells";
@@ -96,7 +98,8 @@ export function IllustrationPanel() {
   const [error, setError] = useState<string | null>(null);
   const [tool, setTool] = useState<StageTool>("move");
   /** The cue whose return place the stage is editing, or null for the character's own place. */
-  const [cueSel, setCueSel] = useState<number | null>(null);
+  const cueSel = usePropUiStore((s) => s.cue);
+  const setCueSel = usePropUiStore((s) => s.selectCue);
   const cues = ill.charCues ?? [];
   const editCue = cueSel !== null && cueSel < cues.length ? cueSel : null;
   const cells = sanitizeCells(ill.noTextCells);
@@ -115,6 +118,11 @@ export function IllustrationPanel() {
   // Cell painting: the value the first clicked cell flipped to, applied to every cell dragged over
   const paintRef = useRef<boolean | null>(null);
   const stageH = STAGE_H[aspectRatio];
+
+  // Picking an exit to edit puts the stage in move mode, where its return place is dragged
+  useEffect(() => {
+    if (editCue !== null) setTool("move");
+  }, [editCue]);
 
   // Revoke picked images with the panel
   useEffect(
@@ -391,44 +399,9 @@ export function IllustrationPanel() {
 
   const pct = (v: number) => `${Math.round(v * 100)}%`;
 
-  /** Saves cues in time order and keeps the edited one selected. */
-  const saveCues = (next: CharacterCue[], keep: CharacterCue | null) => {
-    const sorted = sortCues(next);
-    setIllustration({ charCues: sorted });
-    setCueSel(keep ? sorted.indexOf(keep) : null);
-  };
-
-  const addCue = () => {
-    const t = Math.round(usePlaybackStore.getState().currentTime * 100) / 100;
-    // It comes back where it is at that moment, so the user only has to drag it somewhere new
-    const at = characterAt(ill, t);
-    const cue: CharacterCue = { hideAt: t, showAt: t + 3, effect: "fade", fade: 0.6, x: at.x, y: at.y };
-    saveCues([...cues, cue], cue);
-    setTool("move");
-  };
-
-  const updateCue = (i: number, patch: Partial<CharacterCue>) => {
-    const old = cues[i];
-    const cue = { ...old, ...patch };
-    // Leaving after the return time pushes the return out by the same gap
-    if (patch.hideAt !== undefined && cue.showAt < cue.hideAt)
-      cue.showAt = cue.hideAt + (old.showAt - old.hideAt);
-    if (patch.showAt !== undefined && cue.showAt < cue.hideAt) cue.showAt = cue.hideAt;
-    saveCues(
-      cues.map((c, k) => (k === i ? cue : c)),
-      cue,
-    );
-  };
-
-  const removeCue = (i: number) =>
-    saveCues(
-      cues.filter((_, k) => k !== i),
-      null,
-    );
-
   return (
     <section className="space-y-3 px-4 py-4">
-      <h2 className="text-xs font-semibold tracking-wide text-zinc-400">일러스트</h2>
+      <h2 className="text-xs font-semibold tracking-wide text-zinc-400">배경 · 배치</h2>
 
       <div className="space-y-1.5">
         <div
@@ -517,11 +490,18 @@ export function IllustrationPanel() {
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
 
-      <div className="space-y-2 border-t border-zinc-800/70 pt-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-zinc-300">배경</span>
-          <LockToggle locked={ill.bgLocked} onChange={(v) => setIllustration({ bgLocked: v })} label="배경" />
-        </div>
+      <Fold
+        title="배경"
+        right={
+          <>
+            <LockToggle
+              locked={ill.bgLocked}
+              onChange={(v) => setIllustration({ bgLocked: v })}
+              label="배경"
+            />
+          </>
+        }
+      >
         {imagePicker("background", "배경 일러스트", "가로로 긴 그림이 잘 어울립니다")}
         <Row label="확대">
           <Slider
@@ -555,29 +535,85 @@ export function IllustrationPanel() {
         >
           배경 위치 가운데로
         </button>
-      </div>
+      </Fold>
 
       {albumPicked && (
-        <div className="space-y-2 border-t border-zinc-800/70 pt-3">
-          <span className="text-xs font-semibold text-zinc-300">앨범 커버</span>
+        <Fold title="앨범 커버">
           {imagePicker(
             "cover",
             "앨범 커버",
             "정사각 커버와 레코드 라벨에 쓰입니다. 없으면 배경 일러스트를 씁니다",
           )}
-        </div>
+        </Fold>
       )}
+    </section>
+  );
+}
 
-      <div className="space-y-2 border-t border-zinc-800/70 pt-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-zinc-300">캐릭터</span>
-          <LockToggle
-            locked={ill.charLocked}
-            onChange={(v) => setIllustration({ charLocked: v })}
-            label="캐릭터"
-          />
-        </div>
-        {imagePicker("character", "캐릭터 PNG", "배경이 투명한 PNG를 권장합니다")}
+/**
+ * Character settings and its exits and returns, shown in the illustration
+ * section when the character is picked in its list or its timeline lane. The
+ * return place is dragged on the 배경 · 배치 stage.
+ */
+export function CharacterEditor() {
+  const ill = useProjectStore((s) => s.style.illustration);
+  const aspectRatio = useProjectStore((s) => s.style.aspectRatio);
+  const setIllustration = useProjectStore((s) => s.setIllustration);
+  const cueSel = usePropUiStore((s) => s.cue);
+  const setCueSel = usePropUiStore((s) => s.selectCue);
+  const cues = ill.charCues ?? [];
+  const editCue = cueSel !== null && cueSel < cues.length ? cueSel : null;
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+  /** Saves cues in time order and keeps the edited one selected. */
+  const saveCues = (next: CharacterCue[], keep: CharacterCue | null) => {
+    const sorted = sortCues(next);
+    setIllustration({ charCues: sorted });
+    setCueSel(keep ? sorted.indexOf(keep) : null);
+  };
+
+  const addCue = () => {
+    const t = Math.round(usePlaybackStore.getState().currentTime * 100) / 100;
+    // It comes back where it is at that moment, so the user only has to drag it somewhere new
+    const at = characterAt(ill, t);
+    const cue: CharacterCue = { hideAt: t, showAt: t + 3, effect: "fade", fade: 0.6, x: at.x, y: at.y };
+    saveCues([...cues, cue], cue);
+  };
+
+  const updateCue = (i: number, patch: Partial<CharacterCue>) => {
+    const old = cues[i];
+    const cue = { ...old, ...patch };
+    // Leaving after the return time pushes the return out by the same gap
+    if (patch.hideAt !== undefined && cue.showAt < cue.hideAt)
+      cue.showAt = cue.hideAt + (old.showAt - old.hideAt);
+    if (patch.showAt !== undefined && cue.showAt < cue.hideAt) cue.showAt = cue.hideAt;
+    saveCues(
+      cues.map((c, k) => (k === i ? cue : c)),
+      cue,
+    );
+  };
+
+  const removeCue = (i: number) =>
+    saveCues(
+      cues.filter((_, k) => k !== i),
+      null,
+    );
+
+  return (
+    <div className="space-y-3">
+      <Fold
+        title="기본 설정"
+        right={
+          <>
+            <LockToggle
+              locked={ill.charLocked}
+              onChange={(v) => setIllustration({ charLocked: v })}
+              label="캐릭터"
+            />
+          </>
+        }
+      >
+        <CharacterPicker stageH={STAGE_H[aspectRatio]} />
         <Row label="크기">
           <Slider
             value={ill.characterScale}
@@ -645,19 +681,22 @@ export function IllustrationPanel() {
         <p className="text-[11px] leading-snug text-zinc-500">
           0%면 가만히 있고, 50%가 테마 기본값, 그 위로는 좌우로 더 크게 흔들립니다.
         </p>
-      </div>
+      </Fold>
 
-      <div className="space-y-2 border-t border-zinc-800/70 pt-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-zinc-300">캐릭터 퇴장 · 재등장</span>
-          <button
-            type="button"
-            onClick={addCue}
-            className="rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-200 hover:border-indigo-500"
-          >
-            + 지금 사라지기
-          </button>
-        </div>
+      <Fold
+        title="퇴장 · 재등장"
+        right={
+          <>
+            <button
+              type="button"
+              onClick={addCue}
+              className="rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-200 hover:border-indigo-500"
+            >
+              + 지금 사라지기
+            </button>
+          </>
+        }
+      >
         <p className="text-[11px] leading-snug text-zinc-500">
           사라져 있는 동안은 가사 금지 칸이 잠시 꺼지고, 다시 나타나면 그 자리가 가사 금지 칸이 됩니다(직접
           지정한 칸보다 우선).
@@ -677,7 +716,6 @@ export function IllustrationPanel() {
                   aria-pressed={editCue === i}
                   onClick={() => {
                     setCueSel(editCue === i ? null : i);
-                    setTool("move");
                   }}
                   className="text-indigo-400 hover:underline"
                 >
@@ -716,13 +754,86 @@ export function IllustrationPanel() {
                 max={MAX_CUE_FADE}
                 step={0.1}
                 label={`${i + 1}번 전환 길이`}
+                disabled={cue.effect === "cut"}
                 format={(v) => `${v.toFixed(1)}s`}
                 onChange={(v) => updateCue(i, { fade: v })}
               />
             </Row>
           </div>
         ))}
-      </div>
-    </section>
+      </Fold>
+    </div>
+  );
+}
+
+/** Picks or swaps the character PNG; the first one marks the no-lyric cells it covers. */
+export function CharacterPicker({ stageH }: { stageH: number }) {
+  const asset = useProjectStore((s) => s.images.character);
+  const setImage = useProjectStore((s) => s.setImage);
+  const setIllustration = useProjectStore((s) => s.setIllustration);
+  const [error, setError] = useState<string | null>(null);
+
+  const release = () => {
+    if (!asset) return;
+    forgetImage(asset.objectUrl);
+    URL.revokeObjectURL(asset.objectUrl);
+  };
+
+  const handleFile = (file: File) => {
+    setError(null);
+    const objectUrl = URL.createObjectURL(file);
+    const probe = new Image();
+    probe.onload = () => {
+      release();
+      setImage("character", { fileName: file.name, objectUrl });
+      // A first character fills the empty grid once; after that the cells are the user's
+      const ill = useProjectStore.getState().style.illustration;
+      if (!sanitizeCells(ill.noTextCells).some(Boolean)) {
+        const img = { source: probe, width: probe.naturalWidth, height: probe.naturalHeight };
+        const marked = blockedCells(characterRect(ill, img, STAGE_W, stageH), STAGE_W, stageH);
+        if (marked.some(Boolean)) setIllustration({ noTextCells: marked });
+      }
+    };
+    probe.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      setError("이 파일은 열 수 없는 이미지 형식입니다.");
+    };
+    probe.src = objectUrl;
+  };
+
+  return (
+    <div className="space-y-1">
+      <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-zinc-800 px-2 py-2 text-xs text-zinc-400 hover:border-indigo-500 hover:text-zinc-200">
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+            e.target.value = "";
+          }}
+        />
+        {asset ? "캐릭터 PNG 바꾸기" : "캐릭터 PNG 선택"}
+      </label>
+      {asset ? (
+        <p className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
+          <span className="truncate">{asset.fileName}</span>
+          <button
+            type="button"
+            onClick={() => {
+              release();
+              setImage("character", null);
+            }}
+            className="shrink-0 text-indigo-400 hover:underline"
+          >
+            빼기
+          </button>
+        </p>
+      ) : (
+        <p className="text-[11px] text-zinc-500">배경이 투명한 PNG를 권장합니다</p>
+      )}
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
   );
 }
