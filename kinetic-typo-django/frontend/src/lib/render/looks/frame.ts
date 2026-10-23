@@ -1,4 +1,4 @@
-import type { LookPresetId, LyricLine, StyleSettings, SubtitleSettings } from "@/types/project";
+import type { CueEffect, LookPresetId, LyricLine, StyleSettings, SubtitleSettings } from "@/types/project";
 import type { Ctx2D } from "../motifs";
 import type { TextBounds } from "../text-bounds";
 import {
@@ -8,9 +8,11 @@ import {
   type IllustrationImages,
   type Rect,
 } from "./illustration";
+import { clipReveal, revealAlpha } from "./cues";
 import { freeSpan, pickCell } from "./layout";
 import { hash01 } from "./noise";
-import { lookElementAmount } from "./presets";
+import type { PropLayer } from "./props";
+import { getLookElement, lookElementAmount } from "./presets";
 
 /** Everything a look preset needs for one frame. */
 export interface LookFrame {
@@ -38,6 +40,10 @@ export interface LookFrame {
   subtitleTop: boolean;
   /** Character on screen, or null when none is drawn. */
   charRect: Rect | null;
+  /** How much of the character shows while it leaves or comes back (cues); missing means fully. */
+  charReveal?: { reveal: number; effect: CueEffect };
+  /** Props on the timeline (drawn by renderLookFrame, not by the themes). */
+  props?: readonly PropLayer[];
   /** 4x4 cells the lyrics should avoid (all false when avoidance is off). */
   blocked: readonly boolean[];
   /** Detail-tab multipliers, 1 = the look's own default. */
@@ -97,21 +103,60 @@ export function drawIllustration(f: LookFrame, dest: Rect): Rect | null {
   return src;
 }
 
-/** Draws the character at its placement. bounce and tilt are ignored while it is locked. */
+/**
+ * Draws the character at its placement. bounce and tilt are ignored while it is
+ * locked, and scaled by the character shake setting (0.5 = as given); above that
+ * it also sways sideways. A leaving or returning character is masked by its cue.
+ */
 export function drawCharacterLayer(
   f: LookFrame,
   opts: { bounce: number; tilt: number; alpha?: number },
 ): void {
   const img = f.images.character;
   if (!img || !f.charRect) return;
+  const reveal = f.charReveal?.reveal ?? 1;
+  if (reveal <= 0) return;
+  const effect = f.charReveal?.effect ?? "fade";
   const ill = f.style.illustration;
   const still = ill.charLocked;
-  drawCharacter(f.ctx, img, f.charRect, {
-    bounce: still || !ill.beatBounce ? 0 : Math.min(1, opts.bounce),
-    tilt: still ? 0 : opts.tilt * f.shake,
+  const k = still ? 0 : (ill.charShake ?? 0.5) * 2;
+  const sway = Math.max(0, k - 1) * f.charRect.w * 0.035;
+  const rect = {
+    ...f.charRect,
+    x: f.charRect.x + Math.sin(f.timeSec * 1.7) * sway,
+    y: f.charRect.y + Math.sin(f.timeSec * 2.3 + 1) * sway * 0.3,
+  };
+  f.ctx.save();
+  clipReveal(f.ctx, rect, effect, reveal);
+  drawCharacter(f.ctx, img, rect, {
+    bounce: !ill.beatBounce ? 0 : Math.min(1.5, opts.bounce * k),
+    tilt: opts.tilt * f.shake * k,
     flip: ill.charFlip,
-    alpha: opts.alpha,
+    alpha: (opts.alpha ?? 1) * revealAlpha(effect, reveal),
   });
+  f.ctx.restore();
+}
+
+/**
+ * Draws a movable element moved and turned by the user (its x, y and rot),
+ * turning around pivot, the element's own center in frame pixels.
+ */
+export function withMoved(f: LookFrame, id: string, pivot: { x: number; y: number }, draw: () => void): void {
+  const st = getLookElement(f.style.lookElements, f.preset, id);
+  const dx = (st.x ?? 0) * f.W;
+  const dy = (st.y ?? 0) * f.H;
+  const rot = ((st.rot ?? 0) * Math.PI) / 180;
+  if (dx === 0 && dy === 0 && rot === 0) {
+    draw();
+    return;
+  }
+  const { ctx } = f;
+  ctx.save();
+  ctx.translate(pivot.x + dx, pivot.y + dy);
+  ctx.rotate(rot);
+  ctx.translate(-pivot.x, -pivot.y);
+  draw();
+  ctx.restore();
 }
 
 /** The free screen area for a lyric block: the first open cell in order of preference, widened over open neighbors. */

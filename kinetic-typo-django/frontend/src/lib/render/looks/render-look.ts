@@ -24,6 +24,7 @@ import { deepSea } from "./deep-sea";
 import { neonSign } from "./neon-sign";
 import { drawOverlapLines } from "./overlap-layer";
 import { albumJacket } from "./album-jacket";
+import { drawProps } from "./props";
 
 const RENDERERS: Record<Exclude<LookPresetId, "classic">, LookRenderer> = {
   album_jacket: albumJacket,
@@ -84,8 +85,10 @@ export function renderLookFrame(
     ctx.translate(f.frameShake.x, f.frameShake.y);
     r.scene(f);
     for (const m of mixes) m.r.decor?.(m.f);
+    drawProps(f, false);
     // In the bottom-only display the line is shown in the subtitles alone
     if (showsKineticLyrics(f.subtitles)) drawLyrics(lyr.r, lyr.f);
+    drawProps(f, true);
     ctx.restore();
     r.overlay(f);
     for (const m of mixes) m.r.overlay(m.f);

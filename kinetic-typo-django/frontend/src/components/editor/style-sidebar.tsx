@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import type { DetailSettings, LookElementState, LookPresetId, StyleSettings } from "@/types/project";
 import { DEFAULT_DETAIL } from "@/lib/render/detail";
@@ -18,6 +17,7 @@ import {
   type ThemedPresetId,
 } from "@/lib/render/looks/presets";
 import { useProjectStore } from "@/store/project-store";
+import { FinishPanel } from "./finish-panel";
 
 const COLOR_FIELDS: Array<{
   key: keyof Pick<StyleSettings, "bgColor" | "textColor" | "accentColor" | "secondaryColor">;
@@ -42,7 +42,7 @@ const ROLE_HINT: Partial<Record<ElementRole, string>> = {
   lyrics: "가사 테마일 때 적용",
 };
 
-type Tab = "theme" | "detail";
+type Tab = "theme" | "detail" | "finish";
 
 const ON = "border-indigo-500 bg-indigo-500/10 text-zinc-100";
 const OFF = "border-zinc-800 text-zinc-400 hover:border-indigo-500";
@@ -79,7 +79,7 @@ function Segmented<T extends string>({
 /**
  * Left column. Pick up to three themes, choose which one draws the picture
  * and which one the lyrics, and switch every element of each on or off.
- * The detail tab holds glitch, shake and position.
+ * The detail tab holds glitch, shake and position; the finish tab the color grade and filters.
  */
 export function StyleSidebar() {
   const [tab, setTab] = useState<Tab>("theme");
@@ -93,54 +93,154 @@ export function StyleSidebar() {
           options={[
             ["theme", "테마·요소"],
             ["detail", "상세"],
+            ["finish", "마무리"],
           ]}
           onChange={setTab}
         />
-        {tab === "theme" ? <ThemeTab /> : <DetailTab />}
+        {tab === "theme" ? <ThemeTab /> : tab === "detail" ? <DetailTab /> : <FinishPanel />}
       </div>
     </section>
   );
 }
 
-/** All themes; a click picks or unpicks one. Picked ones show their order, 1 being the background. */
+/**
+ * All themes in a panel that folds away; a click picks or unpicks one. Picked
+ * ones show their order, 1 being the background. Folded, it lists the picks.
+ */
 function ThemeGrid() {
   const style = useProjectStore((s) => s.style);
   const toggleTheme = useProjectStore((s) => s.toggleTheme);
+  const [open, setOpen] = useState(true);
   const picked = pickedLooks(style);
   const full = picked.length > MAX_MIX_LOOKS;
   return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] leading-snug text-zinc-500">
-        테마를 최대 3개까지 고르세요. 1번이 배경을 그립니다. 모두 해제하면 기본 테마(앨범 자켓)로 돌아갑니다.
-      </p>
-      <div className="grid grid-cols-2 gap-1.5">
-        {LOOK_PRESETS.map((p) => {
-          const order = picked.indexOf(p.id);
-          const on = order >= 0;
-          const blocked = !on && full;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => toggleTheme(p.id)}
-              aria-pressed={on}
-              disabled={blocked}
-              title={p.description}
-              className={`relative rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${on ? ON : OFF}`}
-            >
-              {on && (
-                <span className="absolute right-1.5 top-1.5 rounded-full bg-indigo-600 px-1.5 text-[10px] font-semibold text-white">
-                  {order + 1}
-                </span>
-              )}
-              <span className="block break-keep pr-5 text-xs font-semibold text-zinc-200">
-                {p.emoji} {p.label}
-              </span>
-              <span className="block break-keep text-[10px] leading-snug text-zinc-500">{p.description}</span>
-            </button>
-          );
-        })}
-      </div>
+    <div className="rounded-md border border-zinc-800">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="theme-grid"
+        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-zinc-900/60"
+      >
+        <span className="shrink-0 font-semibold text-zinc-200">테마</span>
+        <span className="shrink-0 font-mono text-[10px] text-zinc-500">
+          {picked.length}/{MAX_MIX_LOOKS + 1}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-400">
+          {picked.map((id) => `${getLookPreset(id).emoji} ${getLookPreset(id).label}`).join(" · ")}
+        </span>
+        <span
+          aria-hidden
+          className={`shrink-0 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div id="theme-grid" className="space-y-1.5 border-t border-zinc-800 p-2">
+          <p className="text-[11px] leading-snug text-zinc-500">
+            최대 3개까지 고르세요. 1번이 배경을 그립니다. 모두 해제하면 기본 테마(앨범 자켓)로 돌아갑니다.
+          </p>
+          {/* As many columns as the sidebar width fits */}
+          <div className="grid max-h-[50vh] grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-1.5 overflow-y-auto pr-0.5">
+            {LOOK_PRESETS.map((p) => {
+              const order = picked.indexOf(p.id);
+              const on = order >= 0;
+              const blocked = !on && full;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => toggleTheme(p.id)}
+                  aria-pressed={on}
+                  disabled={blocked}
+                  title={p.description}
+                  className={`relative rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${on ? ON : OFF}`}
+                >
+                  {on && (
+                    <span className="absolute right-1.5 top-1.5 rounded-full bg-indigo-600 px-1.5 text-[10px] font-semibold text-white">
+                      {order + 1}
+                    </span>
+                  )}
+                  <span className="block break-keep pr-5 text-xs font-semibold text-zinc-200">
+                    {p.emoji} {p.label}
+                  </span>
+                  <span className="block break-keep text-[10px] leading-snug text-zinc-500">
+                    {p.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const MOVE_SLIDERS: Array<{
+  key: "x" | "y" | "rot";
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  format: (v: number) => string;
+}> = [
+  {
+    key: "x",
+    label: "가로",
+    min: -0.6,
+    max: 0.6,
+    step: 0.01,
+    format: (v) => `${v > 0 ? "+" : ""}${Math.round(v * 100)}%`,
+  },
+  {
+    key: "y",
+    label: "세로",
+    min: -0.6,
+    max: 0.6,
+    step: 0.01,
+    format: (v) => `${v > 0 ? "+" : ""}${Math.round(v * 100)}%`,
+  },
+  { key: "rot", label: "회전", min: -180, max: 180, step: 1, format: (v) => `${Math.round(v)}°` },
+];
+
+/** Position and turn of a movable element; a double click on a slider puts it back. */
+function MoveControls({
+  label,
+  state,
+  onChange,
+}: {
+  label: string;
+  state: LookElementState;
+  onChange: (patch: Partial<LookElementState>) => void;
+}) {
+  return (
+    <div className="ml-5 space-y-1 rounded-md border border-zinc-800 px-2 py-1.5">
+      {MOVE_SLIDERS.map((m) => (
+        <label key={m.key} className="flex items-center gap-2 text-[11px] text-zinc-400">
+          <span className="w-8 shrink-0">{m.label}</span>
+          <input
+            type="range"
+            min={m.min}
+            max={m.max}
+            step={m.step}
+            value={state[m.key] ?? 0}
+            onChange={(e) => onChange({ [m.key]: Number(e.target.value) })}
+            onDoubleClick={() => onChange({ [m.key]: 0 })}
+            aria-label={`${label} ${m.label}`}
+            className="min-w-0 flex-1 accent-indigo-500"
+          />
+          <span className="w-10 text-right font-mono text-zinc-300">{m.format(state[m.key] ?? 0)}</span>
+        </label>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange({ x: 0, y: 0, rot: 0 })}
+        className="text-[11px] text-indigo-400 hover:underline"
+      >
+        원래 자리로
+      </button>
     </div>
   );
 }
@@ -157,37 +257,60 @@ function ElementRow({
   active: boolean;
   onChange: (patch: Partial<LookElementState>) => void;
 }) {
+  const [moving, setMoving] = useState(false);
+  const moved = (state.x ?? 0) !== 0 || (state.y ?? 0) !== 0 || (state.rot ?? 0) !== 0;
   return (
-    <div className={`flex items-center gap-2 text-xs ${active ? "" : "opacity-50"}`}>
-      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-zinc-200">
-        <input
-          type="checkbox"
-          checked={state.on}
-          onChange={(e) => onChange({ on: e.target.checked })}
-          className="accent-indigo-500"
-        />
-        {/* Name and role on two lines, so a narrow sidebar never hides the name */}
-        <span className="min-w-0 flex-1">
-          <span className="block break-keep leading-snug">{def.label}</span>
-          <span className="block text-[10px] leading-tight text-zinc-500">
-            {active ? ROLE_LABEL[def.role] : (ROLE_HINT[def.role] ?? ROLE_LABEL[def.role])}
+    <div className="space-y-1">
+      <div className={`flex items-center gap-2 text-xs ${active ? "" : "opacity-50"}`}>
+        <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-zinc-200">
+          <input
+            type="checkbox"
+            checked={state.on}
+            onChange={(e) => onChange({ on: e.target.checked })}
+            className="accent-indigo-500"
+          />
+          {/* Name and role on two lines, so a narrow sidebar never hides the name */}
+          <span className="min-w-0 flex-1">
+            <span className="block break-keep leading-snug">{def.label}</span>
+            <span className="block text-[10px] leading-tight text-zinc-500">
+              {active ? ROLE_LABEL[def.role] : (ROLE_HINT[def.role] ?? ROLE_LABEL[def.role])}
+            </span>
           </span>
+        </label>
+        <input
+          type="range"
+          min={0.05}
+          max={1}
+          step={0.05}
+          value={state.amount}
+          disabled={!state.on}
+          onChange={(e) => onChange({ amount: Number(e.target.value) })}
+          aria-label={`${def.label} 적용 정도`}
+          className="w-20 accent-indigo-500 disabled:opacity-30"
+        />
+        <span className={`w-9 text-right font-mono ${state.on ? "text-zinc-300" : "text-zinc-600"}`}>
+          {Math.round(state.amount * 100)}%
         </span>
-      </label>
-      <input
-        type="range"
-        min={0.05}
-        max={1}
-        step={0.05}
-        value={state.amount}
-        disabled={!state.on}
-        onChange={(e) => onChange({ amount: Number(e.target.value) })}
-        aria-label={`${def.label} 적용 정도`}
-        className="w-20 accent-indigo-500 disabled:opacity-30"
-      />
-      <span className={`w-9 text-right font-mono ${state.on ? "text-zinc-300" : "text-zinc-600"}`}>
-        {Math.round(state.amount * 100)}%
-      </span>
+        {def.move ? (
+          <button
+            type="button"
+            onClick={() => setMoving((v) => !v)}
+            aria-expanded={moving}
+            aria-label={`${def.label} 위치 · 회전`}
+            title="위치 · 회전"
+            className={`w-6 shrink-0 rounded border text-[11px] ${
+              moving || moved
+                ? "border-indigo-500 text-indigo-200"
+                : "border-zinc-800 text-zinc-500 hover:border-indigo-500"
+            }`}
+          >
+            ⌖
+          </button>
+        ) : (
+          <span aria-hidden className="w-6 shrink-0" />
+        )}
+      </div>
+      {def.move && moving && <MoveControls label={def.label} state={state} onChange={onChange} />}
     </div>
   );
 }
@@ -267,6 +390,11 @@ function ThemeTab() {
   return (
     <div className="space-y-3">
       <ThemeGrid />
+      {picked.some((id) => isThemedPresetId(id) && LOOK_ELEMENTS[id].some((d) => d.move)) && (
+        <p className="text-[11px] leading-snug text-zinc-500">
+          ⌖ 표시가 있는 요소(레코드, 커버, 원, 낙관 등)는 눌러서 위치를 옮기고 돌릴 수 있습니다.
+        </p>
+      )}
 
       {picked.map((id: LookPresetId) =>
         isThemedPresetId(id) ? <ThemeBlock key={id} id={id} count={picked.length} /> : null,
@@ -275,7 +403,8 @@ function ThemeTab() {
       {picked.includes("album_jacket") && (
         <div className="space-y-1.5 border-t border-zinc-800/70 pt-3">
           <p className="text-[11px] leading-snug text-zinc-500">
-            앨범 자켓: 오른쪽 일러스트 칸에서 앨범 커버를 따로 올릴 수 있고, 없으면 배경 이미지가 커버로 쓰입니다. 제목을 비워 두면 제목 줄은 그리지 않습니다.
+            앨범 자켓: 오른쪽 일러스트 칸에서 앨범 커버를 따로 올릴 수 있고, 없으면 배경 이미지가 커버로
+            쓰입니다. 제목을 비워 두면 제목 줄은 그리지 않습니다.
           </p>
           <input
             value={style.coverTitle}

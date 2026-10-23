@@ -1,11 +1,13 @@
-
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
-import type { AspectRatio, IllustrationSettings, ImageAsset } from "@/types/project";
+import type { AspectRatio, CharacterCue, IllustrationSettings, ImageAsset } from "@/types/project";
 import type { LoadedImage } from "@/lib/render/looks/illustration";
 import { drawCharacter, drawImageRect, kenBurnsSource } from "@/lib/render/looks/illustration";
+import { characterAt, CUE_EFFECTS, MAX_CUE_FADE, MIN_CUE_FADE, sortCues } from "@/lib/render/looks/cues";
 import { forgetImage, resolveIllustrationImages } from "@/lib/render/looks/image-cache";
 import { blockedCells, cellRect, CELLS, characterRect, GRID, sanitizeCells } from "@/lib/render/looks/layout";
 import { pickedLooks } from "@/lib/render/looks/presets";
+import { usePlaybackStore } from "@/store/playback-store";
+import { TimeField } from "./time-field";
 import { useProjectStore } from "@/store/project-store";
 
 type ImageSlot = "background" | "character" | "cover";
@@ -93,11 +95,19 @@ export function IllustrationPanel() {
   const albumPicked = useProjectStore((s) => pickedLooks(s.style).includes("album_jacket"));
   const [error, setError] = useState<string | null>(null);
   const [tool, setTool] = useState<StageTool>("move");
+  /** The cue whose return place the stage is editing, or null for the character's own place. */
+  const [cueSel, setCueSel] = useState<number | null>(null);
+  const cues = ill.charCues ?? [];
+  const editCue = cueSel !== null && cueSel < cues.length ? cueSel : null;
   const cells = sanitizeCells(ill.noTextCells);
-  const urlsRef = useRef<Record<ImageSlot, string | null>>({ background: null, character: null, cover: null });
+  const urlsRef = useRef<Record<ImageSlot, string | null>>({
+    background: null,
+    character: null,
+    cover: null,
+  });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{
-    target: "character" | "background";
+    target: "character" | "background" | "cue";
     startX: number;
     startY: number;
     from: IllustrationSettings;
@@ -142,18 +152,31 @@ export function IllustrationPanel() {
         );
         drawImageRect(ctx, loaded.background, src, dest);
       }
+      const cue = editCue !== null ? (ill.charCues[editCue] ?? null) : null;
+      const cueIll = cue ? { ...ill, charX: cue.x, charY: cue.y } : null;
+      const cueRect = cueIll ? characterRect(cueIll, loaded.character, W, H) : null;
       const charRect = characterRect(ill, loaded.character, W, H);
-      sanitizeCells(ill.noTextCells).forEach((b, c) => {
-        if (!b) return;
-        const r = cellRect(W, H, c);
-        ctx.fillStyle = ill.avoidCharacter ? "rgba(239, 68, 68, 0.32)" : "rgba(239, 68, 68, 0.1)";
-        ctx.fillRect(r.x, r.y, r.w, r.h);
-        if (ill.avoidCharacter) {
-          ctx.strokeStyle = "rgba(248, 113, 113, 0.9)";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
-        }
-      });
+      // Editing a return place: its cells (which win over the user's then) in violet, the user's dimmed
+      if (cue) {
+        blockedCells(cueRect, W, H).forEach((b, c) => {
+          if (!b || !ill.avoidCharacter) return;
+          const r = cellRect(W, H, c);
+          ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
+          ctx.fillRect(r.x, r.y, r.w, r.h);
+        });
+      }
+      if (!cue)
+        sanitizeCells(ill.noTextCells).forEach((b, c) => {
+          if (!b) return;
+          const r = cellRect(W, H, c);
+          ctx.fillStyle = ill.avoidCharacter ? "rgba(239, 68, 68, 0.32)" : "rgba(239, 68, 68, 0.1)";
+          ctx.fillRect(r.x, r.y, r.w, r.h);
+          if (ill.avoidCharacter) {
+            ctx.strokeStyle = "rgba(248, 113, 113, 0.9)";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+          }
+        });
       ctx.strokeStyle = "rgba(255,255,255,0.35)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
@@ -167,9 +190,23 @@ export function IllustrationPanel() {
       }
       ctx.setLineDash([]);
       if (loaded.character && charRect) {
-        drawCharacter(ctx, loaded.character, charRect, { bounce: 0, tilt: 0, flip: ill.charFlip });
-        ctx.strokeStyle = ill.charLocked ? "rgba(245,158,11,0.9)" : "rgba(129,140,248,0.95)";
-        ctx.strokeRect(charRect.x, charRect.y, charRect.w, charRect.h);
+        drawCharacter(ctx, loaded.character, charRect, {
+          bounce: 0,
+          tilt: 0,
+          flip: ill.charFlip,
+          alpha: cue ? 0.3 : 1,
+        });
+        if (!cue) {
+          ctx.strokeStyle = ill.charLocked ? "rgba(245,158,11,0.9)" : "rgba(129,140,248,0.95)";
+          ctx.strokeRect(charRect.x, charRect.y, charRect.w, charRect.h);
+        }
+      }
+      if (loaded.character && cueRect) {
+        drawCharacter(ctx, loaded.character, cueRect, { bounce: 0, tilt: 0, flip: ill.charFlip });
+        ctx.strokeStyle = "rgba(167,139,250,0.95)";
+        ctx.setLineDash([6, 4]);
+        ctx.strokeRect(cueRect.x, cueRect.y, cueRect.w, cueRect.h);
+        ctx.setLineDash([]);
       }
       // Decoding is async; redraw until the picked images are ready
       const pending =
@@ -181,7 +218,7 @@ export function IllustrationPanel() {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [images, ill, stageH]);
+  }, [images, ill, stageH, editCue]);
 
   /** Marks the cells the character covers now, at the stage's own frame size. */
   const cellsFromCharacter = (character: LoadedImage | null) =>
@@ -261,6 +298,12 @@ export function IllustrationPanel() {
     }
     const p = toCanvas(e);
     const loaded = resolveIllustrationImages(images);
+    if (editCue !== null) {
+      // Anywhere on the stage drags the return place
+      canvas.setPointerCapture(e.pointerId);
+      dragRef.current = { target: "cue", startX: p.x, startY: p.y, from: ill };
+      return;
+    }
     const r = characterRect(ill, loaded.character, canvas.width, canvas.height);
     const onChar = r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
     let target: "character" | "background" | null = null;
@@ -282,7 +325,15 @@ export function IllustrationPanel() {
     const p = toCanvas(e);
     const dx = (p.x - drag.startX) / canvas.width;
     const dy = (p.y - drag.startY) / canvas.height;
-    if (drag.target === "character") {
+    if (drag.target === "cue" && editCue !== null) {
+      const from = drag.from.charCues[editCue];
+      if (!from) return;
+      setIllustration({
+        charCues: cues.map((c, i) =>
+          i === editCue ? { ...c, x: clamp(from.x + dx, -0.2, 1.2), y: clamp(from.y + dy, 0.15, 1.4) } : c,
+        ),
+      });
+    } else if (drag.target === "character") {
       setIllustration({
         charX: clamp(drag.from.charX + dx, -0.2, 1.2),
         charY: clamp(drag.from.charY + dy, 0.15, 1.4),
@@ -340,6 +391,41 @@ export function IllustrationPanel() {
 
   const pct = (v: number) => `${Math.round(v * 100)}%`;
 
+  /** Saves cues in time order and keeps the edited one selected. */
+  const saveCues = (next: CharacterCue[], keep: CharacterCue | null) => {
+    const sorted = sortCues(next);
+    setIllustration({ charCues: sorted });
+    setCueSel(keep ? sorted.indexOf(keep) : null);
+  };
+
+  const addCue = () => {
+    const t = Math.round(usePlaybackStore.getState().currentTime * 100) / 100;
+    // It comes back where it is at that moment, so the user only has to drag it somewhere new
+    const at = characterAt(ill, t);
+    const cue: CharacterCue = { hideAt: t, showAt: t + 3, effect: "fade", fade: 0.6, x: at.x, y: at.y };
+    saveCues([...cues, cue], cue);
+    setTool("move");
+  };
+
+  const updateCue = (i: number, patch: Partial<CharacterCue>) => {
+    const old = cues[i];
+    const cue = { ...old, ...patch };
+    // Leaving after the return time pushes the return out by the same gap
+    if (patch.hideAt !== undefined && cue.showAt < cue.hideAt)
+      cue.showAt = cue.hideAt + (old.showAt - old.hideAt);
+    if (patch.showAt !== undefined && cue.showAt < cue.hideAt) cue.showAt = cue.hideAt;
+    saveCues(
+      cues.map((c, k) => (k === i ? cue : c)),
+      cue,
+    );
+  };
+
+  const removeCue = (i: number) =>
+    saveCues(
+      cues.filter((_, k) => k !== i),
+      null,
+    );
+
   return (
     <section className="space-y-3 px-4 py-4">
       <h2 className="text-xs font-semibold tracking-wide text-zinc-400">일러스트</h2>
@@ -386,7 +472,15 @@ export function IllustrationPanel() {
           }`}
           style={{ aspectRatio: `${STAGE_W} / ${stageH}` }}
         />
-        {tool === "cells" ? (
+        {editCue !== null ? (
+          <p className="text-[11px] leading-snug text-violet-300">
+            {editCue + 1}번 재등장 위치를 끌어서 옮기세요. 보라 칸은 돌아온 뒤 가사가 피해 갈 칸입니다(직접
+            지정한 빨간 칸보다 우선).{" "}
+            <button type="button" onClick={() => setCueSel(null)} className="text-indigo-400 hover:underline">
+              편집 끝내기
+            </button>
+          </p>
+        ) : tool === "cells" ? (
           <>
             <p className="text-[11px] leading-snug text-zinc-500">
               칸을 누르거나 끌어서 빨간 칸으로 지정하세요. 가사는 빨간 칸을 피해 가고, 맨 아래 가운데 두 칸 중
@@ -466,7 +560,11 @@ export function IllustrationPanel() {
       {albumPicked && (
         <div className="space-y-2 border-t border-zinc-800/70 pt-3">
           <span className="text-xs font-semibold text-zinc-300">앨범 커버</span>
-          {imagePicker("cover", "앨범 커버", "정사각 커버와 레코드 라벨에 쓰입니다. 없으면 배경 일러스트를 씁니다")}
+          {imagePicker(
+            "cover",
+            "앨범 커버",
+            "정사각 커버와 레코드 라벨에 쓰입니다. 없으면 배경 일러스트를 씁니다",
+          )}
         </div>
       )}
 
@@ -532,6 +630,98 @@ export function IllustrationPanel() {
           />
           빨간 칸을 피해 가사 · 자막 놓기 (4x4)
         </label>
+        <Row label="흔들림">
+          <Slider
+            value={ill.charShake ?? 0.5}
+            min={0}
+            max={1}
+            step={0.05}
+            disabled={ill.charLocked}
+            label="캐릭터 흔들림"
+            format={pct}
+            onChange={(v) => setIllustration({ charShake: v })}
+          />
+        </Row>
+        <p className="text-[11px] leading-snug text-zinc-500">
+          0%면 가만히 있고, 50%가 테마 기본값, 그 위로는 좌우로 더 크게 흔들립니다.
+        </p>
+      </div>
+
+      <div className="space-y-2 border-t border-zinc-800/70 pt-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-zinc-300">캐릭터 퇴장 · 재등장</span>
+          <button
+            type="button"
+            onClick={addCue}
+            className="rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-200 hover:border-indigo-500"
+          >
+            + 지금 사라지기
+          </button>
+        </div>
+        <p className="text-[11px] leading-snug text-zinc-500">
+          사라져 있는 동안은 가사 금지 칸이 잠시 꺼지고, 다시 나타나면 그 자리가 가사 금지 칸이 됩니다(직접
+          지정한 칸보다 우선).
+        </p>
+        {cues.map((cue, i) => (
+          <div
+            key={i}
+            className={`space-y-1.5 rounded-md border px-2 py-1.5 ${
+              editCue === i ? "border-violet-500/70 bg-violet-500/5" : "border-zinc-800"
+            }`}
+          >
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-semibold text-zinc-300">{i + 1}번</span>
+              <span className="flex gap-2">
+                <button
+                  type="button"
+                  aria-pressed={editCue === i}
+                  onClick={() => {
+                    setCueSel(editCue === i ? null : i);
+                    setTool("move");
+                  }}
+                  className="text-indigo-400 hover:underline"
+                >
+                  {editCue === i ? "위치 편집 끝" : "재등장 위치 옮기기"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeCue(i)}
+                  className="text-indigo-400 hover:underline"
+                >
+                  빼기
+                </button>
+              </span>
+            </div>
+            <TimeField label="사라짐" value={cue.hideAt} onCommit={(v) => updateCue(i, { hideAt: v })} />
+            <TimeField label="재등장" value={cue.showAt} onCommit={(v) => updateCue(i, { showAt: v })} />
+            <label className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+              <span className="w-12 shrink-0">효과</span>
+              <select
+                value={cue.effect}
+                onChange={(e) => updateCue(i, { effect: e.target.value as CharacterCue["effect"] })}
+                aria-label={`${i + 1}번 사라짐 효과`}
+                className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 text-zinc-100 focus:border-indigo-500 focus:outline-none"
+              >
+                {CUE_EFFECTS.map(([id, text]) => (
+                  <option key={id} value={id}>
+                    {text}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Row label="전환 길이">
+              <Slider
+                value={cue.fade}
+                min={MIN_CUE_FADE}
+                max={MAX_CUE_FADE}
+                step={0.1}
+                label={`${i + 1}번 전환 길이`}
+                format={(v) => `${v.toFixed(1)}s`}
+                onChange={(v) => updateCue(i, { fade: v })}
+              />
+            </Row>
+          </div>
+        ))}
       </div>
     </section>
   );

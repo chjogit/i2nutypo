@@ -13,6 +13,7 @@ import {
   isPortrait,
   lineExit,
   minSide,
+  withMoved,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -81,7 +82,7 @@ function decor(f: LookFrame): void {
   ctx.fillStyle = withAlpha(style.accentColor, 0.8 * amt(f, "grade"));
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
-  drawHalo(f);
+  withMoved(f, "halo", { x: f.W / 2, y: f.H * 0.42 }, () => drawHalo(f));
 }
 
 /** Halo ring and star flare at the upper center, breathing with the beat. */

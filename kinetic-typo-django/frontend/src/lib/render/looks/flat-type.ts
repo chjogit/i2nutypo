@@ -10,6 +10,7 @@ import {
   lyricRegion,
   minSide,
   rowLimit,
+  withMoved,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -151,7 +152,7 @@ function scene(f: LookFrame): void {
     drawIllustration(f, { x: 0, y: 0, w: W, h: H });
     ctx.restore();
   }
-  drawStamp(f, now.ink);
+  withMoved(f, "stamp", { x: W / 2, y: H * 0.52 }, () => drawStamp(f, now.ink));
   decor(f);
 
   // Sticker-style cutout: a solid white edge made from offset shadows

@@ -15,6 +15,7 @@ import {
   isPortrait,
   lineExit,
   minSide,
+  withMoved,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -247,6 +248,19 @@ function overlay(f: LookFrame): void {
 
   // Left sidebar: rule and vertical caption
   const sx = W * 0.03;
+  withMoved(f, "sidebar", { x: sx, y: H / 2 }, () => drawSidebar(f, sx));
+
+  const grain = amt(f, "grain");
+  if (grain > 0) {
+    drawVignette(f, 0.85 * grain);
+    drawGrain(f, 0.85 * grain);
+  }
+}
+
+/** Left rule with a vertical caption. */
+function drawSidebar(f: LookFrame, sx: number): void {
+  const { ctx, H, style } = f;
+  const s = minSide(f);
   ctx.save();
   ctx.globalAlpha = amt(f, "sidebar");
   ctx.fillStyle = "rgba(255,255,255,0.5)";
@@ -258,12 +272,6 @@ function overlay(f: LookFrame): void {
   const n = f.line ? String(f.line.index + 1).padStart(2, "0") : "--";
   ctx.fillText(`ERROR // LYRIC ${n} // ${f.timeSec.toFixed(2)}`, 0, 0);
   ctx.restore();
-
-  const grain = amt(f, "grain");
-  if (grain > 0) {
-    drawVignette(f, 0.85 * grain);
-    drawGrain(f, 0.85 * grain);
-  }
 }
 
 export const darkGlitch: LookRenderer = { scene, lyrics, overlay, decor: (f) => drawBlocks(f) };

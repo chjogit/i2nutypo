@@ -4,6 +4,7 @@ import {
   drawVignette,
   lineExit,
   minSide,
+  withMoved,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -33,21 +34,24 @@ function drawBrush(f: LookFrame, amount: number): void {
 
 function decor(f: LookFrame): void {
   const brush = amt(f, "brush");
-  if (brush > 0) drawBrush(f, brush);
+  if (brush > 0) withMoved(f, "brush", { x: f.W / 2, y: f.H / 2 }, () => drawBrush(f, brush));
   const seal = amt(f, "seal");
-  if (seal > 0) {
-    const { ctx, W, H, style } = f;
-    const s = minSide(f) * 0.07;
-    ctx.save();
-    ctx.translate(W * 0.1 + boil(f, 1, 2), H * 0.82);
-    ctx.rotate(-0.06);
-    ctx.fillStyle = withAlpha(style.accentColor, 0.9 * seal);
-    ctx.fillRect(-s / 2, -s / 2, s, s);
-    ctx.strokeStyle = withAlpha("#ffffff", 0.75 * seal);
-    ctx.lineWidth = s * 0.08;
-    ctx.strokeRect(-s * 0.32, -s * 0.32, s * 0.64, s * 0.64);
-    ctx.restore();
-  }
+  if (seal > 0) withMoved(f, "seal", { x: f.W * 0.1, y: f.H * 0.82 }, () => drawSeal(f, seal));
+}
+
+/** A red square seal in the lower left. */
+function drawSeal(f: LookFrame, seal: number): void {
+  const { ctx, W, H, style } = f;
+  const s = minSide(f) * 0.07;
+  ctx.save();
+  ctx.translate(W * 0.1 + boil(f, 1, 2), H * 0.82);
+  ctx.rotate(-0.06);
+  ctx.fillStyle = withAlpha(style.accentColor, 0.9 * seal);
+  ctx.fillRect(-s / 2, -s / 2, s, s);
+  ctx.strokeStyle = withAlpha("#ffffff", 0.75 * seal);
+  ctx.lineWidth = s * 0.08;
+  ctx.strokeRect(-s * 0.32, -s * 0.32, s * 0.64, s * 0.64);
+  ctx.restore();
 }
 
 function scene(f: LookFrame): void {

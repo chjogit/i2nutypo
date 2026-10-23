@@ -11,6 +11,7 @@ import {
   lyricRegion,
   minSide,
   rowLimit,
+  withMoved,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -130,28 +131,30 @@ function scene(f: LookFrame): void {
     w: card.w - border * 2,
     h: card.h - border * (polaroid > 0 ? 4.2 : 2),
   };
-  ctx.save();
-  if (polaroid > 0) {
-    const seed = f.line ? f.line.index : 0;
-    const settle = easeOutExpo(Math.min(1, f.lineElapsed / 0.5));
-    const tilt = hashSigned(seed, 4) * 0.035 * polaroid * (0.6 + 0.4 * settle);
-    ctx.translate(W / 2, H / 2);
-    ctx.rotate(tilt);
-    ctx.translate(-W / 2, -H / 2);
-    ctx.shadowColor = "rgba(10,40,70,0.35)";
-    ctx.shadowBlur = s * 0.03;
-    ctx.shadowOffsetY = s * 0.01;
-    ctx.fillStyle = "#fffdf7";
-    ctx.fillRect(card.x, card.y, card.w, card.h);
-    ctx.shadowColor = "transparent";
-  }
-  ctx.beginPath();
-  ctx.rect(photo.x, photo.y, photo.w, photo.h);
-  ctx.clip();
-  const src = img ? backgroundSource(f, photo) : null;
-  if (img && src) drawImageRect(ctx, img, src, photo);
-  else drawPlaceholderSea(f, photo);
-  ctx.restore();
+  withMoved(f, "polaroid", { x: W / 2, y: H / 2 }, () => {
+    ctx.save();
+    if (polaroid > 0) {
+      const seed = f.line ? f.line.index : 0;
+      const settle = easeOutExpo(Math.min(1, f.lineElapsed / 0.5));
+      const tilt = hashSigned(seed, 4) * 0.035 * polaroid * (0.6 + 0.4 * settle);
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(tilt);
+      ctx.translate(-W / 2, -H / 2);
+      ctx.shadowColor = "rgba(10,40,70,0.35)";
+      ctx.shadowBlur = s * 0.03;
+      ctx.shadowOffsetY = s * 0.01;
+      ctx.fillStyle = "#fffdf7";
+      ctx.fillRect(card.x, card.y, card.w, card.h);
+      ctx.shadowColor = "transparent";
+    }
+    ctx.beginPath();
+    ctx.rect(photo.x, photo.y, photo.w, photo.h);
+    ctx.clip();
+    const src = img ? backgroundSource(f, photo) : null;
+    if (img && src) drawImageRect(ctx, img, src, photo);
+    else drawPlaceholderSea(f, photo);
+    ctx.restore();
+  });
 
   decor(f);
   drawCharacterLayer(f, {

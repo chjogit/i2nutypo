@@ -15,7 +15,7 @@ import type { Project } from "@/types/project";
 import { CANVAS_SIZE } from "@/lib/render/canvas-size";
 import { stepParticles, createParticles } from "@/lib/render/particles";
 import { bpmPulseEnergy, renderFrame } from "@/lib/render/render-frame";
-import { resolveIllustrationImages } from "@/lib/render/looks/image-cache";
+import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks/image-cache";
 import type { IllustrationImages } from "@/lib/render/looks/illustration";
 import { bassLevels, mixDown } from "./beat-envelope";
 
@@ -84,9 +84,10 @@ async function decodeSong(project: Project): Promise<AudioBuffer | null> {
 /** Images still decoding resolve to null; the export waits for them so no frame misses a layer. */
 async function loadImages(project: Project, signal: AbortSignal): Promise<IllustrationImages> {
   const want = (["background", "character", "cover"] as const).filter((k) => project.images[k]);
+  const wantProps = project.props.filter((p) => p.onTimeline && p.clips.length > 0).length;
   for (let i = 0; i < 50; i++) {
     const images = resolveIllustrationImages(project.images);
-    if (want.every((k) => images[k])) return images;
+    if (want.every((k) => images[k]) && resolvePropLayers(project.props).length === wantProps) return images;
     if (signal.aborted) break;
     await new Promise((r) => setTimeout(r, 100));
   }
@@ -130,6 +131,7 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
 
   await document.fonts.ready;
   const images = await loadImages(project, o.signal);
+  const props = resolvePropLayers(project.props);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -197,6 +199,7 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         energy,
         animateParticles: true,
         images,
+        props,
       });
       for (let s = 0; s < extraSteps; s++)
         stepParticles(particles, project.fx.particleBeatDrift ? energy * 1.4 : 0);

@@ -20,6 +20,7 @@ import { formatLrcTime, MIN_LINE_DURATION } from "@/lib/lyrics/parse";
 import { CELLS, GRID } from "@/lib/render/looks/layout";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
+import { PROP_LANE_HEIGHT, PropLanes } from "./prop-lanes";
 
 type DragKind = "move" | "start" | "end";
 
@@ -212,6 +213,8 @@ export function Timeline() {
   const updateLine = useProjectStore((s) => s.updateLine);
   const removeLine = useProjectStore((s) => s.removeLine);
   const fontScale = useProjectStore((s) => s.style.fontScale);
+  const charCues = useProjectStore((s) => s.style.illustration.charCues);
+  const propLanes = useProjectStore((s) => s.props.filter((p) => p.onTimeline).length);
   const setStyle = useProjectStore((s) => s.setStyle);
   const isPlaying = usePlaybackStore((s) => s.isPlaying);
   const play = usePlaybackStore((s) => s.play);
@@ -276,7 +279,10 @@ export function Timeline() {
     resizeRef.current = null;
   };
   const sel = selected !== null && selected < lines.length ? selected : null;
-  const shownHeight = Math.min(maxHeight, height ?? (sel !== null ? DEFAULT_EDIT_HEIGHT : DEFAULT_HEIGHT));
+  const shownHeight = Math.min(
+    maxHeight,
+    height ?? (sel !== null ? DEFAULT_EDIT_HEIGHT : DEFAULT_HEIGHT) + propLanes * PROP_LANE_HEIGHT,
+  );
 
   const panelRef = useRef<HTMLDivElement>(null);
   const sizerRef = useRef<HTMLDivElement>(null);
@@ -530,112 +536,129 @@ export function Timeline() {
         {/* Track and editor split the height 3:7 while a line is selected */}
         <div
           ref={scrollRef}
-          className={`min-h-[96px] overflow-x-auto overflow-y-hidden px-4 pb-1 pt-1 ${sel !== null ? "flex-[3]" : "flex-1"} ${QUIET_SCROLLBAR}`}
+          className={`min-h-[96px] overflow-x-auto overflow-y-auto px-4 pb-1 pt-1 ${sel !== null ? "flex-[3]" : "flex-1"} ${QUIET_SCROLLBAR}`}
         >
-          <div
-            ref={trackRef}
-            onPointerDown={onTrackDown}
-            onPointerMove={onTrackMove}
-            onPointerUp={onTrackUp}
-            onPointerCancel={onTrackUp}
-            className={`relative h-full cursor-text select-none ${twoLanes ? "min-h-[150px]" : "min-h-[84px]"}`}
-            style={{ width }}
-          >
-            {/* Ruler */}
-            {ticks.map((t) => (
-              <div
-                key={t}
-                className="pointer-events-none absolute top-0 h-full border-l border-zinc-800/80"
-                style={{ left: t * pps }}
-              >
-                <span className="ml-1 font-mono text-[10px] text-zinc-500">
-                  {formatLrcTime(t).slice(0, 5)}
-                </span>
-              </div>
-            ))}
-
-            {twoLanes && (
-              <span className="pointer-events-none absolute bottom-1 left-1 top-[calc(50%+10px)] flex items-center text-[10px] font-semibold text-violet-300/60">
-                &
-              </span>
-            )}
-
-            {lines.length === 0 && (
-              <p className="pointer-events-none absolute left-2 top-8 text-xs text-zinc-500">
-                가사를 입력하면 여기에 자막 구간이 생깁니다.
-              </p>
-            )}
-
-            {/* Lyric blocks */}
-            {lines.map((line, i) => {
-              const start = draft?.index === i ? draft.start : line.startTime;
-              const end = draft?.index === i ? draft.end : line.endTime;
-              const isSel = sel === i;
-              return (
+          {/* Lyric track on top, then one illustration lane per prop, sharing the playhead */}
+          <div className="relative flex h-full flex-col" style={{ width }}>
+            <div
+              ref={trackRef}
+              onPointerDown={onTrackDown}
+              onPointerMove={onTrackMove}
+              onPointerUp={onTrackUp}
+              onPointerCancel={onTrackUp}
+              className={`relative flex-1 cursor-text select-none ${twoLanes ? "min-h-[150px]" : "min-h-[84px]"}`}
+            >
+              {/* Ruler */}
+              {ticks.map((t) => (
                 <div
-                  key={`${i}-${line.rawText}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${i + 1}번 ${line.overlap ? "겹치는 " : ""}자막 ${formatLrcTime(start)} ~ ${formatLrcTime(end)}: ${line.cleanText}`}
-                  aria-pressed={isSel}
-                  onPointerDown={(e) => onSegmentDown(e, i, "move")}
-                  onPointerMove={onSegmentMove}
-                  onPointerUp={onSegmentUp}
-                  onPointerCancel={onSegmentUp}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      setSelected(i);
-                      seek(line.startTime);
-                    }
-                  }}
-                  className={`absolute flex cursor-grab flex-col justify-center overflow-hidden rounded-md border px-2 text-left active:cursor-grabbing ${
-                    !twoLanes
-                      ? "bottom-1 top-5"
-                      : line.overlap
-                        ? "bottom-1 top-[calc(50%+10px)]"
-                        : "bottom-[calc(50%-6px)] top-5"
-                  } ${
-                    isSel
-                      ? line.overlap
-                        ? "border-violet-400 bg-violet-500/15"
-                        : "border-indigo-400 bg-indigo-500/15"
-                      : line.overlap
-                        ? "border-violet-800/80 bg-violet-950/30 hover:border-violet-400/70"
-                        : "border-zinc-700 bg-zinc-900/40 hover:border-indigo-400/70"
-                  }`}
-                  style={{ left: start * pps, width: Math.max(6, (end - start) * pps) }}
-                  title={`${formatLrcTime(start)} ~ ${formatLrcTime(end)}`}
+                  key={t}
+                  className="pointer-events-none absolute top-0 h-full border-l border-zinc-800/80"
+                  style={{ left: t * pps }}
                 >
-                  <span className="truncate text-xs font-semibold text-zinc-100">
-                    {(line.offsetX !== 0 || line.offsetY !== 0 || Object.keys(line.lineStyle).length > 0) && (
-                      <span title="따로 조정한 줄" className="mr-1 text-indigo-200">
-                        ⌖
-                      </span>
-                    )}
-                    {line.cleanText}
+                  <span className="ml-1 font-mono text-[10px] text-zinc-500">
+                    {formatLrcTime(t).slice(0, 5)}
                   </span>
-                  {line.pronText && (
-                    <span className="truncate text-[10px] text-amber-200/70">{line.pronText}</span>
-                  )}
-                  {line.transText && (
-                    <span className="truncate text-[10px] text-zinc-300">{line.transText}</span>
-                  )}
-                  <span
-                    aria-hidden
-                    onPointerDown={(e) => onSegmentDown(e, i, "start")}
-                    className="absolute inset-y-0 left-0 w-2 cursor-ew-resize hover:bg-indigo-300/50"
-                  />
-                  <span
-                    aria-hidden
-                    onPointerDown={(e) => onSegmentDown(e, i, "end")}
-                    className="absolute inset-y-0 right-0 w-2 cursor-ew-resize hover:bg-indigo-300/50"
-                  />
                 </div>
-              );
-            })}
+              ))}
 
+              {/* Stretches where the character is away (leaving through coming back), set in the illustration panel */}
+              {(charCues ?? []).map((c, i) => (
+                <div
+                  key={`cue-${i}`}
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-0 h-[3px] rounded-full bg-amber-400/70"
+                  style={{ left: c.hideAt * pps, width: Math.max(4, (c.showAt + c.fade - c.hideAt) * pps) }}
+                />
+              ))}
+
+              {twoLanes && (
+                <span className="pointer-events-none absolute bottom-1 left-1 top-[calc(50%+10px)] flex items-center text-[10px] font-semibold text-violet-300/60">
+                  &
+                </span>
+              )}
+
+              {lines.length === 0 && (
+                <p className="pointer-events-none absolute left-2 top-8 text-xs text-zinc-500">
+                  가사를 입력하면 여기에 자막 구간이 생깁니다.
+                </p>
+              )}
+
+              {/* Lyric blocks */}
+              {lines.map((line, i) => {
+                const start = draft?.index === i ? draft.start : line.startTime;
+                const end = draft?.index === i ? draft.end : line.endTime;
+                const isSel = sel === i;
+                return (
+                  <div
+                    key={`${i}-${line.rawText}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${i + 1}번 ${line.overlap ? "겹치는 " : ""}자막 ${formatLrcTime(start)} ~ ${formatLrcTime(end)}: ${line.cleanText}`}
+                    aria-pressed={isSel}
+                    onPointerDown={(e) => onSegmentDown(e, i, "move")}
+                    onPointerMove={onSegmentMove}
+                    onPointerUp={onSegmentUp}
+                    onPointerCancel={onSegmentUp}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setSelected(i);
+                        seek(line.startTime);
+                      }
+                    }}
+                    className={`absolute flex cursor-grab flex-col justify-center overflow-hidden rounded-md border px-2 text-left active:cursor-grabbing ${
+                      !twoLanes
+                        ? "bottom-1 top-5"
+                        : line.overlap
+                          ? "bottom-1 top-[calc(50%+10px)]"
+                          : "bottom-[calc(50%-6px)] top-5"
+                    } ${
+                      isSel
+                        ? line.overlap
+                          ? "border-violet-400 bg-violet-500/15"
+                          : "border-indigo-400 bg-indigo-500/15"
+                        : line.overlap
+                          ? "border-violet-800/80 bg-violet-950/30 hover:border-violet-400/70"
+                          : "border-zinc-700 bg-zinc-900/40 hover:border-indigo-400/70"
+                    }`}
+                    style={{ left: start * pps, width: Math.max(6, (end - start) * pps) }}
+                    title={`${formatLrcTime(start)} ~ ${formatLrcTime(end)}`}
+                  >
+                    <span className="truncate text-xs font-semibold text-zinc-100">
+                      {(line.offsetX !== 0 ||
+                        line.offsetY !== 0 ||
+                        Object.keys(line.lineStyle).length > 0) && (
+                        <span title="따로 조정한 줄" className="mr-1 text-indigo-200">
+                          ⌖
+                        </span>
+                      )}
+                      {line.cleanText}
+                    </span>
+                    {line.pronText && (
+                      <span className="truncate text-[10px] text-amber-200/70">{line.pronText}</span>
+                    )}
+                    {line.transText && (
+                      <span className="truncate text-[10px] text-zinc-300">{line.transText}</span>
+                    )}
+                    <span
+                      aria-hidden
+                      onPointerDown={(e) => onSegmentDown(e, i, "start")}
+                      className="absolute inset-y-0 left-0 w-2 cursor-ew-resize hover:bg-indigo-300/50"
+                    />
+                    <span
+                      aria-hidden
+                      onPointerDown={(e) => onSegmentDown(e, i, "end")}
+                      className="absolute inset-y-0 right-0 w-2 cursor-ew-resize hover:bg-indigo-300/50"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <PropLanes pps={pps} timeAt={timeAt} />
             {/* Playhead */}
-            <div ref={headRef} className="pointer-events-none absolute left-0 top-0 h-full w-px bg-rose-400">
+            <div
+              ref={headRef}
+              className="pointer-events-none absolute left-0 top-0 z-[2] h-full w-px bg-rose-400"
+            >
               <div className="-ml-1 h-2 w-2 rotate-45 bg-rose-400" />
             </div>
           </div>

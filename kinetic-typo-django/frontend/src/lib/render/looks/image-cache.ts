@@ -1,5 +1,6 @@
-import type { IllustrationAssets } from "@/types/project";
+import type { IllustrationAssets, PropAsset } from "@/types/project";
 import type { IllustrationImages, LoadedImage } from "./illustration";
+import type { PropLayer } from "./props";
 
 /**
  * Decoded <img> elements keyed by object URL. A URL starts loading on first
@@ -7,7 +8,7 @@ import type { IllustrationImages, LoadedImage } from "./illustration";
  */
 const cache = new Map<string, { img: HTMLImageElement; ready: boolean }>();
 
-function getImage(objectUrl: string): LoadedImage | null {
+export function getImage(objectUrl: string): LoadedImage | null {
   let entry = cache.get(objectUrl);
   if (!entry) {
     const img = new Image();
@@ -39,4 +40,15 @@ export function resolveIllustrationImages(assets: IllustrationAssets): Illustrat
     character: assets.character ? getImage(assets.character.objectUrl) : null,
     cover: assets.cover ? getImage(assets.cover.objectUrl) : null,
   };
+}
+
+/** Props on the timeline whose pictures are decoded, in list order (later ones on top). */
+export function resolvePropLayers(props: readonly PropAsset[]): PropLayer[] {
+  const out: PropLayer[] = [];
+  for (const p of props) {
+    if (!p.onTimeline || p.clips.length === 0) continue;
+    const img = getImage(p.objectUrl);
+    if (img) out.push({ img, clips: p.clips });
+  }
+  return out;
 }

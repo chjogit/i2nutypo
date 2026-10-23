@@ -9,6 +9,8 @@ import type {
   LookPresetId,
   LyricLine,
   Project,
+  PropAsset,
+  PropClip,
   StyleSettings,
   SubtitleSettings,
   SyncSettings,
@@ -39,7 +41,13 @@ import {
 } from "@/lib/render/looks/presets";
 import { DEFAULT_DETAIL, sanitizeDetail } from "@/lib/render/detail";
 import { findLyricFont } from "@/lib/fonts/catalog";
+import { sanitizeCues } from "@/lib/render/looks/cues";
+import { fitClip, freeAt, makeClip, MIN_CLIP, sortClips } from "@/lib/props/clips";
 import { sanitizeCells } from "@/lib/render/looks/layout";
+
+/** A saved 0..1 setting, or the fallback when missing or broken. */
+const sanitizeUnit = (v: unknown, fallback: number): number =>
+  typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
 
 export const DEFAULT_DURATION = 32;
 
@@ -124,6 +132,16 @@ interface ProjectActions {
   applyPalette: (id: LookPresetId) => void;
   setIllustration: (patch: Partial<StyleSettings["illustration"]>) => void;
   setImage: (slot: "background" | "character" | "cover", asset: ImageAsset | null) => void;
+  /** Adds an uploaded prop to the list and puts it on the timeline with one clip at `at`. */
+  addProp: (asset: Omit<PropAsset, "onTimeline" | "clips">, at: number) => void;
+  /** Takes a prop out of the project; the caller revokes its object URL. */
+  removeProp: (id: string) => void;
+  /** Shows or hides a prop's lane; it stays in the list either way. Coming back without clips adds one at `at`. */
+  setPropOnTimeline: (id: string, on: boolean, at: number) => void;
+  /** Adds a clip at `at` when that time is free in the prop's lane; returns its id. */
+  addPropClip: (id: string, at: number) => string | null;
+  updatePropClip: (id: string, clipId: string, patch: Partial<PropClip>) => void;
+  removePropClip: (id: string, clipId: string) => void;
   /** Switches one element on/off or changes its strength; the theme defaults to the background theme. */
   setLookElement: (id: string, patch: Partial<LookElementState>, preset?: LookPresetId) => void;
   setDetail: (patch: Partial<StyleSettings["detail"]>) => void;
@@ -167,6 +185,7 @@ export const useProjectStore = create<ProjectStore>()(
     (set) => ({
       audio: { kind: "none" },
       images: { background: null, character: null, cover: null },
+      props: [],
       duration: DEFAULT_DURATION,
       lyricsText: initialLyrics,
       lyricsCollapsed: false,
@@ -304,6 +323,55 @@ export const useProjectStore = create<ProjectStore>()(
 
       setImage: (slot, asset) => set((s) => ({ images: { ...s.images, [slot]: asset } })),
 
+      addProp: (asset, at) =>
+        set((s) => ({
+          props: [...s.props, { ...asset, onTimeline: true, clips: [makeClip(at, s.duration)] }],
+        })),
+
+      removeProp: (id) => set((s) => ({ props: s.props.filter((p) => p.id !== id) })),
+
+      setPropOnTimeline: (id, on, at) =>
+        set((s) => ({
+          props: s.props.map((p) =>
+            p.id !== id
+              ? p
+              : { ...p, onTimeline: on, clips: on && p.clips.length === 0 ? [makeClip(at, s.duration)] : p.clips },
+          ),
+        })),
+
+      addPropClip: (id, at) => {
+        let added: string | null = null;
+        set((s) => ({
+          props: s.props.map((p) => {
+            if (p.id !== id || !freeAt(p.clips, at)) return p;
+            const made = makeClip(at, s.duration);
+            const clip = fitClip(made, made, p.clips, s.duration);
+            if (clip.end - clip.start < MIN_CLIP - 1e-6) return p;
+            added = clip.id;
+            return { ...p, clips: sortClips([...p.clips, clip]) };
+          }),
+        }));
+        return added;
+      },
+
+      updatePropClip: (id, clipId, patch) =>
+        set((s) => ({
+          props: s.props.map((p) => {
+            if (p.id !== id) return p;
+            const cur = p.clips.find((c) => c.id === clipId);
+            if (!cur) return p;
+            const timed = patch.start !== undefined || patch.end !== undefined;
+            const next = { ...cur, ...patch };
+            const clip = timed ? fitClip(next, cur, p.clips, s.duration) : next;
+            return { ...p, clips: sortClips(p.clips.map((c) => (c.id === clipId ? clip : c))) };
+          }),
+        })),
+
+      removePropClip: (id, clipId) =>
+        set((s) => ({
+          props: s.props.map((p) => (p.id === id ? { ...p, clips: p.clips.filter((c) => c.id !== clipId) } : p)),
+        })),
+
       setDetail: (patch) => set((s) => ({ style: { ...s.style, detail: { ...s.style.detail, ...patch } } })),
 
       setLookElement: (id, patch, theme) =>
@@ -367,6 +435,8 @@ export const useProjectStore = create<ProjectStore>()(
               ...current.style.illustration,
               ...p.style?.illustration,
               noTextCells: sanitizeCells(p.style?.illustration?.noTextCells),
+              charCues: sanitizeCues(p.style?.illustration?.charCues),
+              charShake: sanitizeUnit(p.style?.illustration?.charShake, 0.5),
             },
             // Saves from the retired classic look move to the album jacket theme with their effects
             lookElements:

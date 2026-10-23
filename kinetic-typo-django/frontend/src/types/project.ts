@@ -1,3 +1,5 @@
+import type { FinishSettings } from "./finish";
+
 export type LanguageCode = "ko-KR" | "ja-JP" | "en-US";
 
 export type AspectRatio = "16:9" | "9:16" | "1:1";
@@ -148,6 +150,14 @@ export interface IllustrationSettings {
   charFlip: boolean;
   /** Character PNG bounces on the beat. */
   beatBounce: boolean;
+  /** How much the character sways, tilts and bounces, 0..1; 0.5 is each theme's own amount. */
+  charShake: number;
+  /**
+   * Times the character leaves and comes back, in time order. While it is gone
+   * the no-lyric cells are off; once it is back, the cells it covers at its new
+   * place are used instead of the user's cells.
+   */
+  charCues: CharacterCue[];
   showCharacter: boolean;
   /** Keep lyrics and subtitles out of the cells marked in noTextCells. */
   avoidCharacter: boolean;
@@ -155,10 +165,31 @@ export interface IllustrationSettings {
   noTextCells: boolean[];
 }
 
+/** How the character leaves and comes back. */
+export type CueEffect = "fade" | "wipeDown" | "wipeSide" | "iris";
+
+export interface CharacterCue {
+  /** Seconds on the song timeline when the character starts to leave. */
+  hideAt: number;
+  /** Seconds when it starts to come back; it stays at its new place after that. */
+  showAt: number;
+  effect: CueEffect;
+  /** Length of each transition in seconds. */
+  fade: number;
+  /** Where it comes back: center x and feet y as shares of the frame. */
+  x: number;
+  y: number;
+}
+
 export interface LookElementState {
   on: boolean;
   /** Strength 0..1 while on. */
   amount: number;
+  /** Move from the theme's own place, as shares of the frame width / height (movable elements only). */
+  x?: number;
+  y?: number;
+  /** Turn in degrees around the element's center (movable elements only). */
+  rot?: number;
 }
 
 /** A local image picked by the user; only an object URL is kept. */
@@ -172,6 +203,45 @@ export interface IllustrationAssets {
   character: ImageAsset | null;
   /** Album cover for the album jacket theme; the background stands in when missing. */
   cover: ImageAsset | null;
+}
+
+/** One stretch of time a prop is on screen, with its own placement. */
+export interface PropClip {
+  id: string;
+  /** Seconds on the song timeline. */
+  start: number;
+  end: number;
+  /** Center as shares of the frame width / height. */
+  x: number;
+  y: number;
+  /** Height as a share of the frame height. */
+  scale: number;
+  /** Turn in degrees. */
+  rot: number;
+  /** 0..1. */
+  opacity: number;
+  /** Fade in / out at the clip ends, in seconds. */
+  fade: number;
+  /** Drawn over the lyrics instead of behind them. */
+  front: boolean;
+  flip: boolean;
+}
+
+/**
+ * An extra picture the user added (a prop, a sticker, an object). It keeps
+ * its place in the project's list while off the timeline; on the timeline
+ * it gets a lane of its own.
+ */
+export interface PropAsset {
+  id: string;
+  fileName: string;
+  /** Object URL; only valid for the current page session. */
+  objectUrl: string;
+  /** Natural size, for the aspect ratio. */
+  width: number;
+  height: number;
+  onTimeline: boolean;
+  clips: PropClip[];
 }
 
 /** Fine controls that apply to every look (the "상세" tab). */
@@ -211,6 +281,8 @@ export interface StyleSettings {
   coverTitle: string;
   coverCredit: string;
   detail: DetailSettings;
+  /** Final color grade and filters over the whole frame; missing means none. */
+  finish?: FinishSettings;
   activePresetId: string;
   collabRelay: boolean;
   fixedMotif: MotifId;
@@ -290,6 +362,8 @@ export type SubtitleDisplay = "bottomOnly" | "kinetic";
 export interface Project {
   audio: AudioSource;
   images: IllustrationAssets;
+  /** Extra pictures (props); like the images they last for the page session only. */
+  props: PropAsset[];
   /** Song length in seconds; falls back to a default until audio is loaded. */
   duration: number;
   lyricsText: string;

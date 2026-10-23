@@ -1,4 +1,12 @@
-import { amt, drawCharacterLayer, drawGrain, minSide, type LookFrame, type LookRenderer } from "./frame";
+import {
+  amt,
+  drawCharacterLayer,
+  drawGrain,
+  minSide,
+  withMoved,
+  type LookFrame,
+  type LookRenderer,
+} from "./frame";
 import { drawBackdrop, drawWordLyrics, gradientFallback } from "./kit";
 import { withAlpha } from "./noise";
 
@@ -9,27 +17,29 @@ function decor(f: LookFrame): void {
   const { ctx, W, H, style } = f;
   const s = minSide(f);
   const band = amt(f, "band");
-  if (band > 0) {
-    // A slanted color band that slides in a little on each line
-    const slide = f.line ? Math.min(1, Math.max(0, f.lineElapsed) / 0.4) : 1;
-    ctx.save();
-    ctx.globalAlpha = 0.85 * band;
-    ctx.fillStyle = style.accentColor;
-    ctx.translate(W * (0.5 - 0.6 * (1 - slide)), H * 0.62);
-    ctx.rotate(-0.12);
-    ctx.fillRect(-W, -s * 0.05, W * 2, s * 0.1);
-    ctx.restore();
-  }
+  if (band > 0)
+    withMoved(f, "band", { x: W / 2, y: H * 0.62 }, () => {
+      // A slanted color band that slides in a little on each line
+      const slide = f.line ? Math.min(1, Math.max(0, f.lineElapsed) / 0.4) : 1;
+      ctx.save();
+      ctx.globalAlpha = 0.85 * band;
+      ctx.fillStyle = style.accentColor;
+      ctx.translate(W * (0.5 - 0.6 * (1 - slide)), H * 0.62);
+      ctx.rotate(-0.12);
+      ctx.fillRect(-W, -s * 0.05, W * 2, s * 0.1);
+      ctx.restore();
+    });
   const ring = amt(f, "ring");
-  if (ring > 0) {
-    ctx.save();
-    ctx.strokeStyle = withAlpha(style.accentColor, 0.9 * ring);
-    ctx.lineWidth = s * 0.02;
-    ctx.beginPath();
-    ctx.arc(W * 0.78, H * 0.3, s * (0.16 + f.energy * 0.02), 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
+  if (ring > 0)
+    withMoved(f, "ring", { x: W * 0.78, y: H * 0.3 }, () => {
+      ctx.save();
+      ctx.strokeStyle = withAlpha(style.accentColor, 0.9 * ring);
+      ctx.lineWidth = s * 0.02;
+      ctx.beginPath();
+      ctx.arc(W * 0.78, H * 0.3, s * (0.16 + f.energy * 0.02), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    });
 }
 
 function scene(f: LookFrame): void {

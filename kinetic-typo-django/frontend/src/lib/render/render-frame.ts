@@ -18,8 +18,12 @@ import { manualRows, MIN_FIT_SCALE, widthAround, wrapText } from "./wrap";
 import { DEFAULT_DETAIL, frameShake, glitchGain, lyricOffset, shakeGain } from "./detail";
 import { effectiveFx, effectiveStyle, lineForOffsets } from "./style-mode";
 import type { IllustrationImages } from "./looks/illustration";
-import { CELLS, characterRect, GRID, sanitizeCells } from "./looks/layout";
+import { characterAt } from "./looks/cues";
+import { blockedCells, CELLS, characterRect, GRID, sanitizeCells } from "./looks/layout";
+import type { PropLayer } from "./looks/props";
 import { renderLookFrame } from "./looks/render-look";
+import { applyFinish } from "./finish/gl-finish";
+import { sanitizeFinish } from "./finish/settings";
 
 export interface FrameInput {
   ctx: Ctx2D;
@@ -40,6 +44,8 @@ export interface FrameInput {
   transparentBg?: boolean;
   /** Decoded illustration layers for the look presets; missing means none loaded. */
   images?: IllustrationImages;
+  /** Props on the timeline with decoded pictures. */
+  props?: readonly PropLayer[];
   /** Filled with where this frame drew its lyrics (the preview's text box handles). */
   bounds?: TextBounds;
 }
@@ -106,8 +112,15 @@ export function findOnScreenLines(
   return { line: overlaps[0], next: null, overlaps: overlaps.slice(1) };
 }
 
-/** Draws one frame of the kinetic typography video. Ported from renderFrame in the original studio. */
+/** Draws one frame, then the final color grade and filters over it (not on the text-only layer). */
 export function renderFrame(input: FrameInput): void {
+  drawFrame(input);
+  if (!input.transparentBg && input.style.finish)
+    applyFinish(input.ctx, sanitizeFinish(input.style.finish), input.timeSec);
+}
+
+/** Draws one frame of the kinetic typography video. Ported from renderFrame in the original studio. */
+function drawFrame(input: FrameInput): void {
   const { ctx, W, H, timeSec, lines, subtitles, introGateSec, particles, energy } = input;
   if (input.bounds) input.bounds.lyrics = null;
   const fx = effectiveFx(input.style, input.fx);
@@ -124,14 +137,23 @@ export function renderFrame(input: FrameInput): void {
 
   if (style.lookPreset !== "classic") {
     const images = input.images ?? NO_IMAGES;
-    const charRect = characterRect(style.illustration, images.character, W, H);
+    // Cues move the character and hide it for a while; the rest of the frame sees it where it is now
+    const cue = characterAt(style.illustration, timeSec);
+    const ill =
+      cue.cells === "user" ? style.illustration : { ...style.illustration, charX: cue.x, charY: cue.y };
+    const charRect = characterRect(ill, images.character, W, H);
     const lineElapsed = activeLine ? timeSec - activeLine.startTime : 0;
     const lineDur = activeLine ? Math.max(0.01, activeLine.endTime - activeLine.startTime) : 1;
     const hasSubtitle =
       activeLine !== null && [activeLine, ...overlaps].some((l) => hasSubtitleText(subtitles, l));
-    let blocked = style.illustration.avoidCharacter
-      ? sanitizeCells(style.illustration.noTextCells)
-      : NO_BLOCKS;
+    // Gone: no cells. Back somewhere new: the cells it covers there win over the user's
+    let blocked: readonly boolean[] = !ill.avoidCharacter
+      ? NO_BLOCKS
+      : cue.cells === "off"
+        ? NO_BLOCKS
+        : cue.cells === "moved"
+          ? blockedCells(charRect, W, H)
+          : sanitizeCells(ill.noTextCells);
     // Subtitles sit at the bottom unless moved to the top, which keeps the lyrics out of the top row
     const subtitleTop = hasSubtitle && subtitles.position === "top";
     if (subtitleTop) blocked = blocked.map((b, c) => b || c < GRID);
@@ -149,11 +171,13 @@ export function renderFrame(input: FrameInput): void {
         lineElapsed,
         lineProgress: Math.min(1, Math.max(0, lineElapsed / lineDur)),
         songEnd: lines.reduce((end, l) => Math.max(end, l.endTime), 0),
-        style,
+        style: ill === style.illustration ? style : { ...style, illustration: ill },
         subtitles,
         energy,
         images,
         charRect,
+        charReveal: { reveal: cue.reveal, effect: cue.effect },
+        props: input.props,
         blocked,
         subtitleVisible: hasSubtitle && !subtitleTop,
         subtitleTop,

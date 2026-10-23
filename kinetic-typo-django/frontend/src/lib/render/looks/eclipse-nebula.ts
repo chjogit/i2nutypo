@@ -14,6 +14,7 @@ import {
   lyricRegion,
   minSide,
   rowLimit,
+  withMoved,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -78,8 +79,9 @@ function drawRing(f: LookFrame): void {
   const pulse = 1 + f.energy * 0.08;
   ctx.save();
   // Only outside the disk: a gradient fills its inside with the first stop's color
+  // Oversized so the glow still fills the frame when the ring is moved or turned
   ctx.beginPath();
-  ctx.rect(0, 0, W, H);
+  ctx.rect(-W, -H, W * 3, H * 3);
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.clip("evenodd");
   ctx.globalCompositeOperation = "lighter";
@@ -88,7 +90,7 @@ function drawRing(f: LookFrame): void {
   corona.addColorStop(0.2, withAlpha(style.accentColor, 0.45 * ring));
   corona.addColorStop(1, withAlpha(style.accentColor, 0));
   ctx.fillStyle = corona;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(-W, -H, W * 3, H * 3);
   ctx.restore();
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
@@ -111,7 +113,8 @@ function drawRing(f: LookFrame): void {
 function decor(f: LookFrame): void {
   drawNebula(f);
   drawStars(f);
-  drawRing(f);
+  const { x, y } = eclipse(f);
+  withMoved(f, "ring", { x, y }, () => drawRing(f));
 }
 
 function scene(f: LookFrame): void {

@@ -328,6 +328,8 @@ export const DEFAULT_ILLUSTRATION: IllustrationSettings = {
   characterScale: 0.8,
   charFlip: false,
   beatBounce: true,
+  charShake: 0.5,
+  charCues: [],
   showCharacter: true,
   avoidCharacter: true,
   noTextCells: Array<boolean>(16).fill(false),
@@ -347,6 +349,8 @@ export interface LookElementDef {
   on: boolean;
   amount: number;
   role: ElementRole;
+  /** A shape with a place of its own (a record, a ring, a seal): the user can move and turn it. */
+  move?: boolean;
 }
 
 export type ThemedPresetId = Exclude<LookPresetId, "classic">;
@@ -364,18 +368,20 @@ const sc = role("scene");
 const dc = role("decor");
 const ly = role("lyrics");
 const ov = role("overlay");
+/** Marks an element as movable. */
+const mv = (d: LookElementDef): LookElementDef => ({ ...d, move: true });
 
 /** What each theme draws, as switches with a strength the user can tune. */
 export const LOOK_ELEMENTS: Record<ThemedPresetId, readonly LookElementDef[]> = {
   album_jacket: [
     sc("blurbg", "흐린 커버 배경", 0.7),
-    sc("vinyl", "도는 레코드", 0.4),
-    sc("jacket", "정사각 커버", 0.8, false),
+    mv(sc("vinyl", "도는 레코드", 0.4)),
+    mv(sc("jacket", "정사각 커버", 0.8, false)),
     sc("pulse", "박자에 맞춰 숨쉬기", 0.6),
     dc("bands", "사선 그림자 띠", 0.6),
     dc("bokeh", "시작 전 빛망울", 0.8),
     dc("particles", "눈송이와 별", 0.6, false),
-    ov("title", "곡 제목과 크레딧", 1),
+    mv(ov("title", "곡 제목과 크레딧", 1)),
     ov("wave", "소리 선", 0.8),
     ov("progress", "재생 바", 0.8, false),
     ov("intro", "시작 전 카운트", 0.8),
@@ -413,7 +419,7 @@ export const LOOK_ELEMENTS: Record<ThemedPresetId, readonly LookElementDef[]> = 
   cinematic_fantasy: [
     ov("letterbox", "레터박스", 1),
     dc("grade", "금빛 색보정", 0.55),
-    dc("halo", "광채 · 링", 0.6),
+    mv(dc("halo", "광채 · 링", 0.6)),
     ov("lanterns", "등불", 0.6),
     ly("glow", "글자 빛", 0.6),
     ov("vignette", "비네팅 · 그레인", 0.6),
@@ -434,11 +440,11 @@ export const LOOK_ELEMENTS: Record<ThemedPresetId, readonly LookElementDef[]> = 
     ly("rgb", "RGB 분리", 0.6),
     ov("prism", "프리즘 빛", 0.6),
     ov("bubbles", "물방울", 0.5),
-    ov("sidebar", "측면 캡션", 0.7),
+    mv(ov("sidebar", "측면 캡션", 0.7)),
     ov("grain", "비네팅 · 그레인", 0.6),
   ],
   summer_film: [
-    sc("polaroid", "폴라로이드 액자", 0.7),
+    mv(sc("polaroid", "폴라로이드 액자", 0.7)),
     dc("clouds", "흘러가는 구름", 0.6),
     dc("flare", "햇살 플레어", 0.6),
     ov("film", "필름 띠", 0.8),
@@ -447,7 +453,7 @@ export const LOOK_ELEMENTS: Record<ThemedPresetId, readonly LookElementDef[]> = 
   ],
   flat_type: [
     sc("flip", "줄마다 색 뒤집기", 1),
-    sc("stamp", "대형 단어 배경", 0.7),
+    mv(sc("stamp", "대형 단어 배경", 0.7)),
     dc("stripes", "사선 스트라이프", 0.6),
     dc("dots", "동그라미 스티커", 0.6),
     sc("outline", "캐릭터 흰 테두리", 0.6),
@@ -456,15 +462,15 @@ export const LOOK_ELEMENTS: Record<ThemedPresetId, readonly LookElementDef[]> = 
   eclipse_nebula: [
     dc("nebula", "성운 안개", 0.6),
     dc("stars", "별빛", 0.6),
-    dc("ring", "이클립스 링", 0.7),
+    mv(dc("ring", "이클립스 링", 0.7)),
     ov("flare", "보라 · 금빛 플레어", 0.6),
     ly("glow", "글자 빛", 0.6),
     ov("vignette", "비네팅 · 그레인", 0.5),
   ],
   mono_accent: [
     sc("mono", "흑백 처리", 1),
-    dc("band", "포인트 색 띠", 0.7),
-    dc("ring", "포인트 원", 0.6),
+    mv(dc("band", "포인트 색 띠", 0.7)),
+    mv(dc("ring", "포인트 원", 0.6)),
     ly("label", "라벨 상자", 0.8),
     ly("slide", "옆에서 밀려오기", 0.6),
     ov("grain", "그레인", 0.5),
@@ -486,8 +492,8 @@ export const LOOK_ELEMENTS: Record<ThemedPresetId, readonly LookElementDef[]> = 
   ],
   crimson_ink: [
     sc("crimson", "붉은 색보정", 0.6),
-    dc("brush", "먹 붓질", 0.7),
-    dc("seal", "낙관", 0.8),
+    mv(dc("brush", "먹 붓질", 0.7)),
+    mv(dc("seal", "낙관", 0.8)),
     ov("embers", "불티", 0.6),
     ov("vignette", "비네팅", 0.6),
     ly("glow", "글자 빛", 0.6),
@@ -502,7 +508,7 @@ export const LOOK_ELEMENTS: Record<ThemedPresetId, readonly LookElementDef[]> = 
   snow_night: [
     sc("cold", "차가운 색보정", 0.6),
     dc("snow", "눈", 0.7),
-    dc("moon", "달빛", 0.6),
+    mv(dc("moon", "달빛", 0.6)),
     ov("front", "앞쪽 눈", 0.6),
     ov("frost", "서리 가장자리", 0.5),
     ly("glow", "글자 빛", 0.5),
@@ -607,9 +613,14 @@ export function sanitizeLookElements(saved: unknown): Record<string, LookElement
   if (!saved || typeof saved !== "object") return out;
   for (const [k, v] of Object.entries(saved as Record<string, unknown>)) {
     if (!v || typeof v !== "object") continue;
-    const { on, amount } = v as Record<string, unknown>;
+    const { on, amount, x, y, rot } = v as Record<string, unknown>;
     if (typeof on === "boolean" && typeof amount === "number" && Number.isFinite(amount)) {
-      out[k] = { on, amount: Math.min(1, Math.max(0, amount)) };
+      const st: LookElementState = { on, amount: Math.min(1, Math.max(0, amount)) };
+      const fin = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
+      if (fin(x)) st.x = Math.min(0.6, Math.max(-0.6, x));
+      if (fin(y)) st.y = Math.min(0.6, Math.max(-0.6, y));
+      if (fin(rot)) st.rot = Math.min(180, Math.max(-180, rot));
+      out[k] = st;
     }
   }
   return out;

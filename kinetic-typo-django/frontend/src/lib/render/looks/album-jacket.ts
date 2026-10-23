@@ -12,6 +12,7 @@ import {
   lineExit,
   minSide,
   rowLimit,
+  withMoved,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -235,8 +236,9 @@ function scene(f: LookFrame): void {
   const { disc, sleeve } = layout(f);
   const vinyl = amt(f, "vinyl");
   const jacket = amt(f, "jacket");
-  if (vinyl > 0) drawVinyl(f, disc, vinyl);
-  if (jacket > 0) drawSleeve(f, sleeve, jacket);
+  if (vinyl > 0) withMoved(f, "vinyl", disc, () => drawVinyl(f, disc, vinyl));
+  const sleeveMid = { x: sleeve.x + sleeve.w / 2, y: sleeve.y + sleeve.h / 2 };
+  if (jacket > 0) withMoved(f, "jacket", sleeveMid, () => drawSleeve(f, sleeve, jacket));
 
   drawCharacterLayer(f, { bounce: f.energy * 0.4, tilt: 0 });
 }
@@ -435,7 +437,11 @@ function overlay(f: LookFrame): void {
   // Title, sound line and play bar belong to this theme's own layout, so they stay off when mixed in
   if (!f.mixed) {
     const title = amt(f, "title");
-    if (title > 0) drawTitle(f, title);
+    if (title > 0) {
+      const col = layout(f).column;
+      const mid = { x: col.x + col.w / 2, y: col.y + minSide(f) * 0.07 };
+      withMoved(f, "title", mid, () => drawTitle(f, title));
+    }
     const wave = amt(f, "wave");
     if (wave > 0) drawWave(f, wave);
     const progress = amt(f, "progress");

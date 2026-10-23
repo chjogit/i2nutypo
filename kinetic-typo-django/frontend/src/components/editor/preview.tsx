@@ -5,7 +5,7 @@ import { readBassEnergy } from "@/lib/audio/audio-graph";
 import { createParticles } from "@/lib/render/particles";
 import { CANVAS_SIZE } from "@/lib/render/canvas-size";
 import { bpmPulseEnergy, renderFrame } from "@/lib/render/render-frame";
-import { resolveIllustrationImages } from "@/lib/render/looks/image-cache";
+import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks/image-cache";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { MiniPreview, useMiniPreviewEnabled } from "./mini-preview";
@@ -73,6 +73,7 @@ export function Preview() {
           bpmPulseEnergy(t, project.style.bpm, project.style.beatReact, playback.isPlaying),
         animateParticles: true,
         images: resolveIllustrationImages(project.images),
+        props: resolvePropLayers(project.props),
         bounds: boundsRef.current,
       });
       raf = requestAnimationFrame(tick);

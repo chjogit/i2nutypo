@@ -12,6 +12,7 @@ import { ExportPanel } from "./export-panel";
 import { IllustrationPanel } from "./illustration-panel";
 import { LyricsEditor } from "./lyrics-editor";
 import { Preview } from "./preview";
+import { PropsPanel } from "./props-panel";
 import { StyleSidebar } from "./style-sidebar";
 import { SubtitlePanel } from "./subtitle-panel";
 import { Timeline } from "./timeline";
@@ -119,6 +120,7 @@ export function StudioShell() {
           className="divide-y divide-zinc-800 lg:order-3 lg:border-l lg:border-zinc-800"
         >
           <IllustrationPanel />
+          <PropsPanel />
         </aside>
       </div>
       <Timeline />

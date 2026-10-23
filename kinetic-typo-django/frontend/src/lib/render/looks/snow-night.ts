@@ -1,4 +1,12 @@
-import { amt, drawCharacterLayer, drawVignette, minSide, type LookFrame, type LookRenderer } from "./frame";
+import {
+  amt,
+  drawCharacterLayer,
+  drawVignette,
+  minSide,
+  withMoved,
+  type LookFrame,
+  type LookRenderer,
+} from "./frame";
 import { drawBackdrop, drawParticles, drawWordLyrics, gradientFallback, washFrame } from "./kit";
 import { withAlpha } from "./noise";
 
@@ -8,18 +16,20 @@ import { withAlpha } from "./noise";
 function decor(f: LookFrame): void {
   drawParticles(f, "snow", amt(f, "snow"), "#ffffff");
   const moon = amt(f, "moon");
-  if (moon > 0) {
-    const { ctx, W, H } = f;
-    const r = minSide(f) * 0.5;
-    const g = ctx.createRadialGradient(W * 0.2, H * 0.15, 0, W * 0.2, H * 0.15, r);
-    g.addColorStop(0, `rgba(230,240,255,${0.5 * moon})`);
-    g.addColorStop(1, "rgba(230,240,255,0)");
-    ctx.save();
-    ctx.globalCompositeOperation = "screen";
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-    ctx.restore();
-  }
+  if (moon > 0)
+    withMoved(f, "moon", { x: f.W * 0.2, y: f.H * 0.15 }, () => {
+      const { ctx, W, H } = f;
+      const r = minSide(f) * 0.5;
+      const g = ctx.createRadialGradient(W * 0.2, H * 0.15, 0, W * 0.2, H * 0.15, r);
+      g.addColorStop(0, `rgba(230,240,255,${0.5 * moon})`);
+      g.addColorStop(1, "rgba(230,240,255,0)");
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.fillStyle = g;
+      // Oversized so a moved moon's glow is never cut at the old frame edge
+      ctx.fillRect(-W, -H, W * 3, H * 3);
+      ctx.restore();
+    });
 }
 
 function scene(f: LookFrame): void {
