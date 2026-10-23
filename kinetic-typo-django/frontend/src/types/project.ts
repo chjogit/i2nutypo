@@ -77,6 +77,12 @@ export interface LyricLine {
   offsetY: number;
   /** This line's own style settings; a missing key follows the whole video's setting. */
   lineStyle: LineStyle;
+  /**
+   * Written with a leading "&": sung over the line before it (chorus, duet).
+   * Drawn next to the active line instead of replacing it, and left out of the
+   * automatic sync, which moves it along with that line.
+   */
+  overlap: boolean;
   firstWord: string;
   tokens: string[];
   words: LyricWord[];

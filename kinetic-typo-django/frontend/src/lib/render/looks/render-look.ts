@@ -22,6 +22,7 @@ import { rainWindow } from "./rain-window";
 import { mangaPanel } from "./manga-panel";
 import { deepSea } from "./deep-sea";
 import { neonSign } from "./neon-sign";
+import { drawOverlapLines } from "./overlap-layer";
 import { albumJacket } from "./album-jacket";
 
 const RENDERERS: Record<Exclude<LookPresetId, "classic">, LookRenderer> = {
@@ -96,6 +97,7 @@ export function renderLookFrame(
       ctx,
       line: f.line,
       lineElapsed: f.lineElapsed,
+      overlaps: f.overlaps,
       W: f.W,
       H: f.H,
       settings: f.subtitles,
@@ -113,12 +115,15 @@ export function renderLookFrame(
   ctx.restore();
 }
 
-/** Lyrics moved by the global and per-line position. */
+/** Lyrics moved by the global and per-line position, then any overlapping lines beside them. */
 function drawLyrics(r: LookRenderer, f: LookFrame): void {
+  const hasOverlaps = (f.overlaps?.length ?? 0) > 0;
   f.ctx.save();
   f.ctx.translate(f.lyricShift.x, f.lyricShift.y);
   // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
-  if (f.textBounds) f.textBounds.lyrics = recordTextBounds(f.ctx, () => r.lyrics(f));
-  else r.lyrics(f);
+  const box = f.textBounds || hasOverlaps ? recordTextBounds(f.ctx, () => r.lyrics(f)) : null;
+  if (!f.textBounds && !hasOverlaps) r.lyrics(f);
+  if (f.textBounds) f.textBounds.lyrics = box;
   f.ctx.restore();
+  if (hasOverlaps) drawOverlapLines(r, f, box);
 }

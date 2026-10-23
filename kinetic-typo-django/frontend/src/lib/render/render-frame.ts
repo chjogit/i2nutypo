@@ -77,16 +77,33 @@ const EFFECT_FX_KEY: Record<Exclude<WordEffect, "normal">, FxToggleKey> = {
   impact: "fxImpact",
 };
 
+const isOn = (l: LyricLine, t: number) => t >= l.startTime && t < l.endTime;
+
+/** The ordinary line on screen at timeSec and the ordinary line after it. */
 export function findActiveLine(
   lines: readonly LyricLine[],
   timeSec: number,
 ): { line: LyricLine; next: LyricLine | null } | null {
   for (let i = 0; i < lines.length; i++) {
-    if (timeSec >= lines[i].startTime && timeSec < lines[i].endTime) {
-      return { line: lines[i], next: lines[i + 1] ?? null };
-    }
+    if (lines[i].overlap || !isOn(lines[i], timeSec)) continue;
+    return { line: lines[i], next: lines.slice(i + 1).find((l) => !l.overlap) ?? null };
   }
   return null;
+}
+
+/**
+ * Lines on screen at timeSec: the main one and the overlapping ("&") ones sung
+ * over it. An overlapping line that outlasts its main line takes its place.
+ */
+export function findOnScreenLines(
+  lines: readonly LyricLine[],
+  timeSec: number,
+): { line: LyricLine; next: LyricLine | null; overlaps: LyricLine[] } | null {
+  const active = findActiveLine(lines, timeSec);
+  const overlaps = lines.filter((l) => l.overlap && isOn(l, timeSec));
+  if (active) return { ...active, overlaps };
+  if (overlaps.length === 0) return null;
+  return { line: overlaps[0], next: null, overlaps: overlaps.slice(1) };
 }
 
 /** Draws one frame of the kinetic typography video. Ported from renderFrame in the original studio. */
@@ -96,8 +113,9 @@ export function renderFrame(input: FrameInput): void {
   const fx = effectiveFx(input.style, input.fx);
   const transparentBg = input.transparentBg ?? false;
   const isInIntroGate = timeSec < introGateSec;
-  const active = isInIntroGate ? null : findActiveLine(lines, timeSec);
+  const active = isInIntroGate ? null : findOnScreenLines(lines, timeSec);
   const activeLine = active?.line ?? null;
+  const overlaps = active?.overlaps ?? [];
   const style = effectiveStyle(input.style, activeLine);
   const detail = style.detail ?? DEFAULT_DETAIL;
   const shake = transparentBg ? { x: 0, y: 0 } : frameShake(detail, energy, timeSec, W, H);
@@ -109,7 +127,8 @@ export function renderFrame(input: FrameInput): void {
     const charRect = characterRect(style.illustration, images.character, W, H);
     const lineElapsed = activeLine ? timeSec - activeLine.startTime : 0;
     const lineDur = activeLine ? Math.max(0.01, activeLine.endTime - activeLine.startTime) : 1;
-    const hasSubtitle = activeLine !== null && hasSubtitleText(subtitles, activeLine);
+    const hasSubtitle =
+      activeLine !== null && [activeLine, ...overlaps].some((l) => hasSubtitleText(subtitles, l));
     let blocked = style.illustration.avoidCharacter
       ? sanitizeCells(style.illustration.noTextCells)
       : NO_BLOCKS;
@@ -126,9 +145,10 @@ export function renderFrame(input: FrameInput): void {
         timeSec,
         line: activeLine,
         nextLine: active?.next ?? null,
+        overlaps,
         lineElapsed,
         lineProgress: Math.min(1, Math.max(0, lineElapsed / lineDur)),
-        songEnd: lines.length ? lines[lines.length - 1].endTime : 0,
+        songEnd: lines.reduce((end, l) => Math.max(end, l.endTime), 0),
         style,
         subtitles,
         energy,

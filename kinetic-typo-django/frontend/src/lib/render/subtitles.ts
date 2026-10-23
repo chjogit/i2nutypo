@@ -4,13 +4,19 @@ import { recordTextBounds, type TextBounds } from "./text-bounds";
 import { widthAround, wrapText } from "./wrap";
 
 const SUBTITLE_FADE_IN_SEC = 0.18;
+/** Between the main line's text and an overlapping line's in the same row. */
+const OVERLAP_SEPARATOR = " / ";
 /** Subtitle sizes are given at this canvas height and scaled from it. */
 const REFERENCE_HEIGHT = 720;
 
+type SubtitleLine = Pick<LyricLine, "cleanText" | "pronText" | "transText">;
+
 export interface BottomSubtitleContext {
   ctx: Ctx2D;
-  line: Pick<LyricLine, "cleanText" | "pronText" | "transText">;
+  line: SubtitleLine;
   lineElapsed: number;
+  /** Overlapping ("&") lines on screen with `line`; their text joins each row after a "/". */
+  overlaps?: readonly SubtitleLine[];
   W: number;
   H: number;
   settings: SubtitleSettings;
@@ -44,6 +50,7 @@ export function hasSubtitleText(
 /**
  * Fixed bottom subtitles: pronunciation on the first row, meaning on the
  * second, with the lyric line itself on top in the bottom-only display.
+ * Overlapping lines join the same rows: "pronunciation / its pronunciation".
  * Drawn in screen space, outside the kinetic camera transform.
  */
 export function drawBottomSubtitles(c: BottomSubtitleContext): void {
@@ -58,6 +65,7 @@ function drawSubtitleBox({
   ctx,
   line,
   lineElapsed,
+  overlaps = [],
   W,
   H,
   settings,
@@ -68,10 +76,18 @@ function drawSubtitleBox({
   shiftX = 0,
   mainFont,
 }: BottomSubtitleContext): void {
-  const hasMain = settings.display === "bottomOnly" && line.cleanText.length > 0;
-  const hasPron = line.pronText.length > 0;
-  const hasTrans = line.transText.length > 0;
-  if (!hasSubtitleText(settings, line)) return;
+  const all = [line, ...overlaps];
+  const joined = (key: keyof SubtitleLine) =>
+    all
+      .map((l) => l[key])
+      .filter(Boolean)
+      .join(OVERLAP_SEPARATOR);
+  const shown: SubtitleLine = {
+    cleanText: joined("cleanText"),
+    pronText: joined("pronText"),
+    transText: joined("transText"),
+  };
+  if (!hasSubtitleText(settings, shown)) return;
 
   const scale = H / REFERENCE_HEIGHT;
   const pronPx = Math.max(12, Math.round(settings.pronFontSize * scale));
@@ -98,9 +114,10 @@ function drawSubtitleBox({
     return { rows, width: Math.max(0, ...rows.map((r) => ctx.measureText(r).width)) };
   };
   const none = { rows: [] as string[], width: 0 };
-  const main = hasMain ? wrapRow(line.cleanText, mainFontSpec) : none;
-  const pron = hasPron ? wrapRow(line.pronText, pronFont) : none;
-  const trans = hasTrans ? wrapRow(line.transText, transFont) : none;
+  const main =
+    settings.display === "bottomOnly" && shown.cleanText ? wrapRow(shown.cleanText, mainFontSpec) : none;
+  const pron = shown.pronText ? wrapRow(shown.pronText, pronFont) : none;
+  const trans = shown.transText ? wrapRow(shown.transText, transFont) : none;
   const rowCount = main.rows.length + pron.rows.length + trans.rows.length;
 
   const contentH =

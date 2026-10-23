@@ -72,7 +72,9 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function activeIndex(lines: readonly LyricLine[], t: number, introGateSec: number): number {
   if (t < introGateSec) return -1;
-  return lines.findIndex((l) => t >= l.startTime && t < l.endTime);
+  // The box follows the main line; overlapping ("&") lines are placed beside it
+  const main = lines.findIndex((l) => !l.overlap && t >= l.startTime && t < l.endTime);
+  return main >= 0 ? main : lines.findIndex((l) => t >= l.startTime && t < l.endTime);
 }
 
 /** Corner for text size, side bars for wrap width, top and bottom bars for row spacing. */

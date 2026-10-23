@@ -21,6 +21,8 @@ export interface LookFrame {
   timeSec: number;
   line: LyricLine | null;
   nextLine: LyricLine | null;
+  /** Overlapping ("&") lines sung over `line` this frame, drawn smaller beside it. */
+  overlaps?: readonly LyricLine[];
   lineElapsed: number;
   /** 0..1 through the active line. */
   lineProgress: number;

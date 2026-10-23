@@ -1,9 +1,8 @@
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatLrcTime } from "@/lib/lyrics/parse";
 import { detectLyricsLanguage } from "@/lib/lyrics/tokenize";
 import { cleanTranscript } from "@/lib/sync/clean-transcript";
-import { alignLinesToTranscript, resolveLineTimes, type TranscriptChunk } from "@/lib/sync/align";
+import { syncLineTimes, type TranscriptChunk } from "@/lib/sync/align";
 import {
   decodeForWhisper,
   transcribeInWorker,
@@ -155,9 +154,7 @@ export function SyncPanel() {
   const done = phase.kind === "done" ? phase : null;
   const result = useMemo(() => {
     if (!done) return null;
-    const alignments = alignLinesToTranscript(lines, done.chunks, CONFIRM_THRESHOLD);
-    const startTimes = resolveLineTimes(lines, alignments, duration, introGateSec);
-    return { alignments, startTimes };
+    return syncLineTimes(lines, done.chunks, CONFIRM_THRESHOLD, duration, introGateSec);
   }, [done, lines, duration, introGateSec]);
   const confirmed = result ? result.alignments.filter((a) => a.time !== null).length : 0;
   const estimated = result
@@ -254,10 +251,12 @@ export function SyncPanel() {
         {done && (
           <div className="space-y-2">
             <p className="text-zinc-300">
-              {lines.length}줄 중 <span className="font-semibold text-emerald-300">{confirmed}줄</span>은
-              발음이 90% 이상 맞아 확인했고,{" "}
-              <span className="font-semibold text-amber-300">{estimated}줄</span>은 추정 위치에 놓았습니다.
-              나머지는 앞뒤 줄 사이에 배치합니다. 타임라인에서 바로 고칠 수 있습니다.
+              {result?.alignments.length ?? 0}줄 중{" "}
+              <span className="font-semibold text-emerald-300">{confirmed}줄</span>은 발음이 90% 이상 맞아
+              확인했고, <span className="font-semibold text-amber-300">{estimated}줄</span>은 추정 위치에
+              놓았습니다. 나머지는 앞뒤 줄 사이에 배치합니다.
+              {lines.some((l) => l.overlap) && " 겹치는 줄(&)은 함께 부르는 줄을 따라 움직입니다."}{" "}
+              타임라인에서 바로 고칠 수 있습니다.
             </p>
             <p className="text-zinc-500">
               {done.mode === "word"

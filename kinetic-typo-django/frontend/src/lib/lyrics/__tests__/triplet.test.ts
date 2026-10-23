@@ -29,8 +29,8 @@ describe("normalizeMultilineJapaneseBlocks", () => {
 
 describe("splitLyricTriplet", () => {
   it("splits on | and trims", () => {
-    expect(splitLyricTriplet("君 |키미| 너")).toEqual({ mainRaw: "君", pronText: "키미", transText: "너" });
-    expect(splitLyricTriplet("君")).toEqual({ mainRaw: "君", pronText: "", transText: "" });
+    expect(splitLyricTriplet("君 |키미| 너")).toEqual({ mainRaw: "君", pronText: "키미", transText: "너", overlap: false });
+    expect(splitLyricTriplet("君")).toEqual({ mainRaw: "君", pronText: "", transText: "", overlap: false });
   });
 });
 

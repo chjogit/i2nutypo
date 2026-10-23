@@ -137,12 +137,24 @@ function tickStep(pps: number): number {
   return 10;
 }
 
-/** Space around line i that it may grow into or move within. */
+/** Space around line i that it may grow into or move within, between its neighbours on the same lane. */
 function lineBounds(lines: readonly LyricLine[], i: number, duration: number) {
-  return {
-    minStart: i > 0 ? lines[i - 1].endTime : 0,
-    maxEnd: i < lines.length - 1 ? lines[i + 1].startTime : duration,
-  };
+  const lane = lines[i].overlap;
+  let minStart = 0;
+  let maxEnd = duration;
+  for (let j = i - 1; j >= 0; j--) {
+    if (lines[j].overlap === lane) {
+      minStart = lines[j].endTime;
+      break;
+    }
+  }
+  for (let j = i + 1; j < lines.length; j++) {
+    if (lines[j].overlap === lane) {
+      maxEnd = lines[j].startTime;
+      break;
+    }
+  }
+  return { minStart, maxEnd };
 }
 
 /** Text or number field that commits on blur or Enter, so a half-typed value never reaches the lyrics. */
@@ -418,6 +430,8 @@ export function Timeline() {
 
   const selLine = sel !== null ? lines[sel] : null;
   const selBounds = sel !== null ? lineBounds(lines, sel, duration) : null;
+  // Overlapping ("&") lines get a second lane under the main one
+  const twoLanes = lines.some((l) => l.overlap);
 
   const setStart = (v: number) => {
     if (sel === null || !selLine || !selBounds || !Number.isFinite(v)) return;
@@ -524,7 +538,7 @@ export function Timeline() {
             onPointerMove={onTrackMove}
             onPointerUp={onTrackUp}
             onPointerCancel={onTrackUp}
-            className="relative h-full min-h-[84px] cursor-text select-none"
+            className={`relative h-full cursor-text select-none ${twoLanes ? "min-h-[150px]" : "min-h-[84px]"}`}
             style={{ width }}
           >
             {/* Ruler */}
@@ -539,6 +553,12 @@ export function Timeline() {
                 </span>
               </div>
             ))}
+
+            {twoLanes && (
+              <span className="pointer-events-none absolute bottom-1 left-1 top-[calc(50%+10px)] flex items-center text-[10px] font-semibold text-violet-300/60">
+                &
+              </span>
+            )}
 
             {lines.length === 0 && (
               <p className="pointer-events-none absolute left-2 top-8 text-xs text-zinc-500">
@@ -556,7 +576,7 @@ export function Timeline() {
                   key={`${i}-${line.rawText}`}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${i + 1}번 자막 ${formatLrcTime(start)} ~ ${formatLrcTime(end)}: ${line.cleanText}`}
+                  aria-label={`${i + 1}번 ${line.overlap ? "겹치는 " : ""}자막 ${formatLrcTime(start)} ~ ${formatLrcTime(end)}: ${line.cleanText}`}
                   aria-pressed={isSel}
                   onPointerDown={(e) => onSegmentDown(e, i, "move")}
                   onPointerMove={onSegmentMove}
@@ -568,10 +588,20 @@ export function Timeline() {
                       seek(line.startTime);
                     }
                   }}
-                  className={`absolute bottom-1 top-5 flex cursor-grab flex-col justify-center overflow-hidden rounded-md border px-2 text-left active:cursor-grabbing ${
+                  className={`absolute flex cursor-grab flex-col justify-center overflow-hidden rounded-md border px-2 text-left active:cursor-grabbing ${
+                    !twoLanes
+                      ? "bottom-1 top-5"
+                      : line.overlap
+                        ? "bottom-1 top-[calc(50%+10px)]"
+                        : "bottom-[calc(50%-6px)] top-5"
+                  } ${
                     isSel
-                      ? "border-indigo-400 bg-indigo-500/15"
-                      : "border-zinc-700 bg-zinc-900/40 hover:border-indigo-400/70"
+                      ? line.overlap
+                        ? "border-violet-400 bg-violet-500/15"
+                        : "border-indigo-400 bg-indigo-500/15"
+                      : line.overlap
+                        ? "border-violet-800/80 bg-violet-950/30 hover:border-violet-400/70"
+                        : "border-zinc-700 bg-zinc-900/40 hover:border-indigo-400/70"
                   }`}
                   style={{ left: start * pps, width: Math.max(6, (end - start) * pps) }}
                   title={`${formatLrcTime(start)} ~ ${formatLrcTime(end)}`}
@@ -707,6 +737,19 @@ export function Timeline() {
                   >
                     줄 삭제
                   </button>
+                  <label
+                    className="ml-2 flex items-center gap-1.5 text-zinc-300"
+                    title="켜면 앞 줄과 같은 시간에 작게 함께 나옵니다 (가사 앞에 & 를 붙인 것과 같습니다)"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selLine.overlap}
+                      disabled={sel === 0 && !selLine.overlap}
+                      onChange={(e) => updateLine(sel, { overlap: e.target.checked })}
+                      className="accent-violet-500"
+                    />
+                    겹치는 줄(&)
+                  </label>
                   <button type="button" onClick={() => setSelected(null)} className={SMALL_BTN}>
                     닫기
                   </button>

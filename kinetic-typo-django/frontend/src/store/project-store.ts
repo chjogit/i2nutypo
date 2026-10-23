@@ -151,6 +151,7 @@ const toTimed = (l: LyricLine): TimedLyric => ({
   offsetX: l.offsetX,
   offsetY: l.offsetY,
   lineStyle: l.lineStyle,
+  overlap: l.overlap,
 });
 
 /** Rewrites the lyrics from edited lines; a line moved into the intro lowers the intro gate. */
@@ -195,6 +196,7 @@ export const useProjectStore = create<ProjectStore>()(
               rawText: blocks[i].mainRaw,
               pronText: blocks[i].pronText,
               transText: blocks[i].transText,
+              overlap: blocks[i].overlap && i > 0,
             }));
             return { ...fromTimed(s, timed), lyricsCollapsed: true };
           }
@@ -255,7 +257,9 @@ export const useProjectStore = create<ProjectStore>()(
             // Unpicking the last theme goes back to the default theme, with its colors and element defaults
             if (picked.length === 1) {
               const lookElements = Object.fromEntries(
-                Object.entries(st.lookElements).filter(([k]) => !k.startsWith(`${DEFAULT_STYLE.lookPreset}.`)),
+                Object.entries(st.lookElements).filter(
+                  ([k]) => !k.startsWith(`${DEFAULT_STYLE.lookPreset}.`),
+                ),
               );
               return {
                 style: {

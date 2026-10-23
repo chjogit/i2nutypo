@@ -1,5 +1,6 @@
 import type { LyricLine } from "@/types/project";
 import { formatLrcTime } from "@/lib/lyrics/parse";
+import { markOverlap } from "@/lib/lyrics/triplet";
 import { soundSubstitutionCost, toPronunciationKey } from "./pronunciation";
 
 /** A recognized stretch of audio with its text, in song seconds. */
@@ -313,6 +314,37 @@ export function resolveLineTimes(
   return out;
 }
 
+/**
+ * Aligns the ordinary lines and gives every line a new start. Overlapping
+ * ("&") lines are sung over another voice, so they are not looked for in the
+ * transcript: each keeps its distance from the line it overlaps and moves
+ * with it. Alignments use positions in the full lines array.
+ */
+export function syncLineTimes(
+  lines: readonly LyricLine[],
+  chunks: readonly TranscriptChunk[],
+  threshold: number,
+  duration: number,
+  introGateSec: number,
+): { alignments: LineAlignment[]; startTimes: number[] } {
+  const mainIdx = lines.flatMap((l, i) => (l.overlap ? [] : [i]));
+  const main = mainIdx.map((i) => lines[i]);
+  const raw = alignLinesToTranscript(main, chunks, threshold);
+  const mainTimes = resolveLineTimes(main, raw, duration, introGateSec);
+  const startTimes = lines.map((l) => l.startTime);
+  mainIdx.forEach((i, k) => (startTimes[i] = mainTimes[k]));
+  let parent = -1;
+  lines.forEach((l, i) => {
+    if (!l.overlap) {
+      parent = i;
+    } else if (parent >= 0) {
+      const shifted = startTimes[parent] + (l.startTime - lines[parent].startTime);
+      startTimes[i] = round2(Math.min(duration, Math.max(0, shifted)));
+    }
+  });
+  return { alignments: raw.map((a) => ({ ...a, lineIdx: mainIdx[a.lineIdx] })), startTimes };
+}
+
 /** Writes lines back as LRC, one line per block ("main | pronunciation | meaning"). */
 export function linesToLrc(lines: readonly LyricLine[], startTimes: readonly number[]): string {
   return lines
@@ -320,7 +352,8 @@ export function linesToLrc(lines: readonly LyricLine[], startTimes: readonly num
       const parts = [line.rawText];
       if (line.pronText || line.transText) parts.push(line.pronText);
       if (line.transText) parts.push(line.transText);
-      return `[${formatLrcTime(startTimes[i])}] ${parts.join(" | ")}`;
+      const text = parts.join(" | ");
+      return `[${formatLrcTime(startTimes[i])}] ${line.overlap ? markOverlap(text) : text}`;
     })
     .join("\n");
 }
