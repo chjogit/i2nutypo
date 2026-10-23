@@ -1,0 +1,6 @@
+{
+  "name": "onnxruntime-node",
+  "version": "0.0.0-browser-stub",
+  "description": "Empty stand-in: this app runs Whisper only in the browser (onnxruntime-web), so the Node runtime and its native download are not installed.",
+  "main": "index.js"
+}

@@ -1,0 +1,23 @@
+{% load static %}<!doctype html>
+<html lang="ko" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kinetic Typo Studio</title>
+    <meta name="description" content="음원과 가사로 키네틱 타이포그라피 영상을 만듭니다." />
+    <link rel="icon" href="{% static 'favicon.ico' %}" />
+    <!-- Typography fonts drawn on the canvas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Dela+Gothic+One&family=JetBrains+Mono:wght@500;700&family=Nanum+Gothic:wght@700;800&family=Nanum+Myeongjo:wght@700;800&family=Noto+Sans+JP:wght@400;700;900&family=Noto+Sans+KR:wght@400;500;600;700;900&family=Shippori+Mincho:wght@700;800&display=swap"
+    />
+    <link rel="stylesheet" href="{% static 'css/studio.css' %}" />
+    <script type="module" src="{% static 'js/studio.js' %}"></script>
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    <div id="root"></div>
+    <noscript>이 편집기는 JavaScript가 켜져 있어야 동작합니다.</noscript>
+  </body>
+</html>

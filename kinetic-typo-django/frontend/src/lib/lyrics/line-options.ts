@@ -1,0 +1,55 @@
+import type { LineStyle } from "@/types/project";
+
+// Per-line settings stored inside a line's time bracket after the times, as
+// ";key=value" pairs: [00:06.00~00:09.50;x=0.10;y=-0.20;glitch=0.80].
+// Unknown keys are ignored, so older or newer lyrics text still parses.
+
+/** Largest position offset of a line, as a share of the frame; 0 is the usual place. */
+export const MAX_LINE_OFFSET = 0.45;
+export const MIN_LINE_SIZE = 0.5;
+export const MAX_LINE_SIZE = 2;
+
+export interface LineOptions {
+  offsetX: number;
+  offsetY: number;
+  lineStyle: LineStyle;
+}
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+/** Keys of LineStyle with their allowed range. */
+const STYLE_RANGES: Record<keyof LineStyle, [number, number]> = {
+  glitch: [0, 1],
+  shake: [0, 1],
+  size: [MIN_LINE_SIZE, MAX_LINE_SIZE],
+};
+const STYLE_KEYS = Object.keys(STYLE_RANGES) as Array<keyof LineStyle>;
+
+export function parseLineOptions(raw: string | undefined): LineOptions {
+  const out: LineOptions = { offsetX: 0, offsetY: 0, lineStyle: {} };
+  if (!raw) return out;
+  for (const pair of raw.split(";")) {
+    const [key, value] = pair.split("=").map((s) => s.trim());
+    const n = Number(value);
+    if (!key || value === undefined || !Number.isFinite(n)) continue;
+    if (key === "x") out.offsetX = clamp(n, -MAX_LINE_OFFSET, MAX_LINE_OFFSET);
+    else if (key === "y") out.offsetY = clamp(n, -MAX_LINE_OFFSET, MAX_LINE_OFFSET);
+    else if ((STYLE_KEYS as string[]).includes(key)) {
+      const k = key as keyof LineStyle;
+      out.lineStyle[k] = clamp(n, ...STYLE_RANGES[k]);
+    }
+  }
+  return out;
+}
+
+/** The ";key=value" tail for a line, or "" when it has nothing of its own. */
+export function formatLineOptions({ offsetX, offsetY, lineStyle }: LineOptions): string {
+  const parts: string[] = [];
+  if (Math.abs(offsetX) >= 0.005) parts.push(`x=${offsetX.toFixed(2)}`);
+  if (Math.abs(offsetY) >= 0.005) parts.push(`y=${offsetY.toFixed(2)}`);
+  for (const k of STYLE_KEYS) {
+    const v = lineStyle[k];
+    if (v !== undefined) parts.push(`${k}=${v.toFixed(2)}`);
+  }
+  return parts.map((p) => `;${p}`).join("");
+}

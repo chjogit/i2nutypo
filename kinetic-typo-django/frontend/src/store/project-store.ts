@@ -1,0 +1,394 @@
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import type {
+  AudioSource,
+  FxToggleKey,
+  FxToggles,
+  ImageAsset,
+  LookElementState,
+  LookPresetId,
+  LyricLine,
+  Project,
+  StyleSettings,
+  SubtitleSettings,
+  SyncSettings,
+} from "@/types/project";
+import { defaultFxToggles, sanitizeFxToggles } from "@/lib/fx/toggles";
+import {
+  autoDistributeLyrics,
+  hasTimestamps,
+  parseLyrics,
+  serializeTimedLyrics,
+  type TimedLyric,
+} from "@/lib/lyrics/parse";
+import { normalizeMultilineJapaneseBlocks, splitLyricTriplet } from "@/lib/lyrics/triplet";
+import { SAMPLE_LYRICS } from "@/lib/lyrics/samples";
+import { linesToLrc } from "@/lib/sync/align";
+import {
+  DEFAULT_ILLUSTRATION,
+  getLookElement,
+  getLookPreset,
+  isLookPresetId,
+  lookElementKey,
+  pickedLooks,
+  sanitizeLookElements,
+  sanitizeMixLooks,
+  isThemedPresetId,
+  classicToAlbumElements,
+  MAX_MIX_LOOKS,
+} from "@/lib/render/looks/presets";
+import { DEFAULT_DETAIL, sanitizeDetail } from "@/lib/render/detail";
+import { findLyricFont } from "@/lib/fonts/catalog";
+import { sanitizeCells } from "@/lib/render/looks/layout";
+
+export const DEFAULT_DURATION = 32;
+
+export const DEFAULT_STYLE: StyleSettings = {
+  styleMode: "custom",
+  lookPreset: "album_jacket",
+  mixLooks: [],
+  lyricLook: null,
+  illustration: DEFAULT_ILLUSTRATION,
+  lookElements: {},
+  detail: DEFAULT_DETAIL,
+  activePresetId: "collab_16_relay",
+  collabRelay: true,
+  fixedMotif: "yoha_moon_card",
+  language: "ko-KR",
+  aspectRatio: "16:9",
+  displayMode: "sentence",
+  lyricFont: "",
+  coverTitle: "",
+  coverCredit: "",
+  ...getLookPreset("album_jacket").palette,
+  bpm: 98,
+  beatReact: 88,
+  fontScale: 1.0,
+  flashInvert: true,
+  cameraMatchCut: true,
+  particles: true,
+  letterbox: false,
+  nextPreview: true,
+};
+
+export const DEFAULT_SYNC: SyncSettings = {
+  introGateSec: 6.0,
+  similarityThreshold: 0.7,
+};
+
+export const DEFAULT_SUBTITLES: SubtitleSettings = {
+  enabled: true,
+  font: "'Noto Sans KR', sans-serif",
+  pronFontSize: 22,
+  transFontSize: 28,
+  pronColor: "#fde047",
+  transColor: "#ffffff",
+  bgBox: true,
+  bottomOffset: 48,
+  position: "bottom",
+  display: "bottomOnly",
+  mainFontSize: 34,
+  mainColor: "#ffffff",
+};
+
+interface ProjectActions {
+  setLyricsText: (text: string) => void;
+  /**
+   * Takes lyrics typed without times and folds the box. Lines keep their
+   * current times when the line count is unchanged; otherwise they are spread
+   * over the song. Text with [mm:ss] times is used as typed.
+   */
+  commitLyricsInput: (text: string) => void;
+  setLyricsCollapsed: (collapsed: boolean) => void;
+  /** Empties the lyrics, e.g. when another song is picked. */
+  clearLyrics: () => void;
+  /** Edits one line's text or times from the timeline. */
+  updateLine: (index: number, patch: Partial<TimedLyric>) => void;
+  removeLine: (index: number) => void;
+  autoDistribute: () => void;
+  loadSampleLyrics: () => void;
+  setAudio: (audio: AudioSource) => void;
+  setStyle: (patch: Partial<StyleSettings>) => void;
+  /** Makes one theme the only pick and loads its palette and fonts. */
+  applyLookPreset: (id: LookPresetId) => void;
+  /**
+   * Picks or unpicks a theme (at most three). The first pick becomes the
+   * background theme and loads its palette.
+   */
+  toggleTheme: (id: LookPresetId) => void;
+  /** Makes a picked theme the background theme (it draws the picture and character). */
+  setBaseLook: (id: Exclude<LookPresetId, "classic">) => void;
+  /** Picks which theme draws the lyrics; null follows the background theme. */
+  setLyricLook: (id: Exclude<LookPresetId, "classic"> | null) => void;
+  /** Loads a theme's colors and fonts without changing the picks. */
+  applyPalette: (id: LookPresetId) => void;
+  setIllustration: (patch: Partial<StyleSettings["illustration"]>) => void;
+  setImage: (slot: "background" | "character" | "cover", asset: ImageAsset | null) => void;
+  /** Switches one element on/off or changes its strength; the theme defaults to the background theme. */
+  setLookElement: (id: string, patch: Partial<LookElementState>, preset?: LookPresetId) => void;
+  setDetail: (patch: Partial<StyleSettings["detail"]>) => void;
+  setSync: (patch: Partial<SyncSettings>) => void;
+  setSubtitles: (patch: Partial<SubtitleSettings>) => void;
+  /** Rewrites the lyrics with new start times (one per current line). */
+  applyLineTimes: (startTimes: readonly number[]) => void;
+  setFx: (key: FxToggleKey, on: boolean) => void;
+  setFxGroup: (keys: readonly FxToggleKey[], on: boolean) => void;
+}
+
+export type ProjectStore = Project & ProjectActions;
+
+const reparse = (s: Pick<Project, "lyricsText" | "duration" | "sync">): LyricLine[] =>
+  parseLyrics(s.lyricsText, { duration: s.duration, introGateSec: s.sync.introGateSec });
+
+const initialLyrics = SAMPLE_LYRICS["ko-KR"];
+
+const toTimed = (l: LyricLine): TimedLyric => ({
+  startTime: l.startTime,
+  endTime: l.endTime,
+  rawText: l.rawText,
+  pronText: l.pronText,
+  transText: l.transText,
+  offsetX: l.offsetX,
+  offsetY: l.offsetY,
+  lineStyle: l.lineStyle,
+});
+
+/** Rewrites the lyrics from edited lines; a line moved into the intro lowers the intro gate. */
+const fromTimed = (s: Pick<Project, "duration" | "sync">, timed: TimedLyric[]) => {
+  const lyricsText = serializeTimedLyrics(timed, s.duration);
+  const first = timed.length ? Math.min(...timed.map((l) => l.startTime)) : s.sync.introGateSec;
+  const sync = { ...s.sync, introGateSec: Math.min(s.sync.introGateSec, first) };
+  return { lyricsText, sync, lines: reparse({ lyricsText, duration: s.duration, sync }) };
+};
+
+export const useProjectStore = create<ProjectStore>()(
+  persist(
+    (set) => ({
+      audio: { kind: "none" },
+      images: { background: null, character: null, cover: null },
+      duration: DEFAULT_DURATION,
+      lyricsText: initialLyrics,
+      lyricsCollapsed: false,
+      lines: reparse({ lyricsText: initialLyrics, duration: DEFAULT_DURATION, sync: DEFAULT_SYNC }),
+      style: DEFAULT_STYLE,
+      fx: defaultFxToggles(),
+      sync: DEFAULT_SYNC,
+      subtitles: DEFAULT_SUBTITLES,
+
+      setLyricsText: (lyricsText) => set((s) => ({ lyricsText, lines: reparse({ ...s, lyricsText }) })),
+
+      commitLyricsInput: (text) =>
+        set((s) => {
+          const trimmed = text.trim();
+          if (!trimmed) return { lyricsText: "", lines: [], lyricsCollapsed: false };
+          if (hasTimestamps(trimmed)) {
+            return {
+              lyricsText: trimmed,
+              lines: reparse({ ...s, lyricsText: trimmed }),
+              lyricsCollapsed: true,
+            };
+          }
+          const blocks = normalizeMultilineJapaneseBlocks(trimmed).map(splitLyricTriplet);
+          if (blocks.length === s.lines.length) {
+            const timed = s.lines.map((l, i) => ({
+              ...toTimed(l),
+              rawText: blocks[i].mainRaw,
+              pronText: blocks[i].pronText,
+              transText: blocks[i].transText,
+            }));
+            return { ...fromTimed(s, timed), lyricsCollapsed: true };
+          }
+          const lyricsText = autoDistributeLyrics(trimmed, s.duration, s.sync.introGateSec);
+          return { lyricsText, lines: reparse({ ...s, lyricsText }), lyricsCollapsed: true };
+        }),
+
+      setLyricsCollapsed: (lyricsCollapsed) => set({ lyricsCollapsed }),
+
+      clearLyrics: () => set({ lyricsText: "", lines: [], lyricsCollapsed: false }),
+
+      updateLine: (index, patch) =>
+        set((s) => {
+          if (!s.lines[index]) return {};
+          const timed = s.lines.map((l, i) => (i === index ? { ...toTimed(l), ...patch } : toTimed(l)));
+          return fromTimed(s, timed);
+        }),
+
+      removeLine: (index) =>
+        set((s) => {
+          if (!s.lines[index]) return {};
+          const timed = s.lines.filter((_, i) => i !== index).map(toTimed);
+          return { ...fromTimed(s, timed), lyricsCollapsed: timed.length > 0 && s.lyricsCollapsed };
+        }),
+
+      autoDistribute: () =>
+        set((s) => {
+          const lyricsText = autoDistributeLyrics(s.lyricsText, s.duration, s.sync.introGateSec);
+          return { lyricsText, lines: reparse({ ...s, lyricsText }) };
+        }),
+
+      loadSampleLyrics: () =>
+        set((s) => {
+          const lyricsText = SAMPLE_LYRICS[s.style.language];
+          return { lyricsText, lines: reparse({ ...s, lyricsText }), lyricsCollapsed: true };
+        }),
+
+      setAudio: (audio) =>
+        set((s) => {
+          const duration =
+            audio.kind === "upload" ? Math.max(6, Number(audio.duration.toFixed(1))) : DEFAULT_DURATION;
+          return { audio, duration, lines: reparse({ ...s, duration }) };
+        }),
+
+      setStyle: (patch) => set((s) => ({ style: { ...s.style, ...patch } })),
+
+      applyLookPreset: (id) =>
+        set((s) => ({
+          style: { ...s.style, ...getLookPreset(id).palette, lookPreset: id, mixLooks: [], lyricLook: null },
+        })),
+
+      toggleTheme: (id) =>
+        set((s) => {
+          const st = s.style;
+          const picked = pickedLooks(st);
+          if (!isThemedPresetId(id)) return {};
+          if (picked.includes(id)) {
+            // Unpicking the last theme goes back to the default theme, with its colors and element defaults
+            if (picked.length === 1) {
+              const lookElements = Object.fromEntries(
+                Object.entries(st.lookElements).filter(([k]) => !k.startsWith(`${DEFAULT_STYLE.lookPreset}.`)),
+              );
+              return {
+                style: {
+                  ...st,
+                  ...getLookPreset(DEFAULT_STYLE.lookPreset).palette,
+                  lookPreset: DEFAULT_STYLE.lookPreset,
+                  mixLooks: [],
+                  lyricLook: null,
+                  lookElements,
+                },
+              };
+            }
+            // Unpicking: the next theme takes over the background
+            const rest = picked.filter((p) => p !== id) as Exclude<LookPresetId, "classic">[];
+            return {
+              style: {
+                ...st,
+                lookPreset: rest[0],
+                mixLooks: rest.slice(1),
+                lyricLook: st.lyricLook === id ? null : st.lyricLook,
+              },
+            };
+          }
+          if (picked.length > MAX_MIX_LOOKS) return {};
+          return { style: { ...st, mixLooks: [...st.mixLooks, id] } };
+        }),
+
+      setBaseLook: (id) =>
+        set((s) => {
+          const picked = pickedLooks(s.style);
+          if (!picked.includes(id) || s.style.lookPreset === id) return {};
+          const mixLooks = picked.filter((p) => p !== id) as Exclude<LookPresetId, "classic">[];
+          return { style: { ...s.style, lookPreset: id, mixLooks } };
+        }),
+
+      setLyricLook: (id) => set((s) => ({ style: { ...s.style, lyricLook: id } })),
+
+      applyPalette: (id) => set((s) => ({ style: { ...s.style, ...getLookPreset(id).palette } })),
+
+      setIllustration: (patch) =>
+        set((s) => ({ style: { ...s.style, illustration: { ...s.style.illustration, ...patch } } })),
+
+      setImage: (slot, asset) => set((s) => ({ images: { ...s.images, [slot]: asset } })),
+
+      setDetail: (patch) => set((s) => ({ style: { ...s.style, detail: { ...s.style.detail, ...patch } } })),
+
+      setLookElement: (id, patch, theme) =>
+        set((s) => {
+          const preset = theme ?? s.style.lookPreset;
+          const key = lookElementKey(preset, id);
+          const next = { ...getLookElement(s.style.lookElements, preset, id), ...patch };
+          return { style: { ...s.style, lookElements: { ...s.style.lookElements, [key]: next } } };
+        }),
+
+      setSync: (patch) =>
+        set((s) => {
+          const sync = { ...s.sync, ...patch };
+          return { sync, lines: reparse({ ...s, sync }) };
+        }),
+
+      applyLineTimes: (startTimes) =>
+        set((s) => {
+          if (startTimes.length !== s.lines.length || s.lines.length === 0) return {};
+          const lyricsText = linesToLrc(s.lines, startTimes);
+          // A first line found inside the intro would otherwise be pushed back to the gate
+          const sync = { ...s.sync, introGateSec: Math.min(s.sync.introGateSec, Math.min(...startTimes)) };
+          return { lyricsText, sync, lines: reparse({ ...s, lyricsText, sync }) };
+        }),
+
+      setSubtitles: (patch) => set((s) => ({ subtitles: { ...s.subtitles, ...patch } })),
+
+      setFx: (key, on) => set((s) => ({ fx: { ...s.fx, [key]: on } })),
+
+      setFxGroup: (keys, on) =>
+        set((s) => {
+          const fx: FxToggles = { ...s.fx };
+          for (const key of keys) fx[key] = on;
+          return { fx };
+        }),
+    }),
+    {
+      name: "kinetic-typo-project-v1",
+      // Rehydrated from the client (StudioShell) so the server-rendered HTML matches the first paint.
+      skipHydration: true,
+      storage: createJSONStorage(() => localStorage),
+      // Audio and images are object URLs that die with the page, so they are never persisted.
+      partialize: (s) => ({
+        lyricsText: s.lyricsText,
+        lyricsCollapsed: s.lyricsCollapsed,
+        style: s.style,
+        fx: s.fx,
+        sync: s.sync,
+        subtitles: s.subtitles,
+      }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<Project>;
+        const merged: ProjectStore = {
+          ...current,
+          lyricsText: typeof p.lyricsText === "string" ? p.lyricsText : current.lyricsText,
+          lyricsCollapsed: p.lyricsCollapsed === true,
+          style: {
+            ...current.style,
+            ...p.style,
+            illustration: {
+              ...current.style.illustration,
+              ...p.style?.illustration,
+              noTextCells: sanitizeCells(p.style?.illustration?.noTextCells),
+            },
+            // Saves from the retired classic look move to the album jacket theme with their effects
+            lookElements:
+              p.style?.lookPreset === "classic"
+                ? classicToAlbumElements(p.style, p.fx, sanitizeLookElements(p.style.lookElements))
+                : sanitizeLookElements(p.style?.lookElements),
+            lyricFont: findLyricFont(String(p.style?.lyricFont ?? "")) ? String(p.style?.lyricFont) : "",
+            coverTitle: typeof p.style?.coverTitle === "string" ? p.style.coverTitle : "",
+            coverCredit: typeof p.style?.coverCredit === "string" ? p.style.coverCredit : "",
+            detail: sanitizeDetail(p.style?.detail),
+            styleMode: "custom",
+            lookPreset: isLookPresetId(p.style?.lookPreset) ? p.style.lookPreset : current.style.lookPreset,
+            mixLooks: sanitizeMixLooks(p.style?.mixLooks),
+            lyricLook: isThemedPresetId(p.style?.lyricLook) ? p.style.lyricLook : null,
+          },
+          sync: { ...current.sync, ...p.sync },
+          subtitles: {
+            ...current.subtitles,
+            ...p.subtitles,
+            position: p.subtitles?.position === "top" ? "top" : "bottom",
+            display: p.subtitles?.display === "kinetic" ? "kinetic" : "bottomOnly",
+          },
+          fx: sanitizeFxToggles(p.fx),
+        };
+        return { ...merged, lines: reparse(merged) };
+      },
+    },
+  ),
+);
