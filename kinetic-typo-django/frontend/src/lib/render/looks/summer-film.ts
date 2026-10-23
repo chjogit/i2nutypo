@@ -2,6 +2,7 @@ import { easeOutExpo } from "../easing";
 import {
   amt,
   backgroundSource,
+  boxHeight,
   clampCenter,
   drawCharacterLayer,
   fadeIn,
@@ -9,6 +10,7 @@ import {
   lineExit,
   lyricRegion,
   minSide,
+  rowLimit,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -179,10 +181,10 @@ function lyrics(f: LookFrame): void {
   for (let i = 0; i < 8; i++) {
     ctx.font = `900 ${size}px ${style.mainFont}`;
     wrap = wrapWords(ctx, line, f.lineElapsed, maxW);
-    if (wrap.rows.length <= 3 && wrap.widest <= maxW) break;
+    if (wrap.rows.length <= rowLimit(f, 3) && wrap.widest <= maxW) break;
     size *= 0.85;
   }
-  const rowH = size * 1.2;
+  const rowH = size * 1.2 * boxHeight(f);
   const total = rowH * wrap.rows.length;
   const bottomLimit = f.subtitleVisible ? H * 0.8 : H * 0.95;
   let y = Math.max(H * 0.05, Math.min(area.y + area.h / 2 - total / 2, bottomLimit - total));

@@ -2,6 +2,8 @@ import { easeOutBack, easeOutExpo } from "../easing";
 import { fitScale } from "../wrap";
 import {
   backgroundSource,
+  boxHeight,
+  boxWidth,
   clampCenter,
   clampLeft,
   fadeIn,
@@ -10,6 +12,7 @@ import {
   lineExit,
   lyricRegion,
   minSide,
+  rowLimit,
   type LookFrame,
 } from "./frame";
 import { drawVerticalColumn, lineGlyphs, splitColumns } from "./glyphs";
@@ -271,7 +274,7 @@ export function drawWordLyrics(f: LookFrame, o: WordLyricsOptions): void {
   let size = minSide(f) * (line.isBigLine ? o.size[1] : o.size[0]) * style.fontScale;
   const exit = lineExit(f, 0.1);
   const maxW = fitWidth(f, area.w * 0.9);
-  const maxRows = o.maxRows ?? 3;
+  const maxRows = rowLimit(f, o.maxRows ?? 3);
   const setFont = () => {
     ctx.font = `${o.weight} ${size}px ${family}`;
     if (o.tracking) (ctx as CanvasRenderingContext2D).letterSpacing = `${size * o.tracking}px`;
@@ -290,7 +293,7 @@ export function drawWordLyrics(f: LookFrame, o: WordLyricsOptions): void {
     setFont();
     wrap = wrapWords(ctx, line, f.lineElapsed, maxW);
   }
-  const rowH = size * (o.box ? 1.5 : 1.25);
+  const rowH = size * (o.box ? 1.5 : 1.25) * boxHeight(f);
   const total = rowH * wrap.rows.length;
   const topLimit = f.subtitleTop ? H * 0.2 : H * 0.05;
   const bottomLimit = f.subtitleVisible ? H * 0.8 : H * 0.95;
@@ -309,7 +312,7 @@ export function drawWordLyrics(f: LookFrame, o: WordLyricsOptions): void {
     y += rowH;
     const rw = rowWidth(row, wrap.gap);
     let x = left ? blockLeft : cx - rw / 2;
-    const base = y - rowH * 0.3;
+    const base = y - size * (o.box ? 0.45 : 0.375);
     if (o.box && row.some((it) => it.e >= 0)) {
       const pad = size * o.box[1];
       ctx.fillStyle = withAlpha(o.box[0], 0.88 * exit);
@@ -381,11 +384,12 @@ export function drawVerticalLyrics(
   const { ctx, W, H, style } = f;
   const size = minSide(f) * o.size * style.fontScale;
   const top = H * (f.subtitleTop ? 0.25 : 0.08);
-  const colH = H - top - H * (f.subtitleVisible ? 0.22 : 0.08);
+  const colH = Math.min(H - top - size, (H - top - H * (f.subtitleVisible ? 0.22 : 0.08)) * boxHeight(f));
   const cols = splitColumns(lineGlyphs(line, f.lineElapsed), size, colH);
   const exit = lineExit(f, 0.1);
   const col = pickColumn(f.blocked, [3, 0, 2, 1]);
-  const spanW = (cols.length - 1) * size * 1.5;
+  const step = size * 1.5 * boxWidth(f);
+  const spanW = (cols.length - 1) * step;
   let x = (W / GRID) * col + (W / GRID) * (isPortrait(f) ? 0.7 : 0.72);
   x = clampLeft(f, x - spanW - size / 2, spanW + size) + spanW + size / 2;
   ctx.save();
@@ -404,7 +408,7 @@ export function drawVerticalLyrics(
       ctx.fillStyle = withAlpha(g.isAccent ? o.accentColor : o.color, a);
       ctx.fillText(g.ch, 0, 0);
     });
-    x -= size * 1.5;
+    x -= step;
   }
   ctx.restore();
 }

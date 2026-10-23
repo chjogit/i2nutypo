@@ -2,6 +2,8 @@ import { drawVerticalColumn, lineGlyphs, splitColumns } from "./glyphs";
 import { GRID, pickColumn } from "./layout";
 import {
   amt,
+  boxHeight,
+  boxWidth,
   clampLeft,
   drawCharacterLayer,
   drawGrain,
@@ -130,14 +132,18 @@ function lyrics(f: LookFrame): void {
   const bar = barHeight(f);
   const size = minSide(f) * 0.05 * style.fontScale;
   const top = bar + H * (f.subtitleTop ? 0.25 : 0.08);
-  const colH = H - top - bar - H * (f.subtitleVisible && isPortrait(f) ? 0.22 : 0.08);
+  const colH = Math.min(
+    H - top - bar - size,
+    (H - top - bar - H * (f.subtitleVisible && isPortrait(f) ? 0.22 : 0.08)) * boxHeight(f),
+  );
   const cols = splitColumns(lineGlyphs(line, f.lineElapsed), size, colH);
   const exit = lineExit(f, 0.1);
   // Columns run right to left from the right side of the most open screen column, as in vertical Japanese
   const col = pickColumn(f.blocked, [3, 0, 2, 1]);
   let x = (W / GRID) * col + (W / GRID) * (isPortrait(f) ? 0.7 : 0.72);
   // Keep every column on screen after the lyric shift
-  const spanW = (cols.length - 1) * size * 1.5;
+  const step = size * 1.5 * boxWidth(f);
+  const spanW = (cols.length - 1) * step;
   x = clampLeft(f, x - spanW - size / 2, spanW + size) + spanW + size / 2;
   ctx.save();
   ctx.font = `800 ${size}px ${style.mainFont}`;
@@ -153,7 +159,7 @@ function lyrics(f: LookFrame): void {
       ctx.fillStyle = withAlpha(g.isAccent ? style.accentColor : style.textColor, a);
       ctx.fillText(g.ch, 0, 0);
     });
-    x -= size * 1.5;
+    x -= step;
   }
   ctx.restore();
 }

@@ -8,6 +8,10 @@ import type { LineStyle } from "@/types/project";
 export const MAX_LINE_OFFSET = 0.45;
 export const MIN_LINE_SIZE = 0.5;
 export const MAX_LINE_SIZE = 2;
+export const MIN_BOX_WIDTH = 0.3;
+export const MAX_BOX_WIDTH = 1.6;
+export const MIN_BOX_HEIGHT = 0.5;
+export const MAX_BOX_HEIGHT = 2;
 
 export interface LineOptions {
   offsetX: number;
@@ -22,6 +26,8 @@ const STYLE_RANGES: Record<keyof LineStyle, [number, number]> = {
   glitch: [0, 1],
   shake: [0, 1],
   size: [MIN_LINE_SIZE, MAX_LINE_SIZE],
+  width: [MIN_BOX_WIDTH, MAX_BOX_WIDTH],
+  height: [MIN_BOX_HEIGHT, MAX_BOX_HEIGHT],
 };
 const STYLE_KEYS = Object.keys(STYLE_RANGES) as Array<keyof LineStyle>;
 

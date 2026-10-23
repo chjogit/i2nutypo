@@ -2,8 +2,9 @@ import { drawImageRect, type Rect } from "./illustration";
 import { lineGlyphs } from "./glyphs";
 import {
   amt,
-  clampLeft,
   backgroundSource,
+  boxHeight,
+  clampLeft,
   drawCharacterLayer,
   drawScanlines,
   drawVignette,
@@ -11,6 +12,7 @@ import {
   isPortrait,
   lyricRegion,
   minSide,
+  rowLimit,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -184,7 +186,7 @@ function lyrics(f: LookFrame): void {
   const measure = (t: string) => ctx.measureText(t).width;
   ctx.font = `700 ${size}px ${style.mainFont}`;
   let px = size * fitScale(line.cleanText, maxW, measure);
-  const maxRows = Math.max(2, manualRows(line.cleanText).length);
+  const maxRows = Math.max(rowLimit(f, 2), manualRows(line.cleanText).length);
   let rows: string[] = [];
   for (let i = 0; i < 8; i++) {
     ctx.font = `700 ${px}px ${style.mainFont}`;
@@ -194,7 +196,7 @@ function lyrics(f: LookFrame): void {
   }
   const rowWidths = rows.map((r) => ctx.measureText(r).width);
   const widest = Math.max(0, ...rowWidths);
-  const rowH = px * 1.4;
+  const rowH = px * 1.4 * boxHeight(f);
   // Grow away from the window edge the text sits on
   const y0 =
     row === 0 ? y : row < GRID - 1 ? y - ((rows.length - 1) * rowH) / 2 : y - (rows.length - 1) * rowH;

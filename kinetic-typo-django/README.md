@@ -54,6 +54,12 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 자막 파일: SRT, VTT, ASS(글꼴·색·크기 포함), LRC. 원문·발음·뜻 중 담을 줄을 고릅니다.
 - 코드: `frontend/src/lib/export/`, `frontend/src/components/editor/export-panel.tsx`
 
+## 미리보기 편집
+
+- 작은 미리보기 창: 아래로 스크롤해 미리보기가 화면에서 벗어나면 오른쪽 위에 작은 창이 뜹니다. 제목줄을 끌어 옮기고, 재생/일시정지, 크기(작게·보통·크게), ↑(원래 미리보기로 이동), ✕(닫기)를 씁니다. 미리보기 아래 "작은 창" 체크로 끌 수 있습니다.
+- 가사 텍스트 박스: 모서리는 글자 크기, 좌우 막대는 가로 폭(글자 크기는 그대로 두고 줄바꿈 위치만 바뀜), 위아래 막대는 줄 간격입니다. 막대를 두 번 클릭하면 원래대로 돌아갑니다. 키보드는 `[` `]` 가로 폭, `{` `}` 줄 간격. 타임라인의 "이 줄 스타일"에서도 같은 값을 숫자로 고칠 수 있고, 가사 텍스트에는 `;width=0.80;height=1.20`처럼 저장됩니다.
+- 코드: `frontend/src/components/editor/mini-preview.tsx`, `text-box-overlay.tsx`, `frontend/src/lib/render/looks/frame.ts`(`fitWidth`, `boxHeight`)
+
 ## 참고
 
 - 데이터베이스는 쓰지 않습니다(`DATABASES = {}`). 작업 내용은 브라우저 저장소에 남습니다.

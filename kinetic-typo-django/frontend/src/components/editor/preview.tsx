@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import type { AspectRatio } from "@/types/project";
 import type { TextBounds } from "@/lib/render/text-bounds";
@@ -9,6 +8,7 @@ import { bpmPulseEnergy, renderFrame } from "@/lib/render/render-frame";
 import { resolveIllustrationImages } from "@/lib/render/looks/image-cache";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
+import { MiniPreview, useMiniPreviewEnabled } from "./mini-preview";
 import { applyOverride, TextBoxOverlay, type LineOverride } from "./text-box-overlay";
 
 const RATIOS: AspectRatio[] = ["16:9", "9:16", "1:1"];
@@ -24,6 +24,8 @@ export function Preview() {
   /** Where the last frame drew its lyrics, and a text box drag not yet saved. */
   const boundsRef = useRef<TextBounds>({ lyrics: null });
   const overrideRef = useRef<LineOverride | null>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [miniEnabled, setMiniEnabled] = useMiniPreviewEnabled();
   const aspectRatio = useProjectStore((s) => s.style.aspectRatio);
   const setStyle = useProjectStore((s) => s.setStyle);
   const size = CANVAS_SIZE[aspectRatio];
@@ -81,7 +83,7 @@ export function Preview() {
 
   return (
     <section aria-label="미리보기" className="space-y-2 px-4 py-4">
-      <div data-preview-frame className="flex items-center justify-center">
+      <div ref={frameRef} data-preview-frame className="flex items-center justify-center">
         <div className="relative max-w-full">
           <canvas
             ref={canvasRef}
@@ -94,9 +96,22 @@ export function Preview() {
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-zinc-500">
-          가사 박스를 끌어 옮기고, 모서리로 크기 조절, 두 번 클릭으로 가사와 줄바꿈을 고칩니다.
+          가사 박스를 끌어 옮기고, 모서리로 글자 크기, 좌우 막대로 가로 폭(줄바꿈), 위아래 막대로 줄 간격을
+          바꿉니다. 두 번 클릭하면 가사와 줄바꿈을 고칩니다.
         </span>
-        <span className="ml-auto text-xs text-zinc-500">화면 비율</span>
+        <label
+          className="ml-auto flex shrink-0 items-center gap-1 text-xs text-zinc-500"
+          title="아래로 스크롤해 미리보기가 안 보이면 화면 구석에 작은 미리보기 창을 띄웁니다"
+        >
+          <input
+            type="checkbox"
+            checked={miniEnabled}
+            onChange={(e) => setMiniEnabled(e.target.checked)}
+            className="accent-indigo-500"
+          />
+          작은 창
+        </label>
+        <span className="shrink-0 text-xs text-zinc-500">화면 비율</span>
         <div className="flex rounded-md border border-zinc-800 text-xs">
           {RATIOS.map((r) => (
             <button
@@ -110,6 +125,7 @@ export function Preview() {
           ))}
         </div>
       </div>
+      <MiniPreview sourceRef={canvasRef} frameRef={frameRef} enabled={miniEnabled} />
     </section>
   );
 }

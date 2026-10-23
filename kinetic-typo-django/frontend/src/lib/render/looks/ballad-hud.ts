@@ -1,6 +1,7 @@
 import { fitGlyphRows, lineGlyphs } from "./glyphs";
 import {
   amt,
+  boxHeight,
   clampCenter,
   drawCharacterLayer,
   drawGrain,
@@ -11,6 +12,7 @@ import {
   lineExit,
   lyricRegion,
   minSide,
+  rowLimit,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -144,13 +146,13 @@ function lyrics(f: LookFrame): void {
     },
     big ? 0.35 : 0.18,
     fitWidth(f, anchor.w * 0.84),
-    big ? 2 : 3,
+    rowLimit(f, big ? 2 : 3),
   );
   size = fit.size;
   // Pulled back on screen when the lyric shift would push it off (dashes included)
   const dash = !big && fit.rows.length === 1 ? size * 2.4 : 0;
   const cx = clampCenter(f, anchor.x, Math.max(0, ...fit.rowWidths) + dash * 2);
-  const rowH = size * 1.6;
+  const rowH = size * 1.6 * boxHeight(f);
   const y0 = y - ((fit.rows.length - 1) * rowH) / 2;
 
   // A dark halo keeps white text readable on the washed-out picture

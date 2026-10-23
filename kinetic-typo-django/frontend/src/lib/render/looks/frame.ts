@@ -173,9 +173,20 @@ export function lineExit(f: LookFrame, tail = 0.1): number {
 /** Side margin lyrics keep from the frame edges. */
 export const lyricMargin = (f: LookFrame): number => minSide(f) * 0.04;
 
-/** Line width for a lyric block: at most `want` and never wider than the frame inside its margins. */
+/** The line's own text box width, 1 = the theme's usual wrap width. */
+export const boxWidth = (f: LookFrame): number => f.line?.lineStyle.width ?? 1;
+/** The line's own text box height, 1 = the theme's usual row spacing. */
+export const boxHeight = (f: LookFrame): number => f.line?.lineStyle.height ?? 1;
+
+/** Most rows a lyric block may wrap into before its type shrinks; a narrowed text box allows more. */
+export const rowLimit = (f: LookFrame, rows: number): number => Math.round(rows / Math.min(1, boxWidth(f)));
+
+/**
+ * Line width for a lyric block: `want` scaled by the line's own box width,
+ * and never wider than the frame inside its margins.
+ */
 export function fitWidth(f: LookFrame, want: number): number {
-  return Math.min(want, f.W - lyricMargin(f) * 2);
+  return Math.min(want * boxWidth(f), f.W - lyricMargin(f) * 2);
 }
 
 /** Left edge moved so a block w wide stays on screen after the lyric shift. */

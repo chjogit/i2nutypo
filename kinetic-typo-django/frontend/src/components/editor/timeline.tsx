@@ -1,4 +1,3 @@
-
 import {
   useEffect,
   useLayoutEffect,
@@ -8,7 +7,15 @@ import {
   type RefObject,
 } from "react";
 import type { LineStyle, LyricLine } from "@/types/project";
-import { MAX_LINE_OFFSET, MAX_LINE_SIZE, MIN_LINE_SIZE } from "@/lib/lyrics/line-options";
+import {
+  MAX_BOX_HEIGHT,
+  MAX_BOX_WIDTH,
+  MAX_LINE_OFFSET,
+  MAX_LINE_SIZE,
+  MIN_BOX_HEIGHT,
+  MIN_BOX_WIDTH,
+  MIN_LINE_SIZE,
+} from "@/lib/lyrics/line-options";
 import { formatLrcTime, MIN_LINE_DURATION } from "@/lib/lyrics/parse";
 import { CELLS, GRID } from "@/lib/render/looks/layout";
 import { usePlaybackStore } from "@/store/playback-store";
@@ -839,6 +846,22 @@ const LINE_STYLE_CONTROLS: ReadonlyArray<{
     max: MAX_LINE_SIZE,
     initial: 1,
     format: (v) => `${v.toFixed(2)}×`,
+  },
+  {
+    key: "width",
+    label: "가로 폭",
+    min: MIN_BOX_WIDTH,
+    max: MAX_BOX_WIDTH,
+    initial: 1,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
+  {
+    key: "height",
+    label: "줄 간격",
+    min: MIN_BOX_HEIGHT,
+    max: MAX_BOX_HEIGHT,
+    initial: 1,
+    format: (v) => `${Math.round(v * 100)}%`,
   },
 ];
 

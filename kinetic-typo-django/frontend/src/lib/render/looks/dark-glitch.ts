@@ -3,15 +3,17 @@ import { drawVerticalColumn, lineGlyphs, splitColumns } from "./glyphs";
 import { cellRect, GRID, pickCell, pickColumn } from "./layout";
 import {
   amt,
+  boxHeight,
+  boxWidth,
   clampLeft,
   drawCharacterLayer,
   drawGrain,
   drawIllustration,
   drawVignette,
   fadeIn,
+  fitWidth,
   isPortrait,
   lineExit,
-  lyricMargin,
   minSide,
   type LookFrame,
   type LookRenderer,
@@ -139,9 +141,10 @@ function lyrics(f: LookFrame): void {
     ctx.font = `900 ${size}px ${style.mainFont}`;
     ctx.textAlign = "center";
     const topY = H * (f.subtitleTop ? 0.3 : 0.15);
-    const cols = splitColumns(glyphs, size, H * 0.85 - topY);
+    const cols = splitColumns(glyphs, size, Math.min(H * 0.95 - topY, (H * 0.85 - topY) * boxHeight(f)));
     const centerX = (f.W / GRID) * (pickColumn(f.blocked, [1, 2, 0, 3]) + 0.5);
-    const spanW = (cols.length - 1) * size * 1.4;
+    const step = size * 1.4 * boxWidth(f);
+    const spanW = (cols.length - 1) * step;
     // Centered on the column, but never off screen after the lyric shift
     let x = clampLeft(f, centerX - spanW / 2 - size / 2, spanW + size) + spanW + size / 2;
     for (const col of cols) {
@@ -161,10 +164,10 @@ function lyrics(f: LookFrame): void {
         ctx.fillStyle = withAlpha(style.textColor, a);
         ctx.fillText(gl.ch, jx, 0);
       });
-      x -= size * 1.4;
+      x -= step;
     }
   } else {
-    const maxW = Math.min(f.W * 0.7, f.W - lyricMargin(f) * 2);
+    const maxW = fitWidth(f, f.W * 0.7);
     let size = minSide(f) * 0.04 * style.fontScale;
     ctx.font = `700 ${size}px ${style.mainFont}`;
     // Words and spaced phrases shrink to fit whole rather than being cut
@@ -179,7 +182,7 @@ function lyrics(f: LookFrame): void {
     const complete = shown.length >= line.cleanText.length;
     // "[ " plus what has been sung, plus " ]" once the line is complete
     const visible = revealRows(rows, 2 + shown.length + (complete ? 2 : 0), true);
-    const rowH = size * 1.4;
+    const rowH = size * 1.4 * boxHeight(f);
     const jx = g > 0 ? hashSigned(Math.floor(f.timeSec * 30), 9) * size * 0.3 * g : 0;
     const passes: Array<[string, number]> = [[withAlpha(style.textColor, exit), 0]];
     if (rgb > 0)

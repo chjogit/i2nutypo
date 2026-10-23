@@ -13,8 +13,8 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Dela+Gothic+One&family=JetBrains+Mono:wght@500;700&family=Nanum+Gothic:wght@700;800&family=Nanum+Myeongjo:wght@700;800&family=Noto+Sans+JP:wght@400;700;900&family=Noto+Sans+KR:wght@400;500;600;700;900&family=Shippori+Mincho:wght@700;800&display=swap"
     />
-    <link rel="stylesheet" href="{% static 'css/studio.css' %}" />
-    <script type="module" src="{% static 'js/studio.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/studio.css' %}?v={{ v }}" />
+    <script type="module" src="{% static 'js/studio.js' %}?v={{ v }}"></script>
   </head>
   <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
     <div id="root"></div>

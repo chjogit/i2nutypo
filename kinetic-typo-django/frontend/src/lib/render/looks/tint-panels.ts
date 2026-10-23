@@ -2,15 +2,16 @@ import { easeOutExpo } from "../easing";
 import { drawImageRect } from "./illustration";
 import {
   amt,
+  boxHeight,
   clampLeft,
   drawCharacterLayer,
   drawGrain,
   drawIllustration,
   drawVignette,
   fadeIn,
+  fitWidth,
   isPortrait,
   lineExit,
-  lyricMargin,
   lyricRegion,
   minSide,
   type LookFrame,
@@ -148,7 +149,7 @@ function lyrics(f: LookFrame): void {
   );
   let size = minSide(f) * 0.075 * style.fontScale * Math.min(1, area.w / (f.W * 0.42));
   // Left-aligned block: keep both edges on screen after the lyric shift
-  const maxW = Math.min(area.w * 0.84, f.W - lyricMargin(f) * 2);
+  const maxW = fitWidth(f, area.w * 0.84);
   const x0 = clampLeft(f, area.x + area.w * 0.08, maxW);
   const exit = lineExit(f, 0.08);
 
@@ -176,7 +177,7 @@ function lyrics(f: LookFrame): void {
       rowW += width + size * 0.2;
     });
   }
-  const rowH = size * 1.3;
+  const rowH = size * 1.3 * boxHeight(f);
   let y = area.y + area.h / 2 - ((rows.length - 1) * rowH) / 2;
   y = Math.max(size * 1.2, Math.min(y, f.H * (f.subtitleVisible ? 0.74 : 0.9) - (rows.length - 1) * rowH));
 

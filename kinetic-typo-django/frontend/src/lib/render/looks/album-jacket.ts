@@ -3,6 +3,7 @@ import { fitScale } from "../wrap";
 import {
   amt,
   backgroundSource,
+  boxHeight,
   clampLeft,
   drawCharacterLayer,
   fadeIn,
@@ -10,6 +11,7 @@ import {
   isPortrait,
   lineExit,
   minSide,
+  rowLimit,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -268,12 +270,12 @@ function lyrics(f: LookFrame): void {
   size *= fitScale(line.cleanText, maxW, (t) => ctx.measureText(t).width);
   ctx.font = `800 ${size}px ${style.mainFont}`;
   let wrap = wrapWords(ctx, line, f.lineElapsed, maxW);
-  for (let i = 0; i < 8 && wrap.rows.length > 3; i++) {
+  for (let i = 0; i < 8 && wrap.rows.length > rowLimit(f, 3); i++) {
     size *= 0.86;
     ctx.font = `800 ${size}px ${style.mainFont}`;
     wrap = wrapWords(ctx, line, f.lineElapsed, maxW);
   }
-  const rowH = size * 1.25;
+  const rowH = size * 1.25 * boxHeight(f);
   const total = rowH * wrap.rows.length;
   const bottomLimit = f.subtitleVisible ? H * 0.8 : H * 0.92;
   let y = Math.max(f.subtitleTop ? H * 0.2 : H * 0.05, Math.min(area.y, bottomLimit - total));

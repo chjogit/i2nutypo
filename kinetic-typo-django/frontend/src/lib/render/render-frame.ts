@@ -345,7 +345,8 @@ function drawSentenceMode(
   transparentBg: boolean,
 ): (() => void) | null {
   const { ctx, style, fx, W, isFlashFrame } = paint;
-  const maxLineWidth = Math.min(W * 0.82, paint.maxWidth);
+  const box = line.lineStyle;
+  const maxLineWidth = Math.min(W * 0.82 * (box.width ?? 1), paint.maxWidth);
 
   type RowItem = { word: LyricWord; width: number; fontSize: number };
   // Rows break between words (between phrases for Japanese written with
@@ -387,12 +388,16 @@ function drawSentenceMode(
   if (widest > maxLineWidth)
     baseSize = Math.max(10, Math.floor(baseSize * Math.max(MIN_FIT_SCALE, maxLineWidth / widest)));
   let { rows, gap } = layout(baseSize);
-  for (let tries = 0; tries < 4 && rows.length * baseSize * 1.45 > H * MAX_LYRIC_HEIGHT; tries++) {
+  for (
+    let tries = 0;
+    tries < 4 && rows.length * baseSize * 1.45 * (box.height ?? 1) > H * MAX_LYRIC_HEIGHT;
+    tries++
+  ) {
     baseSize = Math.max(10, Math.floor(baseSize * 0.85));
     ({ rows, gap } = layout(baseSize));
   }
 
-  const rowHeight = baseSize * 1.45;
+  const rowHeight = baseSize * 1.45 * (box.height ?? 1);
   const totalHeight = rows.length * rowHeight;
   const showNext = nextLine !== null && !transparentBg && style.nextPreview;
 

@@ -1,9 +1,10 @@
 import { easeOutBack } from "../easing";
 import {
   amt,
+  boxHeight,
+  clampCenter,
   drawCharacterLayer,
   drawIllustration,
-  clampCenter,
   fadeIn,
   fitWidth,
   lineExit,
@@ -109,7 +110,7 @@ function lyrics(f: LookFrame): void {
   const topLimit = f.subtitleTop ? H * 0.2 : H * 0.04;
   const bottomLimit = f.subtitleVisible ? H * 0.78 : H * 0.95;
   const height = (rows: Item[][]) =>
-    rows.reduce((acc, r) => acc + Math.max(...r.map((it) => it.size)) * 1.12, 0);
+    rows.reduce((acc, r) => acc + Math.max(...r.map((it) => it.size)) * 1.12 * boxHeight(f), 0);
   // Long lines shrink until the block fits between the subtitles and the frame edge
   let gap = base * 0.12;
   let rows = layout(gap);
@@ -128,7 +129,7 @@ function lyrics(f: LookFrame): void {
   ctx.textAlign = "left";
   ctx.lineJoin = "round";
   rows.forEach((row, r) => {
-    const rowH = Math.max(...row.map((it) => it.size));
+    const rowH = Math.max(...row.map((it) => it.size)) * boxHeight(f);
     let x = cx - widths[r] / 2;
     y += rowH;
     for (const it of row) {

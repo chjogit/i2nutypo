@@ -51,6 +51,13 @@ export interface LineStyle {
   shake?: number;
   /** Text size multiplier, 0.5..2. */
   size?: number;
+  /**
+   * Text box width multiplier, 0.3..1.6: how wide the lyrics may run before
+   * wrapping, without changing the text size (column spacing for vertical lyrics).
+   */
+  width?: number;
+  /** Text box height multiplier, 0.5..2: row spacing (column length, so the wrap, for vertical lyrics). */
+  height?: number;
 }
 
 export interface LyricLine {

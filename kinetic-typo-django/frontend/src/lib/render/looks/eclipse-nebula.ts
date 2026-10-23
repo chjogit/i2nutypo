@@ -1,6 +1,7 @@
 import { fitGlyphRows, lineGlyphs } from "./glyphs";
 import {
   amt,
+  boxHeight,
   clampCenter,
   drawCharacterLayer,
   drawGrain,
@@ -12,6 +13,7 @@ import {
   lyricMargin,
   lyricRegion,
   minSide,
+  rowLimit,
   type LookFrame,
   type LookRenderer,
 } from "./frame";
@@ -150,12 +152,12 @@ function lyrics(f: LookFrame): void {
     },
     0.45,
     fitWidth(f, area.w * 0.9),
-    3,
+    rowLimit(f, 3),
   );
   size = fit.size;
   // Pulled back on screen when the lyric shift would push it off
   const cx = clampCenter(f, area.x + area.w / 2, Math.max(0, ...fit.rowWidths));
-  const rowH = size * 1.7;
+  const rowH = size * 1.7 * boxHeight(f);
   const lowY = f.subtitleVisible ? H * 0.74 : H * 0.88;
   const y0 = Math.min(area.y + area.h / 2, lowY) - ((fit.rows.length - 1) * rowH) / 2;
   const glow = amt(f, "glow");
