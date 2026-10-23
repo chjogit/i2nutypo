@@ -4,17 +4,12 @@ import type { AspectRatio } from "@/types/project";
 import type { TextBounds } from "@/lib/render/text-bounds";
 import { readBassEnergy } from "@/lib/audio/audio-graph";
 import { createParticles } from "@/lib/render/particles";
+import { CANVAS_SIZE } from "@/lib/render/canvas-size";
 import { bpmPulseEnergy, renderFrame } from "@/lib/render/render-frame";
 import { resolveIllustrationImages } from "@/lib/render/looks/image-cache";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { applyOverride, TextBoxOverlay, type LineOverride } from "./text-box-overlay";
-
-const CANVAS_SIZE: Record<AspectRatio, { width: number; height: number }> = {
-  "16:9": { width: 1280, height: 720 },
-  "9:16": { width: 720, height: 1280 },
-  "1:1": { width: 1080, height: 1080 },
-};
 
 const RATIOS: AspectRatio[] = ["16:9", "9:16", "1:1"];
 

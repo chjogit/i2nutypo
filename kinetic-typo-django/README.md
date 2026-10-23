@@ -46,6 +46,14 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 
 `vercel.json`은 `/static/*`을 정적 파일로 직접 내보내고, 나머지 요청은 `config/wsgi.py`의 Django로 보냅니다. 정적 파일은 매번 변경 여부를 확인하도록(`must-revalidate`) 해서 새로 배포하면 바로 반영됩니다.
 
+## 내보내기
+
+가운데 열 아래 "내보내기" 칸에서 저장합니다. 모두 브라우저 안에서 처리되고 서버로 올라가지 않습니다.
+
+- 완성 영상: 미리보기와 같은 렌더러로 곡 전체를 프레임마다 그려 WebCodecs(mediabunny)로 인코딩합니다. 720p/1080p, 30/60fps. Chrome·Edge에서는 MP4(H.264+AAC), 인코더가 없는 브라우저에서는 VP9/Opus나 WebM으로 대신 저장합니다.
+- 자막 파일: SRT, VTT, ASS(글꼴·색·크기 포함), LRC. 원문·발음·뜻 중 담을 줄을 고릅니다.
+- 코드: `frontend/src/lib/export/`, `frontend/src/components/editor/export-panel.tsx`
+
 ## 참고
 
 - 데이터베이스는 쓰지 않습니다(`DATABASES = {}`). 작업 내용은 브라우저 저장소에 남습니다.

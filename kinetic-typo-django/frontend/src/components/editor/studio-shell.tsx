@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { AudioInput } from "./audio-input";
+import { ExportPanel } from "./export-panel";
 import { IllustrationPanel } from "./illustration-panel";
 import { LyricsEditor } from "./lyrics-editor";
 import { Preview } from "./preview";
@@ -111,6 +112,7 @@ export function StudioShell() {
           <Preview />
           <AudioInput />
           <LyricsEditor />
+          <ExportPanel />
         </main>
         <aside
           aria-label="일러스트 레이어"
