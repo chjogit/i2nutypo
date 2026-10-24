@@ -4,6 +4,7 @@ import { BEGINNER_THEMES } from "@/lib/mode/mode";
 import { getLookPreset } from "@/lib/render/looks/presets";
 import { recommendThemes } from "@/lib/render/looks/theme-advisor";
 import { useProjectStore } from "@/store/project-store";
+import { AlbumCoverPicker } from "./album-cover-picker";
 import { AudioInput } from "./audio-input";
 import { BgVideoPicker } from "./bg-video-picker";
 import { ExportPanel } from "./export-panel";
@@ -251,13 +252,14 @@ export function BeginnerShell() {
           <StepCard
             n={4}
             title="자막 다듬기"
-            hint="색, 크기, 줄바꿈과 배경 영상을 원하는 대로 바꾸세요."
+            hint="색, 크기, 줄바꿈, 앨범 커버와 배경 영상을 원하는 대로 바꾸세요."
             done={false}
             current={false}
           >
             <LyricLook />
             <SubtitlePanel />
-            <div className="px-4 pb-4">
+            <div className="space-y-4 px-4 pb-4">
+              <AlbumCoverPicker />
               <BgVideoPicker compact />
             </div>
           </StepCard>
