@@ -1,10 +1,8 @@
 import { beatsEvery } from "@/lib/beats/detect";
 import { ADJUST_BY_ID, TRANSITION_BY_ID } from "@/lib/timeline-fx/defs";
-import { soundLabel, soundLength } from "@/lib/sfx/library";
-import { playClip, stopAllSfx, wakeSfx } from "@/lib/sfx/player";
-import { addTransitionsAt, lineCuts, sfxOnTransitions } from "@/lib/actions/quick-actions";
+import { addTransitionsAt, lineCuts } from "@/lib/actions/quick-actions";
 import { useProjectStore } from "@/store/project-store";
-import { usePropUiStore } from "@/store/prop-ui-store";
+import { usePropUiStore, type FxPick } from "@/store/prop-ui-store";
 import { openMenu } from "@/components/ui/context-menu";
 import { ClipLane } from "./clip-lane";
 import { FX_DRAG_TYPE, type FxDrag } from "./effects-panel";
@@ -19,6 +17,27 @@ const parse = (data: string): FxDrag | null => {
   }
 };
 
+/**
+ * What a lane needs for picking several effect clips: Ctrl/Shift click adds
+ * one to the group, and dragging any picked clip moves the whole group,
+ * across both effect lanes.
+ */
+function useFxGroup(lane: FxPick["lane"]) {
+  const group = usePropUiStore((s) => s.fxGroup);
+  const toggleFx = usePropUiStore((s) => s.toggleFx);
+  const groupShift = usePropUiStore((s) => s.fxShift);
+  const setFxShift = usePropUiStore((s) => s.setFxShift);
+  const moveFxClips = useProjectStore((s) => s.moveFxClips);
+  const ids = (l: FxPick["lane"]) => group.filter((p) => p.lane === l).map((p) => p.id);
+  return {
+    groupIds: new Set(group.length > 1 ? ids(lane) : []),
+    onTogglePick: (id: string) => toggleFx({ lane, id }),
+    groupShift,
+    onGroupShift: setFxShift,
+    onGroupMove: (dt: number) => moveFxClips(ids("transition"), ids("adjust"), dt),
+  };
+}
+
 /** Screen transitions; each is centered on its cut. */
 export function TransitionLane({ pps, timeAt }: LaneProps) {
   const clips = useProjectStore((s) => s.style.transitions);
@@ -29,10 +48,12 @@ export function TransitionLane({ pps, timeAt }: LaneProps) {
   const selectFx = usePropUiStore((s) => s.selectFx);
   const last = usePropUiStore((s) => s.lastTransition);
   const pick = (id: string | null) => id && selectFx({ lane: "transition", id });
+  const groupProps = useFxGroup("transition");
   const label = (kind: string) => TRANSITION_BY_ID.get(kind as never)?.label ?? kind;
 
   return (
     <ClipLane
+      {...groupProps}
       label="✦ 전환"
       ariaLabel="트랜지션 타임라인"
       clips={clips ?? []}
@@ -67,7 +88,6 @@ export function TransitionLane({ pps, timeAt }: LaneProps) {
               label: "복제 (바로 뒤에)",
               onSelect: () => pick(add(c.kind, c.end + (c.end - c.start) / 2 + 0.05)),
             },
-            { label: "어울리는 효과음 붙이기", onSelect: () => void sfxOnTransitions() },
             {
               label: `가사 줄마다 '${label(c.kind)}' 넣기`,
               onSelect: () => void addTransitionsAt(lineCuts(), [c.kind]),
@@ -98,10 +118,12 @@ export function AdjustLane({ pps, timeAt }: LaneProps) {
   const fx = usePropUiStore((s) => s.fx);
   const selectFx = usePropUiStore((s) => s.selectFx);
   const pick = (id: string | null) => id && selectFx({ lane: "adjust", id });
+  const groupProps = useFxGroup("adjust");
   const label = (kind: string) => ADJUST_BY_ID.get(kind as never)?.label ?? kind;
 
   return (
     <ClipLane
+      {...groupProps}
       label="◐ 조정"
       ariaLabel="조정 레이어 타임라인"
       clips={clips ?? []}
@@ -160,73 +182,6 @@ export function AdjustLane({ pps, timeAt }: LaneProps) {
             { label: "여기에 천천히 줌 인", onSelect: () => pick(add("zoom", at)) },
           ],
           "조정 레이어 줄",
-        )
-      }
-    />
-  );
-}
-
-/** Sound effects, played with the preview and mixed into the exported video. */
-export function SfxLane({ pps, timeAt }: LaneProps) {
-  const clips = useProjectStore((s) => s.sfx);
-  const sounds = useProjectStore((s) => s.sounds);
-  const add = useProjectStore((s) => s.addSfx);
-  const update = useProjectStore((s) => s.updateSfx);
-  const remove = useProjectStore((s) => s.removeSfx);
-  const fx = usePropUiStore((s) => s.fx);
-  const selectFx = usePropUiStore((s) => s.selectFx);
-  const pick = (id: string | null) => id && selectFx({ lane: "sfx", id });
-
-  return (
-    <ClipLane
-      label="♪ 효과음"
-      ariaLabel="효과음 타임라인"
-      clips={clips}
-      selectedId={fx?.lane === "sfx" ? fx.id : null}
-      pps={pps}
-      timeAt={timeAt}
-      onSelect={(id) => selectFx({ lane: "sfx", id })}
-      onTimes={(id, start, end) => {
-        const c = clips.find((x) => x.id === id);
-        const len = c ? (soundLength(c.sound, sounds) ?? end - start) : end - start;
-        // A sound can be cut short but never stretched past its own length
-        update(id, { start, end: Math.min(end, start + len) });
-      }}
-      onAdd={(at) => add("whoosh_soft", at, soundLength("whoosh_soft", sounds) ?? 0.7)}
-      title={(c) => soundLabel(c.sound, sounds)}
-      content={(c) => (
-        <span className="pointer-events-none truncate text-[10px] text-zinc-100">
-          ♪ {soundLabel(c.sound, sounds)}
-        </span>
-      )}
-      tone={{
-        on: "border-lime-300 bg-lime-800",
-        off: "border-lime-800/80 bg-lime-950 hover:border-lime-400/70",
-        handle: "hover:bg-lime-300/50",
-        label: "text-lime-300/70",
-      }}
-      dropType={FX_DRAG_TYPE}
-      onDropData={(at, data) => {
-        const d = parse(data);
-        if (d?.lane === "sfx") pick(add(d.sound, at, d.len));
-      }}
-      onClipMenu={(e, c) =>
-        openMenu(
-          e,
-          [
-            {
-              label: "들어 보기",
-              onSelect: () => {
-                wakeSfx();
-                stopAllSfx();
-                void playClip(c, sounds);
-              },
-            },
-            { label: "복제 (바로 뒤에)", onSelect: () => pick(add(c.sound, c.end + 0.05, c.end - c.start)) },
-            "sep",
-            { label: "삭제", hint: "Del", danger: true, onSelect: () => remove(c.id) },
-          ],
-          soundLabel(c.sound, sounds),
         )
       }
     />

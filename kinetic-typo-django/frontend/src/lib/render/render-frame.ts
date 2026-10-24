@@ -147,11 +147,28 @@ function withJolt(s: { x: number; y: number }, flash: number, timeSec: number, W
 }
 
 /** Draws one frame, then the final color grade and filters over it (not on the text-only layer). */
-export function renderFrame(input: FrameInput): void {
+export function renderFrame(raw: FrameInput): void {
+  const input = raw.style.noVibration ? stilled(raw) : raw;
   drawFrame(input);
   if (input.layer === "front") return;
   applyTimelineFx(input.ctx, themeAt(input.style, input.timeSec), input.timeSec, input.energy);
-  if (input.style.finish) applyFinish(input.ctx, sanitizeFinish(input.style.finish), input.timeSec);
+  if (input.style.finish) {
+    const finish = sanitizeFinish(input.style.finish);
+    applyFinish(input.ctx, input.style.noVibration ? { ...finish, weave: 0 } : finish, input.timeSec);
+  }
+}
+
+/** The frame with nothing that shakes: no beat energy, no shake strength and no camera shake clips. */
+function stilled(input: FrameInput): FrameInput {
+  return {
+    ...input,
+    energy: 0,
+    style: {
+      ...input.style,
+      detail: { ...(input.style.detail ?? DEFAULT_DETAIL), shake: 0 },
+      adjustClips: (input.style.adjustClips ?? []).filter((c) => c.kind !== "shake"),
+    },
+  };
 }
 
 const ROAM_SEC = 0.35;
@@ -193,9 +210,18 @@ function drawFrame(input: FrameInput): void {
   const activeLine = active?.line ?? null;
   const overlaps = active?.overlaps ?? [];
   const style = effectiveStyle(themeAt(input.style, timeSec), activeLine);
-  const detail = style.detail ?? DEFAULT_DETAIL;
+  // A line's own shake would bring it back, so the still setting zeroes it after the line style is applied
+  const detail = style.noVibration
+    ? { ...(style.detail ?? DEFAULT_DETAIL), shake: 0 }
+    : (style.detail ?? DEFAULT_DETAIL);
   const flash = activeLine ? flashAmount(activeLine, timeSec) : 0;
-  const shake = withJolt(frameShake(detail, energy, timeSec, W, H), flash, timeSec, W, H);
+  const shake = withJolt(
+    frameShake(detail, energy, timeSec, W, H),
+    input.style.noVibration ? 0 : flash,
+    timeSec,
+    W,
+    H,
+  );
   const hop = hopClock(lines, timeSec);
   // Roaming would carry the lyrics onto red cells, so it stops while any cell is kept clear
   const keepsCells =

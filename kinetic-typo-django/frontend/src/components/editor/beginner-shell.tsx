@@ -8,7 +8,12 @@ import { useLayoutStore } from "@/store/layout-store";
 import { AlbumCoverPicker } from "./album-cover-picker";
 import { AudioInput } from "./audio-input";
 import { BgVideoPicker } from "./bg-video-picker";
-import { AutoContrastControl, ElementMotionToggle } from "./readability-controls";
+import {
+  AutoContrastControl,
+  ElementMotionToggle,
+  LyricOrientationControl,
+  NoVibrationToggle,
+} from "./readability-controls";
 import { ExportPanel } from "./export-panel";
 import { LyricFontPicker } from "./lyric-font-picker";
 import { LyricsEditor } from "./lyrics-editor";
@@ -201,8 +206,10 @@ function LyricLook() {
           <span className="w-10 text-right font-mono text-zinc-300">{Math.round(fontScale * 100)}%</span>
         </span>
       </label>
+      <LyricOrientationControl />
       <AutoContrastControl />
       <ElementMotionToggle />
+      <NoVibrationToggle />
       <LyricFontPicker />
     </div>
   );

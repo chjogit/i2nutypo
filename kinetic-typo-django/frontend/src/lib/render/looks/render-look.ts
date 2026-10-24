@@ -29,6 +29,7 @@ import { applyMotion, motionForLine } from "./motions";
 import { applyColorFilter } from "./color-filter";
 import { drawOrganicMarks } from "./element-motion";
 import { drawReadable } from "./auto-contrast";
+import { orientedLyrics } from "./orientation";
 
 /** How each theme's hand-drawn marks are stroked. */
 const MARK_STROKE: Partial<Record<Exclude<LookPresetId, "classic">, "glow" | "brush">> = {
@@ -181,7 +182,8 @@ function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): void {
     (c) => {
       const g = c === f.ctx ? f : { ...f, ctx: c };
       // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
-      const draw = withMotion(g, () => r.lyrics(g));
+      const lyrics = orientedLyrics(r, g);
+      const draw = withMotion(g, () => lyrics(g));
       // The readability check needs the box of the copy it draws on its own layer
       if (f.textBounds || hasOverlaps || c !== f.ctx) return recordTextBounds(g.ctx, draw);
       draw();

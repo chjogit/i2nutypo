@@ -71,6 +71,8 @@ export interface LineStyle {
   flash?: number;
   /** The line's own lyric motion (1-based number in MOTIONS); none: the theme picks one. */
   motion?: number;
+  /** 1: lyrics across, 2: in columns (vertical); none: as the whole video. */
+  orient?: number;
 }
 
 export interface LyricLine {
@@ -253,6 +255,32 @@ export interface PropClip {
   /** Drawn over the lyrics instead of behind them. */
   front: boolean;
   flip: boolean;
+  /** Part of the picture masked off, or filled with a color; missing when there is none. */
+  mask?: PropMask;
+}
+
+/**
+ * A mask on an illustration clip. The area is a rectangle or ellipse in the
+ * picture's own box (shares 0..1 of its width and height), so it moves, turns
+ * and scales with the picture.
+ */
+export interface PropMask {
+  on: boolean;
+  shape: "rect" | "ellipse";
+  /** Center and size of the area, as shares of the picture's box. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Soft edge, 0..1 (a share of the area's smaller side). */
+  feather: number;
+  /** "inside": the area is masked; "outside": everything but the area is. */
+  target: "inside" | "outside";
+  /** Color laid on the masked part; colorAlpha 0 leaves it see-through. */
+  color: string;
+  colorAlpha: number;
+  /** Color only where the picture has pixels (its silhouette), or over the whole masked area. */
+  fill: "picture" | "area";
 }
 
 /** A stretch of the song drawn with its own themes instead of the ones picked for the whole video. */
@@ -270,6 +298,9 @@ export interface ThemeClip {
 
 /** Theme colors (not the subtitles', which the subtitle panel sets). */
 export type ThemeColors = Pick<StyleSettings, "bgColor" | "textColor" | "accentColor" | "secondaryColor">;
+
+/** Lyrics across (horizontal) or in columns (vertical); auto: as the theme sets them. */
+export type LyricOrientation = "auto" | "horizontal" | "vertical";
 
 /** A filter on the background video alone (style.bgVideoFilter); the lyrics and decorations keep their colors. */
 export interface BgVideoFilter {
@@ -391,6 +422,13 @@ export interface StyleSettings {
    * lyrics are brought up to, and the outline's weight. 0.5 is the usual 3:1.
    */
   autoContrastAmount: number;
+  /**
+   * Turns off every leftover vibration: beat pulses and shake, the jolt on
+   * flash lines, hand-drawn boil, illustration sway and film gate weave.
+   */
+  noVibration: boolean;
+  /** Lyrics set across or in columns over the whole video; "auto" keeps each theme's own. */
+  lyricOrientation: LyricOrientation;
   /** Timeline clips also snap to the analysed beats while dragged. */
   snapToBeats: boolean;
   activePresetId: string;
@@ -555,26 +593,6 @@ export interface BeatGrid {
   downbeat: number;
 }
 
-/** A sound effect on the timeline. */
-export interface SfxClip {
-  id: string;
-  start: number;
-  /** start plus the sound's length; kept so the lane can draw it. */
-  end: number;
-  /** A built-in sound id, or "user:<id>" for one of the user's files. */
-  sound: string;
-  /** Volume 0..1.5. */
-  gain: number;
-}
-
-/** A sound file the user added; like the images, kept for the page session only. */
-export interface SoundAsset {
-  id: string;
-  fileName: string;
-  objectUrl: string;
-  duration: number;
-}
-
 /** A moving background, uploaded or picked from the free stock videos; decoded in the browser. */
 export interface VideoAsset {
   fileName: string;
@@ -593,9 +611,6 @@ export interface Project {
   props: PropAsset[];
   /** Moving background drawn in place of the background picture; page session only. */
   bgVideo: VideoAsset | null;
-  /** Sound effects on the timeline (saved) and the user's own sound files (page session only). */
-  sfx: SfxClip[];
-  sounds: SoundAsset[];
   /** Beats found in the song, or null before the analysis runs. */
   beats: BeatGrid | null;
   /** Song length in seconds; falls back to a default until audio is loaded. */

@@ -11,7 +11,6 @@ import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks
 import { FEATURES_NOW } from "@/lib/mode/mode";
 import { previewVideoFrame } from "@/lib/media/video-bg";
 import { beatGridPulse } from "@/lib/beats/detect";
-import { SfxFollower } from "@/lib/sfx/player";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { IllustrationOverlay } from "./illustration-overlay";
@@ -46,7 +45,6 @@ export function Preview() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const particles = createParticles();
-    const sfx = new SfxFollower();
     let raf = 0;
     let last = performance.now();
 
@@ -68,7 +66,6 @@ export function Preview() {
         playback.setCurrentTime(t);
       }
 
-      sfx.tick(t, playback.isPlaying, project.sfx, project.sounds);
       const images = resolveIllustrationImages(project.images);
       const video = previewVideoFrame(project.bgVideo, t, playback.isPlaying);
       if (video) images.background = filterBackground(video, project.style.bgVideoFilter, "preview");

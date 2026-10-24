@@ -207,7 +207,7 @@ function overlay(f: LookFrame): void {
   // Hand-drawn border that "boils" at 8fps; strength sets wobble and weight
   const boil = Math.floor(f.timeSec * 8);
   const inset = minSide(f) * 0.035;
-  const wobble = 1 + frame * 4;
+  const wobble = f.style.noVibration ? 0 : 1 + frame * 4;
   ctx.save();
   ctx.strokeStyle = style.textColor;
   ctx.lineJoin = "round";

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { PropMaskFold } from "./prop-mask-fold";
 import type { CueEffect, PropAsset, PropClip } from "@/types/project";
 import { newId } from "@/lib/props/clips";
 import { ENTER_EFFECTS, EXIT_EFFECTS, MAX_CUE_FADE, MIN_CUE_FADE } from "@/lib/render/looks/cues";
@@ -521,6 +522,12 @@ export function PropsPanel() {
               </Check>
             </div>
           </Fold>
+          <PropMaskFold
+            // Turning the mask on opens its settings
+            key={`${selClip.id}-${selClip.mask?.on === true}`}
+            mask={selClip.mask}
+            onChange={(mask) => updatePropClip(selProp.id, selClip.id, { mask })}
+          />
           <Fold title="나타남 · 사라짐" className="space-y-1.5 border-t border-zinc-800/70 pt-2">
             <EffectRow
               label="나타남"

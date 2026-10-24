@@ -3,6 +3,7 @@ import { clipPresence } from "@/lib/props/clips";
 import { clipReveal, revealAlpha } from "./cues";
 import type { LookFrame } from "./frame";
 import type { LoadedImage } from "./illustration";
+import { maskedPicture } from "./prop-mask";
 
 /** An illustration on the timeline with its decoded picture. */
 export interface PropLayer {
@@ -43,8 +44,9 @@ export function drawProps(f: LookFrame, front: boolean): void {
     const w = (layer.img.width / layer.img.height) * h;
     // Each illustration sways on its own phase
     const t = f.timeSec + n * 1.3;
-    const sway = clip.shake * w * 0.04;
-    const tilt = clip.shake * 4 * Math.sin(t * 1.9);
+    const shake = f.style.noVibration ? 0 : clip.shake;
+    const sway = shake * w * 0.04;
+    const tilt = shake * 4 * Math.sin(t * 1.9);
     const bounce = clip.beat * f.energy * h * 0.05;
     const cx = clip.x * W + Math.sin(t * 1.7) * sway;
     const cy = clip.y * H + Math.sin(t * 2.3 + 1) * sway * 0.3 - bounce;
@@ -57,7 +59,8 @@ export function drawProps(f: LookFrame, front: boolean): void {
     // A beat squash keeps the bottom planted
     const squash = 1 + clip.beat * f.energy * 0.04;
     ctx.scale(1 / Math.sqrt(squash), squash);
-    ctx.drawImage(layer.img.source, 0, 0, layer.img.width, layer.img.height, -w / 2, -h / 2, w, h);
+    const pic = maskedPicture(layer.img, clip.mask);
+    ctx.drawImage(pic.source, 0, 0, pic.width, pic.height, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
 }

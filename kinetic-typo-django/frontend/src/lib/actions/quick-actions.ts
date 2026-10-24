@@ -5,10 +5,8 @@ import { usePropUiStore } from "@/store/prop-ui-store";
 import { useLayoutStore } from "@/store/layout-store";
 import { beatsEvery } from "@/lib/beats/detect";
 import { analyzeSongBeats } from "@/lib/beats/analyze";
-import { makeSfxClip, soundLength } from "@/lib/sfx/library";
-import { fitClip, sortClips } from "@/lib/props/clips";
 import { sanitizeElementMotion, TRANSITION_BY_ID, transitionsAtCuts } from "@/lib/timeline-fx/defs";
-import { MOTION_PACKS, SFX_FOR_TRANSITION, type MotionPack } from "@/lib/timeline-fx/packs";
+import { MOTION_PACKS, type MotionPack } from "@/lib/timeline-fx/packs";
 import { DEFAULT_FINISH, sanitizeFinish } from "@/lib/render/finish/settings";
 import type { FilterId } from "@/types/finish";
 
@@ -19,7 +17,7 @@ import type { FilterId } from "@/types/finish";
 export interface QuickAction {
   id: string;
   label: string;
-  group: "트랜지션" | "효과음" | "조정 레이어" | "비트" | "가사" | "모션 팩" | "화면";
+  group: "트랜지션" | "조정 레이어" | "비트" | "가사" | "모션 팩" | "화면";
   /** Short note shown on the right of the palette. */
   hint?: string;
   run: () => void | Promise<void>;
@@ -57,25 +55,6 @@ export function addTransitionsAt(
   return next.length - before.length;
 }
 
-/** A matching sound effect at the start of every transition that has none. */
-export function sfxOnTransitions(fixed?: string): number {
-  const s = project();
-  let clips = [...s.sfx];
-  let added = 0;
-  for (const tr of s.style.transitions ?? []) {
-    const sound = fixed ?? SFX_FOR_TRANSITION[tr.kind];
-    const len = soundLength(sound, s.sounds) ?? 0.5;
-    // Lead into the cut: the sound peaks around the transition's middle
-    const at = Math.max(0, (tr.start + tr.end) / 2 - Math.min(len * 0.55, 0.6));
-    if (clips.some((c) => at < c.end && at + len > c.start)) continue;
-    const made = makeSfxClip(sound, at, len, s.duration);
-    clips = sortClips([...clips, fitClip(made, made, clips, s.duration)]);
-    added++;
-  }
-  s.setSfxClips(clips);
-  return added;
-}
-
 export async function runBeatAnalysis(): Promise<string> {
   const s = project();
   if (s.audio.kind !== "upload") return "먼저 음원을 올려 주세요.";
@@ -90,7 +69,6 @@ export function applyPack(pack: MotionPack): string {
   const cuts = pack.on === "bars" ? (barCuts() ?? lineCuts()) : lineCuts();
   s.setTransitions([]);
   addTransitionsAt(cuts, pack.transitions, pack.color);
-  if (pack.sfx !== null) sfxOnTransitions(pack.sfx);
   const base = sanitizeFinish(s.style.finish);
   const { filterAmounts, ...rest } = pack.finish;
   const filters = { ...base.filters };
@@ -147,23 +125,6 @@ export function quickActions(): QuickAction[] {
       group: "트랜지션",
       run: () => project().setTransitions([]),
     },
-    {
-      id: "sfx.tr",
-      label: "트랜지션마다 어울리는 효과음 붙이기",
-      group: "효과음",
-      run: () => void sfxOnTransitions(),
-    },
-    {
-      id: "sfx.here",
-      label: "재생 위치에 '휙' 효과음",
-      group: "효과음",
-      hint: "W",
-      run: () => {
-        const id = project().addSfx("whoosh_soft", now(), soundLength("whoosh_soft", []) ?? 0.7);
-        if (id) usePropUiStore.getState().selectFx({ lane: "sfx", id });
-      },
-    },
-    { id: "sfx.clear", label: "효과음 모두 지우기", group: "효과음", run: () => project().setSfxClips([]) },
     {
       id: "adj.here",
       label: "재생 위치에 조정 레이어 (카메라 흔들림)",

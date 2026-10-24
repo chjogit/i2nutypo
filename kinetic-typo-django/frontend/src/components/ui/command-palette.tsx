@@ -99,7 +99,7 @@ export function CommandPalette() {
               void run(list[active]);
             }
           }}
-          placeholder="할 일 찾기 (예: 트랜지션, 비트, 효과음, 레이아웃)"
+          placeholder="할 일 찾기 (예: 트랜지션, 비트, 레이아웃)"
           aria-label="빠른 작업 검색"
           className="w-full border-b border-zinc-800 bg-transparent px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
         />

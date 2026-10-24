@@ -17,6 +17,10 @@ type DragKind = "move" | "start" | "end";
 interface Drag {
   clipId: string;
   kind: DragKind;
+  /** Ctrl, ⌘ or Shift was held: a click adds the clip to the picked group. */
+  additive: boolean;
+  /** The clip is part of a picked group, so moving it moves the whole group. */
+  group: boolean;
   pointerX: number;
   origStart: number;
   origEnd: number;
@@ -50,6 +54,14 @@ export interface ClipLaneProps<T extends Span> {
   /** Drag data type this lane takes from the effects library, and what to do with a drop at `at`. */
   dropType?: string;
   onDropData?: (at: number, data: string) => void;
+  /** Clips picked together with the main pick, drawn as picked too. */
+  groupIds?: ReadonlySet<string>;
+  /** Ctrl/Shift click: adds the clip to the group or takes it out. Without it, lanes have no groups. */
+  onTogglePick?: (id: string) => void;
+  /** A picked group being dragged: how far it is moved now, and the move when it is dropped. */
+  groupShift?: number;
+  onGroupShift?: (dt: number) => void;
+  onGroupMove?: (dt: number) => void;
   /** Right click on a clip, or on the empty lane at `at`. */
   onClipMenu?: (e: ReactMouseEvent, clip: T) => void;
   onLaneMenu?: (e: ReactMouseEvent, at: number) => void;
@@ -85,9 +97,12 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
   const onClipDown = (e: ReactPointerEvent<HTMLElement>, clip: T, kind: DragKind) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    const additive = (e.ctrlKey || e.metaKey || e.shiftKey) && p.onTogglePick !== undefined;
     dragRef.current = {
       clipId: clip.id,
       kind,
+      additive,
+      group: kind === "move" && (p.groupIds?.size ?? 0) > 1 && (p.groupIds?.has(clip.id) ?? false),
       pointerX: e.clientX,
       origStart: clip.start,
       origEnd: clip.end,
@@ -103,6 +118,10 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
     if (!d.moved && Math.abs(dx) < DRAG_THRESHOLD_PX) return;
     d.moved = true;
     const dt = dx / p.pps;
+    if (d.group) {
+      p.onGroupShift?.(round2(dt));
+      return;
+    }
     let start = d.origStart;
     let end = d.origEnd;
     if (d.kind === "move") {
@@ -126,7 +145,16 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
     const d = dragRef.current;
     dragRef.current = null;
     if (!d) return;
-    p.onSelect(d.clipId);
+    if (d.group && d.moved) {
+      p.onGroupMove?.(p.groupShift ?? 0);
+      p.onGroupShift?.(0);
+      return;
+    }
+    if (!d.moved && d.additive) {
+      p.onTogglePick?.(d.clipId);
+      return;
+    }
+    if (!(d.group && !d.moved)) p.onSelect(d.clipId);
     if (!d.moved) {
       seek(d.origStart);
       return;
@@ -164,7 +192,11 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
         setDropAt(null);
         p.onDropData?.(snap(p.timeAt(e.clientX)), e.dataTransfer.getData(p.dropType));
       }}
-      title="빈 곳 두 번 클릭: 구간 추가 · 우클릭: 메뉴 · 구간 고르고 Delete: 지우기"
+      title={
+        p.onTogglePick
+          ? "빈 곳 두 번 클릭: 구간 추가 · 우클릭: 메뉴 · Ctrl/Shift 클릭: 여러 개 고르기 · Delete: 지우기"
+          : "빈 곳 두 번 클릭: 구간 추가 · 우클릭: 메뉴 · 구간 고르고 Delete: 지우기"
+      }
       className={`relative border-b border-zinc-900 ${dropAt !== null ? "bg-indigo-500/10" : ""}`}
       style={{ height: p.height ?? CLIP_LANE_HEIGHT }}
     >
@@ -180,9 +212,11 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
         {p.label}
       </span>
       {p.clips.map((c) => {
-        const start = draft?.clipId === c.id ? draft.start : c.start;
-        const end = draft?.clipId === c.id ? draft.end : c.end;
-        const isSel = p.selectedId === c.id;
+        const inGroup = p.groupIds?.has(c.id) ?? false;
+        const shift = inGroup && (p.groupIds?.size ?? 0) > 1 ? (p.groupShift ?? 0) : 0;
+        const start = draft?.clipId === c.id ? draft.start : c.start + shift;
+        const end = draft?.clipId === c.id ? draft.end : c.end + shift;
+        const isSel = p.selectedId === c.id || inGroup;
         return (
           <div
             key={c.id}

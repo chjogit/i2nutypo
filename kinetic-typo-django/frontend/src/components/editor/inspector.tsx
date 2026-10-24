@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
-import type { AdjustKind, TransitionColor, TransitionKind } from "@/types/project";
+import type {
+  AdjustClip,
+  AdjustKind,
+  TransitionClip,
+  TransitionColor,
+  TransitionKind,
+} from "@/types/project";
+import { Tip } from "@/components/ui/tip";
 import { ADJUSTS, TRANSITION_BY_ID, TRANSITION_COLORS, TRANSITIONS } from "@/lib/timeline-fx/defs";
-import { SFX, SFX_GROUPS, soundLabel, soundLength } from "@/lib/sfx/library";
-import { playClip, stopAllSfx, wakeSfx } from "@/lib/sfx/player";
 import { formatLrcTime } from "@/lib/lyrics/parse";
 import { useProjectStore } from "@/store/project-store";
 import { usePlaybackStore } from "@/store/playback-store";
@@ -59,35 +64,40 @@ const sec = (v: number) => `${v.toFixed(2)}s`;
 
 /**
  * The picked effect clip's settings in one place, like an editor's inspector:
- * pick a clip on the transition, adjustment or sound lane and change it here
+ * pick a clip on the transition or adjustment lane and change it here
  * without hunting through panels.
  */
 export function Inspector() {
   const fx = usePropUiStore((s) => s.fx);
+  const group = usePropUiStore((s) => s.fxGroup);
+  const removeFxClips = useProjectStore((s) => s.removeFxClips);
   const selectFx = usePropUiStore((s) => s.selectFx);
   const style = useProjectStore((s) => s.style);
-  const sfx = useProjectStore((s) => s.sfx);
-  const sounds = useProjectStore((s) => s.sounds);
   const updateTransition = useProjectStore((s) => s.updateTransition);
   const updateAdjust = useProjectStore((s) => s.updateAdjust);
-  const updateSfx = useProjectStore((s) => s.updateSfx);
   const removeTransition = useProjectStore((s) => s.removeTransition);
   const removeAdjust = useProjectStore((s) => s.removeAdjust);
-  const removeSfx = useProjectStore((s) => s.removeSfx);
   const seek = usePlaybackStore((s) => s.seek);
   if (!fx) return null;
 
   const tr = fx.lane === "transition" ? style.transitions.find((c) => c.id === fx.id) : undefined;
   const adj = fx.lane === "adjust" ? style.adjustClips.find((c) => c.id === fx.id) : undefined;
-  const snd = fx.lane === "sfx" ? sfx.find((c) => c.id === fx.id) : undefined;
-  const clip = tr ?? adj ?? snd;
+  const clip = tr ?? adj;
   if (!clip) return null;
 
-  const title = tr ? "트랜지션" : adj ? "조정 레이어" : "효과음";
+  const picks = group.length > 1 ? group : [fx];
+  const idsOf = (lane: typeof fx.lane) => picks.filter((p) => p.lane === lane).map((p) => p.id);
+  // With several clips picked, a setting changed here goes to every picked clip of the same kind
+  const patchTransitions = (patch: Partial<TransitionClip>) =>
+    idsOf("transition").forEach((id) => updateTransition(id, patch));
+  const patchAdjusts = (patch: Partial<AdjustClip>) =>
+    idsOf("adjust").forEach((id) => updateAdjust(id, patch));
+  const many = picks.length > 1;
+  const title = `${tr ? "트랜지션" : "조정 레이어"}${many ? ` 외 ${picks.length - 1}개` : ""}`;
   const remove = () => {
-    if (tr) removeTransition(tr.id);
+    if (many) removeFxClips(idsOf("transition"), idsOf("adjust"));
+    else if (tr) removeTransition(tr.id);
     else if (adj) removeAdjust(adj.id);
-    else if (snd) removeSfx(snd.id);
     selectFx(null);
   };
 
@@ -103,6 +113,13 @@ export function Inspector() {
         >
           {formatLrcTime(clip.start)} – {formatLrcTime(clip.end)}
         </button>
+        {many && (
+          <Tip>
+            Ctrl/Shift로 여러 구간을 골랐습니다. 여기서 바꾸는 종류·색·세기·들고 나기는 고른 같은 종류 구간
+            모두에 들어가고, 삭제는 고른 구간을 모두 지웁니다. 타임라인에서 고른 구간 하나를 끌면 함께
+            움직입니다.
+          </Tip>
+        )}
         <button
           type="button"
           onClick={remove}
@@ -129,7 +146,7 @@ export function Inspector() {
               onChange={(e) => {
                 const kind = e.target.value as TransitionKind;
                 usePropUiStore.getState().setLastTransition(kind);
-                updateTransition(tr.id, { kind });
+                patchTransitions({ kind });
               }}
               className={FIELD}
             >
@@ -152,7 +169,7 @@ export function Inspector() {
                     key={id}
                     type="button"
                     aria-pressed={tr.color === id}
-                    onClick={() => updateTransition(tr.id, { color: id as TransitionColor })}
+                    onClick={() => patchTransitions({ color: id as TransitionColor })}
                     className={`rounded-full border px-2 py-0.5 text-[11px] ${tr.color === id ? "border-indigo-500 bg-indigo-500/15 text-zinc-100" : "border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
                   >
                     {label}
@@ -183,7 +200,7 @@ export function Inspector() {
           <Row label="종류">
             <select
               value={adj.kind}
-              onChange={(e) => updateAdjust(adj.id, { kind: e.target.value as AdjustKind })}
+              onChange={(e) => patchAdjusts({ kind: e.target.value as AdjustKind })}
               className={FIELD}
             >
               {ADJUSTS.map((a) => (
@@ -201,7 +218,7 @@ export function Inspector() {
               max={1}
               step={0.01}
               format={pct}
-              onChange={(amount) => updateAdjust(adj.id, { amount })}
+              onChange={(amount) => patchAdjusts({ amount })}
             />
           </Row>
           <Row label="들고 나기">
@@ -212,67 +229,7 @@ export function Inspector() {
               max={Math.max(0.05, Math.min(2, (adj.end - adj.start) / 2))}
               step={0.05}
               format={sec}
-              onChange={(fade) => updateAdjust(adj.id, { fade })}
-            />
-          </Row>
-        </>
-      )}
-
-      {snd && (
-        <>
-          <Row label="소리">
-            <span className="flex gap-1.5">
-              <select
-                value={snd.sound}
-                onChange={(e) => {
-                  const sound = e.target.value;
-                  const len = soundLength(sound, sounds) ?? snd.end - snd.start;
-                  updateSfx(snd.id, { sound, end: snd.start + len });
-                }}
-                className={FIELD}
-              >
-                {SFX_GROUPS.map((g) => (
-                  <optgroup key={g} label={g}>
-                    {SFX.filter((s) => s.group === g).map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-                {sounds.length > 0 && (
-                  <optgroup label="내 소리">
-                    {sounds.map((u) => (
-                      <option key={u.id} value={`user:${u.id}`}>
-                        {soundLabel(`user:${u.id}`, sounds)}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              <button
-                type="button"
-                aria-label="들어 보기"
-                onClick={() => {
-                  wakeSfx();
-                  stopAllSfx();
-                  void playClip(snd, sounds);
-                }}
-                className="shrink-0 rounded-md border border-zinc-800 px-2 text-zinc-300 hover:border-indigo-500"
-              >
-                ▶
-              </button>
-            </span>
-          </Row>
-          <Row label="크기">
-            <Slider
-              label="효과음 크기"
-              value={snd.gain}
-              min={0}
-              max={1.5}
-              step={0.05}
-              format={pct}
-              onChange={(gain) => updateSfx(snd.id, { gain })}
+              onChange={(fade) => patchAdjusts({ fade })}
             />
           </Row>
         </>

@@ -23,9 +23,10 @@ import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { FEATURES_NOW } from "@/lib/mode/mode";
 import { PROP_LANE_HEIGHT, PropLanes, ThemeLane } from "./prop-lanes";
-import { AdjustLane, BeatMarks, SfxLane, TransitionLane } from "./fx-lanes";
+import { AdjustLane, BeatMarks, TransitionLane } from "./fx-lanes";
 import { Tip } from "@/components/ui/tip";
 import { LineTimingRow } from "./line-timing";
+import { ORIENT_HORIZONTAL, ORIENT_VERTICAL } from "@/lib/render/looks/orientation";
 import { openMenu } from "@/components/ui/context-menu";
 import { isTextEntry } from "@/lib/ui/text-entry";
 import { useLayoutStore } from "@/store/layout-store";
@@ -72,7 +73,7 @@ const DEFAULT_HEIGHT = 170;
 const TALL_HEIGHT = 380;
 const DEFAULT_EDIT_HEIGHT = 560;
 // Transitions, adjustment layers and sound effects
-const FX_LANES = 3;
+const FX_LANES = 2;
 /** The selected line's editor grows with the section, up to this zoom and this width before zooming. */
 const MAX_EDITOR_SCALE = 1.8;
 const EDITOR_MAX_WIDTH = 1120;
@@ -421,9 +422,12 @@ export function Timeline() {
         project.removeThemeClip(ui.themeClip);
         ui.selectThemeClip(null);
       } else if (ui.fx) {
-        if (ui.fx.lane === "transition") project.removeTransition(ui.fx.id);
-        else if (ui.fx.lane === "adjust") project.removeAdjust(ui.fx.id);
-        else project.removeSfx(ui.fx.id);
+        // Every picked effect clip goes at once
+        const picks = ui.fxGroup.length > 0 ? ui.fxGroup : [ui.fx];
+        project.removeFxClips(
+          picks.filter((p) => p.lane === "transition").map((p) => p.id),
+          picks.filter((p) => p.lane === "adjust").map((p) => p.id),
+        );
         ui.selectFx(null);
       } else return;
       e.preventDefault();
@@ -813,7 +817,6 @@ export function Timeline() {
                   <>
                     <TransitionLane pps={pps} timeAt={timeAt} />
                     <AdjustLane pps={pps} timeAt={timeAt} />
-                    <SfxLane pps={pps} timeAt={timeAt} />
                   </>
                 )}
               </div>
@@ -1346,6 +1349,27 @@ function LineStyleRow({ value, onChange }: { value: LineStyle; onChange: (next: 
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-zinc-400">
       <span>이 줄 스타일</span>
+      <span role="radiogroup" aria-label="이 줄 가사 방향" className="flex items-center gap-1">
+        방향
+        {(
+          [
+            [undefined, "전체 설정"],
+            [ORIENT_HORIZONTAL, "가로"],
+            [ORIENT_VERTICAL, "세로"],
+          ] as const
+        ).map(([v, label]) => (
+          <button
+            key={label}
+            type="button"
+            role="radio"
+            aria-checked={value.orient === v}
+            onClick={() => set("orient", v)}
+            className={`rounded-md border px-1.5 py-0.5 ${value.orient === v ? "border-indigo-500 bg-indigo-500/20 text-indigo-100" : "border-zinc-800 text-zinc-400 hover:border-indigo-500"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </span>
       {LINE_STYLE_CONTROLS.map((c) => {
         const own = value[c.key];
         return (

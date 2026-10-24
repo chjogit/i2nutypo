@@ -415,4 +415,4 @@ export function drawVerticalLyrics(
 
 /** Small signed jitter that changes a few times a second, for hand-made wobble. */
 export const boil = (f: LookFrame, seed: number, fps = 8): number =>
-  hashSigned(Math.floor(f.timeSec * fps), seed);
+  f.style.noVibration ? 0 : hashSigned(Math.floor(f.timeSec * fps), seed);

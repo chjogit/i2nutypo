@@ -84,6 +84,11 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 코드: `frontend/src/components/editor/mini-preview.tsx`, `text-box-overlay.tsx`, `frontend/src/lib/render/looks/frame.ts`(`fitWidth`, `boxHeight`)
 - 세부 타이밍: 타임라인에서 줄을 고르면 "세부 타이밍" 줄이 열립니다. 단어 단위나 글자 단위로 나오는 순간을 표시로 끌어 정하고(미리보기가 그 순간으로 따라감, ←→ 키로 0.05초씩), "탭으로 찍기"로 줄을 재생하며 탭 버튼(또는 스페이스)을 눌러 차례로 찍습니다. 가사 텍스트에는 줄 길이에 대한 비율로 `;t=0,0.12,0.3`처럼 저장되어 줄을 옮기거나 늘려도 모양이 유지되고, 가사를 고쳐 개수가 달라지면 고르게 나오도록 돌아갑니다. 코드: `frontend/src/lib/lyrics/timing.ts`, `parse.ts`(`placeTiming`), `components/editor/line-timing.tsx`
 - 배경 영상 필터: 배경 영상을 넣으면 그 아래 "영상 필터" 칸이 생깁니다. 원본·어둡게·흐리게·선명하게·빛바랜·차갑게·모노톤 프리셋과 밝기·대비·채도·색조·흐림·색(파랑·노랑·흑백) 조절이 배경 영상에만 걸리고, 가사·장식·일러스트·자막 색은 그대로입니다. 미리보기와 내보내기에 같게 들어갑니다. 코드: `frontend/src/lib/render/bg-filter.ts`, `components/editor/bg-video-filter.tsx`
+- 가사 방향: 상세 탭 "가사 위치 (전체)"와 입문 4단계에서 테마대로·가로·세로를 고르고, 타임라인 "이 줄 스타일"의 방향으로 줄마다 따로 정합니다(가사 텍스트에 `;orient=1`(가로)·`;orient=2`(세로)). 테마와 다른 방향이면 그 테마 색으로 기본 가로 블록·세로 열 배치를 씁니다. 코드: `frontend/src/lib/render/looks/orientation.ts`
+- 진동 모두 끄기: 상세 탭 "효과" 칸과 입문 4단계의 스위치. 흔들림을 0으로 내려도 남는 떨림(비트에 맞춘 튐·확대, 강조 줄(!)의 화면 튐, 손그림 테두리 떨림, 일러스트 흔들림, 카메라 흔들림 조정 구간, 필름 화면 흔들림)을 한 번에 멈춥니다. 코드: `render-frame.ts`(`stilled`)
+- 전환·조정 여러 개 고르기: 타임라인 전환·조정 줄에서 Ctrl(⌘)/Shift 클릭으로 구간을 더 고르고, 고른 구간 하나를 끌면 함께 움직이며 Delete로 함께 지웁니다. 오른쪽 설정 칸에서 바꾸는 종류·색·세기·들고 나기는 고른 같은 종류 구간 모두에 들어갑니다.
+- 일러스트 마스킹: 일러스트 구간을 고르면 "마스킹" 칸에서 원·사각 영역, 가릴 곳(영역 밖/안), 위치·크기·부드러움, 가린 부분의 색(투명~불투명, 그림 모양/영역 전체)을 정합니다. 코드: `frontend/src/lib/render/looks/prop-mask.ts`, `components/editor/prop-mask-fold.tsx`
+- 효과음 기능은 없앴습니다(2026-10-24).
 - 글자 자동 대비: 색 맞추기·테두리·끄기와 세기(0~100%, 50%가 3:1 기준)를 고릅니다. 코드: `frontend/src/lib/render/looks/auto-contrast.ts`
 
 ## 테마 요소 옮기기와 캐릭터 연출

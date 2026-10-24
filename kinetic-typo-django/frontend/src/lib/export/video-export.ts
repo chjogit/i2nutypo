@@ -26,7 +26,6 @@ import { ZipWriter } from "./zip";
 import { encodeSgi, encodeTga, SEQUENCE_EXT, type SequenceFormat } from "./image-formats";
 import { openProResWriter, type ProResWriter } from "./prores";
 import { openPropVideoReaders } from "@/lib/media/prop-video";
-import { mixSoundEffects } from "@/lib/sfx/mix";
 import { openVideoReader, type VideoFrameReader } from "@/lib/media/video-bg";
 import { beatGridPulse } from "@/lib/beats/detect";
 
@@ -219,9 +218,7 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
   const from = Math.max(0, Math.min(o.range?.start ?? 0, songEnd));
   const to = Math.max(from + 1 / o.fps, Math.min(o.range?.end ?? songEnd, songEnd));
   const video = isVideoKind(o.kind);
-  // The sound effects on the timeline go into the soundtrack along with the song
-  const audio =
-    video && o.withAudio ? await mixSoundEffects(song, songEnd, project.sfx, project.sounds) : null;
+  const audio = video && o.withAudio ? song : null;
   const codecs = video ? await pickCodecs(width, height, audio, LEVEL_QUALITY[o.level]) : null;
   if (video && !codecs)
     throw new Error(

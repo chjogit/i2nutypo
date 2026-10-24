@@ -36,7 +36,7 @@ import { COLOR_FILTERS } from "@/lib/render/looks/color-filter";
 import { AutoComposeBox } from "./auto-compose-box";
 import { Fold } from "./fold";
 import { Tip } from "@/components/ui/tip";
-import { AutoContrastControl } from "./readability-controls";
+import { AutoContrastControl, LyricOrientationControl, NoVibrationToggle } from "./readability-controls";
 import { ELEMENT_MOTIONS } from "@/lib/timeline-fx/defs";
 import type { ElementMotionMode } from "@/types/project";
 import { FinishPanel } from "./finish-panel";
@@ -858,6 +858,7 @@ function DetailTab() {
         }
       >
         {DETAIL_SLIDERS.map((d) => slider(d.key, d.label, d.min, d.max, d.format))}
+        <NoVibrationToggle />
       </Fold>
 
       <Fold title="움직임 느낌 · 배치" className="space-y-2">
@@ -920,6 +921,7 @@ function DetailTab() {
           </span>
         }
       >
+        <LyricOrientationControl />
         {slider("lyricX", "가로", -0.5, 0.5, signedPct)}
         {slider("lyricY", "세로", -0.5, 0.5, signedPct)}
       </Fold>
