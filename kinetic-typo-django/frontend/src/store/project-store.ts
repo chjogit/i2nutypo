@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { sanitizeThemeContrast } from "@/lib/render/looks/theme-contrast";
 import { NEUTRAL_BG_FILTER, sanitizeBgFilter } from "@/lib/render/bg-filter";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { BEGINNER_THEMES, FEATURES_NOW, MODE, projectStorageKey } from "@/lib/mode/mode";
@@ -115,8 +116,7 @@ export const DEFAULT_STYLE: StyleSettings = {
   elementMotion: DEFAULT_ELEMENT_MOTION,
   exitMotion: true,
   lyricRoam: 0,
-  autoContrast: "color",
-  autoContrastAmount: 0.5,
+  themeContrast: {},
   lyricOrientation: "auto",
   noVibration: false,
   snapToBeats: false,
@@ -315,11 +315,7 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
       elementMotion: sanitizeElementMotion(p.style?.elementMotion),
       exitMotion: p.style?.exitMotion !== false,
       lyricRoam: sanitizeUnit(p.style?.lyricRoam, 0),
-      autoContrast:
-        p.style?.autoContrast === "off" || p.style?.autoContrast === "outline"
-          ? p.style.autoContrast
-          : "color",
-      autoContrastAmount: sanitizeUnit(p.style?.autoContrastAmount, 0.5),
+      themeContrast: restoreThemeContrast(p.style),
       noVibration: p.style?.noVibration === true,
       lyricOrientation:
         p.style?.lyricOrientation === "horizontal" || p.style?.lyricOrientation === "vertical"
@@ -346,6 +342,21 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
     merged.style = { ...st, lookPreset: base, mixLooks: [], lyricLook: null, themeClips: [] };
   }
   return { ...merged, lines: reparse(merged) };
+}
+
+/**
+ * Per-theme auto contrast from a save. A save from before it was per theme
+ * kept one setting for the whole video; a changed one goes to the theme it was
+ * saved with.
+ */
+function restoreThemeContrast(saved: Partial<StyleSettings> | undefined): StyleSettings["themeContrast"] {
+  const out = sanitizeThemeContrast(saved?.themeContrast);
+  const old = (saved ?? {}) as { autoContrast?: unknown; autoContrastAmount?: unknown; lookPreset?: unknown };
+  const mode = old.autoContrast === "off" || old.autoContrast === "outline" ? old.autoContrast : "color";
+  const amount = sanitizeUnit(old.autoContrastAmount, 0.5);
+  if (!saved?.themeContrast && (mode !== "color" || amount !== 0.5) && isThemedPresetId(old.lookPreset))
+    out[old.lookPreset] = { mode, amount };
+  return out;
 }
 
 /** What a project file and local storage keep: everything but the page-session media. */

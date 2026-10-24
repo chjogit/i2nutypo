@@ -37,6 +37,25 @@ const SMALL =
 
 const now = () => usePlaybackStore.getState().currentTime;
 
+const OPEN_KEY = "kinetic-typo-effects-open";
+
+/** Whether the effects panel was left open; it starts open, and storage may be unavailable. */
+function readOpen(): boolean {
+  try {
+    return localStorage.getItem(OPEN_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+function writeOpen(open: boolean): void {
+  try {
+    localStorage.setItem(OPEN_KEY, open ? "1" : "0");
+  } catch {
+    // Folding still works for this visit
+  }
+}
+
 /**
  * Right column library of ready-made effects: motion packs, transitions,
  * adjustment layers, background videos and beat markers.
@@ -47,38 +66,65 @@ export function EffectsPanel() {
   const [tab, setTab] = useState<Tab>("packs");
   const fx = usePropUiStore((s) => s.fx);
   // Picking a clip on an effect lane shows its library
+  const [open, setOpen] = useState(readOpen);
+  const toggle = () =>
+    setOpen((v) => {
+      writeOpen(!v);
+      return !v;
+    });
   useEffect(() => {
-    if (fx) setTab(fx.lane === "transition" ? "transitions" : "adjust");
+    if (!fx) return;
+    setTab(fx.lane === "transition" ? "transitions" : "adjust");
+    // Picking an effect clip shows its library even when the panel was folded
+    setOpen(true);
   }, [fx]);
   return (
-    <section aria-label="효과 · 소스" className="space-y-3 px-4 py-4">
+    <section aria-label="효과 · 소스" className={`px-4 ${open ? "space-y-3 py-4" : "py-2.5"}`}>
       <div className="flex items-center gap-2">
-        <h2 className="text-xs font-semibold tracking-wide text-zinc-400">효과 · 소스</h2>
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-zinc-400 hover:text-zinc-100"
+        >
+          <span
+            aria-hidden
+            className={`text-[10px] text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`}
+          >
+            ▾
+          </span>
+          <h2>효과 · 소스</h2>
+          {!open && <span className="font-normal text-zinc-600">{TABS.find(([id]) => id === tab)?.[1]}</span>}
+        </button>
         <Tip>
           항목에 마우스를 올리면 미리 볼 수 있고, 누르면 재생 위치에 들어갑니다. 타임라인의 해당 줄로 끌어다
           놓아도 됩니다. 타임라인에서 구간을 우클릭하면 복제·삭제 같은 메뉴가 나옵니다. Ctrl+K로 빠른 작업
           목록을 엽니다.
         </Tip>
       </div>
-      <div role="tablist" aria-label="효과 종류" className="grid grid-cols-3 gap-1 text-[11px]">
-        {TABS.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => setTab(id)}
-            className={`rounded-md border px-1.5 py-1 ${tab === id ? "border-indigo-500 bg-indigo-500/15 text-zinc-100" : "border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {tab === "packs" && <PacksTab />}
-      {tab === "transitions" && <TransitionsTab />}
-      {tab === "adjust" && <AdjustTab />}
-      {tab === "video" && <BgVideoPicker />}
-      {tab === "beats" && <BeatsTab />}
+      {open && (
+        <>
+          <div role="tablist" aria-label="효과 종류" className="grid grid-cols-3 gap-1 text-[11px]">
+            {TABS.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`rounded-md border px-1.5 py-1 ${tab === id ? "border-indigo-500 bg-indigo-500/15 text-zinc-100" : "border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {tab === "packs" && <PacksTab />}
+          {tab === "transitions" && <TransitionsTab />}
+          {tab === "adjust" && <AdjustTab />}
+          {tab === "video" && <BgVideoPicker />}
+          {tab === "beats" && <BeatsTab />}
+        </>
+      )}
     </section>
   );
 }

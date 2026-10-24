@@ -652,7 +652,7 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
           </label>
         )}
       </div>
-      <AutoContrastControl />
+      <AutoContrastControl preset={clip ? lyricLookOf(clip) : undefined} />
     </Fold>
   );
 }

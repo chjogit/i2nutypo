@@ -89,7 +89,7 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 전환·조정 여러 개 고르기: 타임라인 전환·조정 줄에서 Ctrl(⌘)/Shift 클릭으로 구간을 더 고르고, 고른 구간 하나를 끌면 함께 움직이며 Delete로 함께 지웁니다. 오른쪽 설정 칸에서 바꾸는 종류·색·세기·들고 나기는 고른 같은 종류 구간 모두에 들어갑니다.
 - 일러스트 마스킹: 일러스트 구간을 고르면 "마스킹" 칸에서 원·사각 영역, 가릴 곳(영역 밖/안), 위치·크기·부드러움, 가린 부분의 색(투명~불투명, 그림 모양/영역 전체)을 정합니다. 코드: `frontend/src/lib/render/looks/prop-mask.ts`, `components/editor/prop-mask-fold.tsx`
 - 효과음 기능은 없앴습니다(2026-10-24).
-- 글자 자동 대비: 색 맞추기·테두리·끄기와 세기(0~100%, 50%가 3:1 기준)를 고릅니다. 코드: `frontend/src/lib/render/looks/auto-contrast.ts`
+- 글자 자동 대비: 색 맞추기·테두리·끄기와 세기(0~100%, 50%가 3:1 기준)를 테마마다 따로 정합니다. 테마마다 기본값이 있고(빛나는 글자 테마는 테두리, 단색 포스터형은 끄기, 나머지는 색 맞추기), 타임라인 테마 구간이 바뀌면 그 테마의 설정이 쓰입니다. 코드: `frontend/src/lib/render/looks/theme-contrast.ts`, `auto-contrast.ts`
 
 ## 테마 요소 옮기기와 캐릭터 연출
 

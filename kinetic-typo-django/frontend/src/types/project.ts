@@ -412,16 +412,10 @@ export interface StyleSettings {
   /** 0..1: each line's lyrics sit somewhere else on screen instead of the same place every time. */
   lyricRoam: number;
   /**
-   * When the lyrics blend into what is behind them: "color" shifts their color
-   * lighter or darker until they read, "outline" adds a contrasting edge, "off"
-   * leaves the theme's colors as they are.
+   * Auto contrast chosen for each theme; a theme without an entry uses its own
+   * default (see theme-contrast.ts).
    */
-  autoContrast: AutoContrast;
-  /**
-   * How strongly autoContrast works, 0..1 (shown as %): the contrast the
-   * lyrics are brought up to, and the outline's weight. 0.5 is the usual 3:1.
-   */
-  autoContrastAmount: number;
+  themeContrast: Partial<Record<LookPresetId, ThemeContrast>>;
   /**
    * Turns off every leftover vibration: beat pulses and shake, the jolt on
    * flash lines, hand-drawn boil, illustration sway and film gate weave.
@@ -529,7 +523,18 @@ export type TransitionKind =
 /** Color a covering transition paints with. */
 export type TransitionColor = "accent" | "bg" | "white" | "black";
 
-/** How the lyrics keep readable over the background (style.autoContrast). */
+/**
+ * How a theme's lyrics keep readable over the background: "color" shifts their
+ * color lighter or darker until they read, "outline" adds a contrasting edge,
+ * "off" leaves the theme's colors as they are. amount 0..1 (shown as %) is the
+ * contrast they are brought up to and the outline's weight; 0.5 is the usual 3:1.
+ */
+export interface ThemeContrast {
+  mode: AutoContrast;
+  amount: number;
+}
+
+/** How the lyrics keep readable over the background (ThemeContrast.mode). */
 export type AutoContrast = "off" | "color" | "outline";
 
 export interface TransitionClip {

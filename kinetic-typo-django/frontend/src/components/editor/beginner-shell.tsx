@@ -4,6 +4,7 @@ import { BEGINNER_THEMES } from "@/lib/mode/mode";
 import { getLookPreset } from "@/lib/render/looks/presets";
 import { recommendThemes } from "@/lib/render/looks/theme-advisor";
 import { useProjectStore } from "@/store/project-store";
+import { loadProject } from "@/lib/session/shared-song";
 import { useLayoutStore } from "@/store/layout-store";
 import { AlbumCoverPicker } from "./album-cover-picker";
 import { AudioInput } from "./audio-input";
@@ -221,7 +222,7 @@ function LyricLook() {
  */
 export function BeginnerShell() {
   useEffect(() => {
-    void useProjectStore.persist.rehydrate();
+    void loadProject();
     useLayoutStore.getState().load();
   }, []);
 

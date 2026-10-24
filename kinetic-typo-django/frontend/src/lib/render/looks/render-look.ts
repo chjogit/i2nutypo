@@ -30,6 +30,7 @@ import { applyColorFilter } from "./color-filter";
 import { drawOrganicMarks } from "./element-motion";
 import { drawReadable } from "./auto-contrast";
 import { orientedLyrics } from "./orientation";
+import { contrastFor } from "./theme-contrast";
 
 /** How each theme's hand-drawn marks are stroked. */
 const MARK_STROKE: Partial<Record<Exclude<LookPresetId, "classic">, "glow" | "brush">> = {
@@ -168,14 +169,16 @@ export function renderLookFrame(
 
 /**
  * Lyrics moved by the global and per-line position, then any overlapping lines
- * beside them. Over a picture they are kept readable (style.autoContrast); on
+ * beside them. Over a picture they are kept readable as the lyric theme's auto
+ * contrast says (contrastFor); on
  * the transparent layer there is no picture to read against, so they are not.
  */
 function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): void {
   const hasOverlaps = (f.overlaps?.length ?? 0) > 0;
   f.ctx.save();
   f.ctx.translate(f.lyricShift.x, f.lyricShift.y);
-  const mode = overPicture ? (f.style.autoContrast ?? "color") : "off";
+  const contrast = contrastFor(f.style, f.preset);
+  const mode = overPicture ? contrast.mode : "off";
   const box = drawReadable(
     f.ctx,
     mode,
@@ -189,7 +192,7 @@ function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): void {
       draw();
       return null;
     },
-    f.style.autoContrastAmount ?? 0.5,
+    contrast.amount,
   );
   if (f.textBounds) f.textBounds.lyrics = box;
   f.ctx.restore();

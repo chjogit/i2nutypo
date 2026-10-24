@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { closeAudioGraph, ensureAudioGraph } from "@/lib/audio/audio-graph";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
+import { keepSong } from "@/lib/session/shared-song";
 
 /**
  * Picks a local audio file (it stays in the browser; only an object URL is
@@ -83,6 +84,7 @@ export function AudioInput({ heading = true }: { heading?: boolean }) {
       // Another song means other lyrics: start the lyrics box over
       if (useProjectStore.getState().audio.kind === "upload") clearLyrics();
       setAudio({ kind: "upload", fileName: file.name, mimeType: file.type, objectUrl: nextUrl, duration });
+      void keepSong(file, duration);
     };
     probe.onerror = () => {
       cleanupProbe();

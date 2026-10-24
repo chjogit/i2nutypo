@@ -1,4 +1,6 @@
-import type { AutoContrast, LyricOrientation } from "@/types/project";
+import type { AutoContrast, LookPresetId, LyricOrientation, ThemeContrast } from "@/types/project";
+import { getLookPreset, lyricLookOf } from "@/lib/render/looks/presets";
+import { contrastFor } from "@/lib/render/looks/theme-contrast";
 import { DEFAULT_ELEMENT_MOTION } from "@/lib/timeline-fx/defs";
 import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
@@ -9,21 +11,42 @@ const MODES: ReadonlyArray<readonly [AutoContrast, string]> = [
   ["off", "끄기"],
 ];
 
-/** Whether the lyrics keep readable on their own over light or dark backgrounds. */
-export function AutoContrastControl() {
-  const mode = useProjectStore((s) => s.style.autoContrast ?? "color");
-  const amount = useProjectStore((s) => s.style.autoContrastAmount ?? 0.5);
+/**
+ * Whether a theme's lyrics keep readable on their own over light or dark
+ * backgrounds. Each theme keeps its own setting; `preset` is the theme whose
+ * lyrics are edited (the whole video's lyric theme when missing).
+ */
+export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
+  const style = useProjectStore((s) => s.style);
   const setStyle = useProjectStore((s) => s.setStyle);
+  const theme = preset ?? lyricLookOf(style);
+  const { mode, amount } = contrastFor(style, theme);
+  const own = style.themeContrast?.[theme] !== undefined;
+  const set = (patch: Partial<ThemeContrast>) =>
+    setStyle({ themeContrast: { ...style.themeContrast, [theme]: { mode, amount, ...patch } } });
+  const reset = () => {
+    const next = { ...style.themeContrast };
+    delete next[theme];
+    setStyle({ themeContrast: next });
+  };
   return (
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
         <span className="inline-flex items-center gap-1.5">
           글자 자동 대비
+          <span className="text-[11px] text-zinc-500">· {getLookPreset(theme).label}</span>
           <Tip>
             배경(그림·영상·테마 색)을 읽어서 가사가 묻힐 때만 가사 색을 밝게 또는 어둡게 바꾸거나(색 맞추기),
-            반대색 테두리를 둘러(테두리) 잘 보이게 합니다. 잘 보이는 장면에서는 고른 색 그대로입니다. 투명
+            반대색 테두리를 둘러(테두리) 잘 보이게 합니다. 잘 보이는 장면에서는 고른 색 그대로입니다. 테마마다
+            따로 저장되어, 타임라인에서 테마가 바뀌면 그 테마의 설정으로 바뀝니다. 테마마다 어울리는 기본값이
+            있고(빛나는 글자는 테두리, 단색 포스터형은 끄기), &apos;테마 기본&apos;으로 되돌립니다. 투명
             배경으로 내보낼 때는 적용되지 않습니다.
           </Tip>
+          {own && (
+            <button type="button" onClick={reset} className="text-[11px] text-indigo-400 hover:underline">
+              테마 기본
+            </button>
+          )}
         </span>
         <span
           role="radiogroup"
@@ -36,7 +59,7 @@ export function AutoContrastControl() {
               type="button"
               role="radio"
               aria-checked={mode === id}
-              onClick={() => setStyle({ autoContrast: id })}
+              onClick={() => set({ mode: id })}
               className={`px-2 py-1 ${mode === id ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
             >
               {label}
@@ -59,7 +82,7 @@ export function AutoContrastControl() {
             max={1}
             step={0.05}
             value={amount}
-            onChange={(e) => setStyle({ autoContrastAmount: Number(e.target.value) })}
+            onChange={(e) => set({ amount: Number(e.target.value) })}
             aria-label="글자 자동 대비 세기"
             className="min-w-0 flex-1 accent-indigo-500"
           />

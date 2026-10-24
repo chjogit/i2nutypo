@@ -1,6 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FEATURES_NOW } from "@/lib/mode/mode";
-import { useProjectStore } from "@/store/project-store";
+import { loadProject } from "@/lib/session/shared-song";
 import {
   DEFAULT_LEFT,
   DEFAULT_RIGHT,
@@ -189,7 +189,7 @@ function Toolbar() {
  */
 export function StudioShell() {
   useEffect(() => {
-    void useProjectStore.persist.rehydrate();
+    void loadProject();
     useLayoutStore.getState().load();
   }, []);
 
