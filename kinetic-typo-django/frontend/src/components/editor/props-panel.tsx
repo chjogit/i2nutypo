@@ -10,6 +10,7 @@ import { useProjectStore } from "@/store/project-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
 import { Fold } from "./fold";
 import { TimeField } from "./time-field";
+import { probeVideo } from "@/lib/media/video-bg";
 import { Tip } from "@/components/ui/tip";
 
 const now = () => usePlaybackStore.getState().currentTime;
@@ -242,6 +243,29 @@ export function PropsPanel() {
     setError(null);
     for (const file of Array.from(files)) {
       const objectUrl = URL.createObjectURL(file);
+      if (file.type.startsWith("video/")) {
+        // A moving illustration: plays from each clip's start and loops
+        probeVideo(objectUrl)
+          .then((meta) => {
+            urlsRef.current.add(objectUrl);
+            addProp(
+              {
+                id: newId("prop"),
+                fileName: file.name,
+                objectUrl,
+                width: meta.width,
+                height: meta.height,
+                video: { duration: meta.duration },
+              },
+              now(),
+            );
+          })
+          .catch(() => {
+            URL.revokeObjectURL(objectUrl);
+            setError(`${file.name}: 이 브라우저가 재생할 수 없는 영상입니다.`);
+          });
+        continue;
+      }
       const probe = new Image();
       probe.onload = () => {
         urlsRef.current.add(objectUrl);
@@ -286,7 +310,7 @@ export function PropsPanel() {
           + 올리기
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             multiple
             className="sr-only"
             onChange={(e) => {
@@ -297,12 +321,14 @@ export function PropsPanel() {
         </label>
       </div>
       <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
-        그림을 올리면 일러스트 레이어로
+        그림·영상을 올리면 일러스트 레이어로
         <Tip>
           캐릭터, 소품, 스티커 같은 그림(PNG 권장)을 올리면 일러스트 1, 2, 3… 으로 쌓이고, 그림마다 아래
           타임라인에 줄이 하나씩 생깁니다. 새 그림은 재생 위치에서 4초 구간으로 시작합니다. 구간마다 나타나는
           효과와 사라지는 효과, 흔들림, 비트 움직임, 빨간 칸을 따로 정할 수 있습니다. 구간을 고르고 Delete
-          키를 누르면 그 구간이 지워집니다.
+          키를 누르면 그 구간이 지워집니다. 영상(MP4·WebM·MOV)도 올릴 수 있고, 구간이 시작될 때 처음부터
+          재생되며 구간보다 짧으면 반복됩니다. 영상은 소리 없이 들어갑니다. 배경 전체를 영상으로 깔려면 효과
+          패널의 "배경 영상"을 쓰세요.
         </Tip>
       </p>
       {error && <p className="text-xs text-red-400">{error}</p>}
@@ -350,11 +376,22 @@ export function PropsPanel() {
                   {props.map((p) => (
                     <tr key={p.id} className="border-t border-zinc-800/70">
                       <td className="px-1.5 py-1">
-                        <img
-                          src={p.objectUrl}
-                          alt=""
-                          className="h-7 w-7 rounded border border-zinc-800 bg-zinc-900 object-contain"
-                        />
+                        {p.video ? (
+                          <video
+                            src={p.objectUrl}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            aria-label="영상"
+                            className="h-7 w-7 rounded border border-zinc-800 bg-zinc-900 object-contain"
+                          />
+                        ) : (
+                          <img
+                            src={p.objectUrl}
+                            alt=""
+                            className="h-7 w-7 rounded border border-zinc-800 bg-zinc-900 object-contain"
+                          />
+                        )}
                       </td>
                       <td className="px-1 py-1">
                         <button

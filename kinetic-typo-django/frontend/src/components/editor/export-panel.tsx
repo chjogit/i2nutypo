@@ -18,6 +18,8 @@ import {
   type VideoFps,
   type VideoQuality,
 } from "@/lib/export/video-export";
+import type { SequenceFormat } from "@/lib/export/image-formats";
+import { Tip } from "@/components/ui/tip";
 import { ProjectFile } from "./project-file";
 import { TimeField } from "./time-field";
 import { RangeBar } from "./range-bar";
@@ -26,7 +28,7 @@ import { useProjectStore } from "@/store/project-store";
 
 type VideoState =
   | { kind: "idle" }
-  | { kind: "running"; progress: number; startedAt: number }
+  | { kind: "running"; progress: number; startedAt: number; stage: string | null }
   | { kind: "done"; url: string; fileName: string; sizeMb: number; note: string }
   | { kind: "error"; message: string };
 
@@ -64,13 +66,18 @@ const KINDS: Array<{ value: ExportKind; label: string; hint: string }> = [
   },
   {
     value: "png",
-    label: "투명 PNG",
-    hint: "가사, 가사 앞 일러스트, 자막을 투명 배경 PNG 연속 이미지로 ZIP에 담습니다.",
+    label: "투명 이미지",
+    hint: "가사, 가사 앞 일러스트, 자막을 투명 배경 연속 이미지(PNG·TGA·SGI)로 ZIP에 담습니다.",
+  },
+  {
+    value: "mov",
+    label: "MOV ProRes",
+    hint: "가사, 가사 앞 일러스트, 자막을 투명 배경 MOV(ProRes 4444 XQ, 알파 포함)로 저장합니다. 프리미어·파이널 컷·다빈치에 바로 올려 합성하세요.",
   },
   {
     value: "layers",
     label: "앞·뒤 레이어",
-    hint: "가사 뒤(배경·뒤 일러스트·효과)와 가사 앞(가사·앞 일러스트·자막)을 back/, front/ 폴더의 PNG로 나눠 ZIP에 담습니다.",
+    hint: "가사 뒤(배경·뒤 일러스트·효과)와 가사 앞(가사·앞 일러스트·자막)을 back/, front/ 폴더의 연속 이미지로 나눠 ZIP에 담습니다.",
   },
 ];
 
@@ -78,6 +85,12 @@ const LEVELS: Array<{ value: EncodeLevel; label: string }> = [
   { value: "standard", label: "표준" },
   { value: "high", label: "높음" },
   { value: "best", label: "최고" },
+];
+
+const SEQUENCES: Array<{ value: SequenceFormat; label: string; hint: string }> = [
+  { value: "png", label: "PNG", hint: "어디서나 열리는 기본 형식, 파일이 가장 작음" },
+  { value: "tga", label: "TGA", hint: "Targa 32비트(RLE), 애프터 이펙트·게임 엔진용" },
+  { value: "sgi", label: "SGI", hint: "SGI RGBA(RLE), 3D·합성 툴용" },
 ];
 
 const ROW_LABELS: Array<{ key: keyof SubtitleRows; label: string }> = [
@@ -103,6 +116,7 @@ export function ExportPanel() {
   const [kind, setKind] = useState<ExportKind>("video");
   const [level, setLevel] = useState<EncodeLevel>("high");
   const [withAudio, setWithAudio] = useState(true);
+  const [sequence, setSequence] = useState<SequenceFormat>("png");
   /** Part of the song to save; null is the whole song. */
   const [range, setRange] = useState<{ start: number; end: number } | null>(null);
   const [video, setVideo] = useState<VideoState>({ kind: "idle" });
@@ -130,7 +144,9 @@ export function ExportPanel() {
     const controller = new AbortController();
     abortRef.current = controller;
     const startedAt = performance.now();
-    setVideo({ kind: "running", progress: 0, startedAt });
+    let stage: string | null = null;
+    let progress = 0;
+    setVideo({ kind: "running", progress, startedAt, stage });
     try {
       const result = await exportVideo(useProjectStore.getState(), {
         kind,
@@ -140,9 +156,22 @@ export function ExportPanel() {
         withAudio,
         range: range ?? undefined,
         signal: controller.signal,
-        onProgress: (progress) => setVideo({ kind: "running", progress, startedAt }),
+        sequence,
+        onProgress: (p) => {
+          progress = p;
+          setVideo({ kind: "running", progress, startedAt, stage });
+        },
+        onStage: (s) => {
+          stage = s;
+          setVideo({ kind: "running", progress, startedAt, stage });
+        },
       });
-      const suffix = kind === "video" ? "" : `-${kind}`;
+      const suffix =
+        kind === "video"
+          ? ""
+          : kind === "mov"
+            ? "-prores4444xq"
+            : `-${kind === "png" ? "alpha" : kind}${sequence === "png" ? "" : `-${sequence}`}`;
       const fileName = `${baseName()}${suffix}.${result.extension}`;
       setVideo({
         kind: "done",
@@ -151,10 +180,12 @@ export function ExportPanel() {
         sizeMb: result.blob.size / 1_000_000,
         note:
           result.extension === "zip"
-            ? `${result.width}×${result.height} PNG ${result.frames}장 ZIP`
-            : result.extension === "mp4"
-              ? `${result.width}×${result.height} MP4`
-              : `${result.width}×${result.height} WebM (이 브라우저는 MP4 인코딩을 지원하지 않아 WebM으로 저장)`,
+            ? `${result.width}×${result.height} ${sequence.toUpperCase()} ${result.frames}장 ZIP`
+            : result.extension === "mov"
+              ? `${result.width}×${result.height} ProRes 4444 XQ (알파) MOV`
+              : result.extension === "mp4"
+                ? `${result.width}×${result.height} MP4`
+                : `${result.width}×${result.height} WebM (이 브라우저는 MP4 인코딩을 지원하지 않아 WebM으로 저장)`,
       });
     } catch (e) {
       if (controller.signal.aborted) setVideo({ kind: "idle" });
@@ -201,7 +232,7 @@ export function ExportPanel() {
         <div
           role="radiogroup"
           aria-label="저장 방식"
-          className="grid grid-cols-3 overflow-hidden rounded-md border border-zinc-800 text-xs sm:grid-cols-5"
+          className="grid grid-cols-3 overflow-hidden rounded-md border border-zinc-800 text-xs sm:grid-cols-6"
         >
           {KINDS.map((k) => (
             <button
@@ -217,7 +248,29 @@ export function ExportPanel() {
             </button>
           ))}
         </div>
-        <p className="text-xs leading-snug text-zinc-500">{KINDS.find((k) => k.value === kind)?.hint}</p>
+        <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+          {KINDS.find((k) => k.value === kind)?.label} 저장
+          <Tip>{KINDS.find((k) => k.value === kind)?.hint}</Tip>
+        </p>
+        {(kind === "png" || kind === "layers") && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-zinc-500">이미지 형식</span>
+            <div className="flex rounded-md border border-zinc-800">
+              {SEQUENCES.map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  title={s.hint}
+                  disabled={running}
+                  onClick={() => setSequence(s.value)}
+                  className={chip(s.value === sequence)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-zinc-500">해상도</span>
           <div className="flex rounded-md border border-zinc-800">
@@ -318,8 +371,13 @@ export function ExportPanel() {
           </div>
         )}
         {!isVideoKind(kind) && (
-          <p className="text-xs text-amber-400/90">
-            PNG는 1초에 {fps}장씩 쌓여 파일이 큽니다. 긴 곡은 일부 구간만 저장하거나 24fps를 쓰세요.
+          <p className="flex items-center gap-1.5 text-xs text-amber-400/90">
+            {kind === "mov" ? "ProRes는 파일이 크고 오래 걸립니다" : "연속 이미지는 파일이 큽니다"}
+            <Tip>
+              {kind === "mov"
+                ? "ProRes 4444 XQ는 브라우저 안에서 FFmpeg(WebAssembly)로 만듭니다. 처음 한 번 인코더(약 32MB)를 내려받고, 영상 인코딩보다 몇 배 느립니다. 영상과 프레임은 이 컴퓨터 밖으로 나가지 않습니다. 긴 곡은 일부 구간만 저장하거나 24fps를 쓰세요."
+                : `1초에 ${fps}장씩 쌓입니다. 긴 곡은 일부 구간만 저장하거나 24fps를 쓰세요. TGA·SGI는 PNG보다 몇 배 큽니다.`}
+            </Tip>
           </p>
         )}
 
@@ -343,7 +401,7 @@ export function ExportPanel() {
             </div>
             <div className="flex items-center justify-between text-xs text-zinc-400">
               <span>
-                만드는 중 {Math.round(video.progress * 100)}%
+                {video.stage ?? `만드는 중 ${Math.round(video.progress * 100)}%`}
                 {remaining !== null && ` · 남은 시간 약 ${formatTime(remaining)}`}
               </span>
               <button

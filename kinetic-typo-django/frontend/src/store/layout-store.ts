@@ -6,10 +6,14 @@ import { create } from "zustand";
  */
 export type LayoutPreset = "standard" | "preview" | "timeline";
 export type Contrast = "normal" | "high" | "dim";
+/** Short side of the preview canvas in pixels. */
+export type PreviewQuality = 480 | 540 | 720 | 1080;
+export const PREVIEW_QUALITIES: readonly PreviewQuality[] = [480, 540, 720, 1080];
 
 interface LayoutStore {
   preset: LayoutPreset;
   contrast: Contrast;
+  previewQuality: PreviewQuality;
   leftWidth: number;
   rightWidth: number;
   leftOpen: boolean;
@@ -28,6 +32,7 @@ export const DEFAULT_RIGHT = 320;
 const SAVED: Array<keyof LayoutStore> = [
   "preset",
   "contrast",
+  "previewQuality",
   "leftWidth",
   "rightWidth",
   "leftOpen",
@@ -37,6 +42,7 @@ const SAVED: Array<keyof LayoutStore> = [
 export const useLayoutStore = create<LayoutStore>()((set, get) => ({
   preset: "standard",
   contrast: "normal",
+  previewQuality: 720,
   leftWidth: DEFAULT_LEFT,
   rightWidth: DEFAULT_RIGHT,
   leftOpen: true,
@@ -61,6 +67,9 @@ export const useLayoutStore = create<LayoutStore>()((set, get) => ({
       set({
         preset: raw.preset === "preview" || raw.preset === "timeline" ? raw.preset : "standard",
         contrast: raw.contrast === "high" || raw.contrast === "dim" ? raw.contrast : "normal",
+        previewQuality: PREVIEW_QUALITIES.includes(raw.previewQuality as PreviewQuality)
+          ? (raw.previewQuality as PreviewQuality)
+          : 720,
         leftWidth: clamp(raw.leftWidth ?? (oldLeft > 0 ? oldLeft : undefined), LEFT_RANGE, DEFAULT_LEFT),
         rightWidth: clamp(raw.rightWidth, RIGHT_RANGE, DEFAULT_RIGHT),
         leftOpen: raw.leftOpen !== false,

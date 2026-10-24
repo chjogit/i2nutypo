@@ -11,5 +11,18 @@ export const CANVAS_SIZE: Record<AspectRatio, { width: number; height: number }>
   "21:9": { width: 1680, height: 720 },
 };
 
+/** Pixel size of a canvas drawn at `shortSide` pixels on its short side, and its scale from the logical size. */
+export function pixelSize(aspect: AspectRatio, shortSide: number) {
+  const base = CANVAS_SIZE[aspect];
+  const scale = shortSide / Math.min(base.width, base.height);
+  return { width: Math.round(base.width * scale), height: Math.round(base.height * scale), scale, base };
+}
+
+/** The renderer's size for a preview canvas drawn at a finer pixel size (its data-lw / data-lh). */
+export const logicalSize = (c: HTMLCanvasElement) => ({
+  width: Number(c.dataset.lw) || c.width,
+  height: Number(c.dataset.lh) || c.height,
+});
+
 /** Every aspect ratio, in the order the preview offers them. */
 export const ASPECT_RATIOS = Object.keys(CANVAS_SIZE) as AspectRatio[];

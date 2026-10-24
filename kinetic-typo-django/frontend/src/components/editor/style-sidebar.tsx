@@ -34,6 +34,7 @@ import { COLOR_FILTERS } from "@/lib/render/looks/color-filter";
 import { AutoComposeBox } from "./auto-compose-box";
 import { Fold } from "./fold";
 import { Tip } from "@/components/ui/tip";
+import { AutoContrastControl } from "./readability-controls";
 import { ELEMENT_MOTIONS } from "@/lib/timeline-fx/defs";
 import type { ElementMotionMode } from "@/types/project";
 import { FinishPanel } from "./finish-panel";
@@ -635,6 +636,7 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
           </label>
         )}
       </div>
+      <AutoContrastControl />
     </Fold>
   );
 }

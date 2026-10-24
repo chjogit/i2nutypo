@@ -181,7 +181,10 @@ export function lyricRoamOffset(
 /** Draws one frame of the kinetic typography video. Ported from renderFrame in the original studio. */
 function drawFrame(input: FrameInput): void {
   const { ctx, W, H, timeSec, lines, subtitles, introGateSec, particles, energy } = input;
-  if (input.bounds) input.bounds.lyrics = null;
+  if (input.bounds) {
+    input.bounds.lyrics = null;
+    if (input.bounds.elements) input.bounds.elements.length = 0;
+  }
   const fx = effectiveFx(input.style, input.fx);
   const layer = input.layer ?? "full";
   const transparentBg = layer === "front";

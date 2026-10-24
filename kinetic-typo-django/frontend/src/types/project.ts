@@ -281,6 +281,8 @@ export interface PropAsset {
   height: number;
   onTimeline: boolean;
   clips: PropClip[];
+  /** Set for a moving illustration: a video file that plays from each clip's start, looping. */
+  video?: { duration: number };
 }
 
 /** Fine controls that apply to every look (the "상세" tab). */
@@ -349,6 +351,12 @@ export interface StyleSettings {
   exitMotion: boolean;
   /** 0..1: each line's lyrics sit somewhere else on screen instead of the same place every time. */
   lyricRoam: number;
+  /**
+   * When the lyrics blend into what is behind them: "color" shifts their color
+   * lighter or darker until they read, "outline" adds a contrasting edge, "off"
+   * leaves the theme's colors as they are.
+   */
+  autoContrast: AutoContrast;
   /** Timeline clips also snap to the analysed beats while dragged. */
   snapToBeats: boolean;
   activePresetId: string;
@@ -448,6 +456,9 @@ export type TransitionKind =
 
 /** Color a covering transition paints with. */
 export type TransitionColor = "accent" | "bg" | "white" | "black";
+
+/** How the lyrics keep readable over the background (style.autoContrast). */
+export type AutoContrast = "off" | "color" | "outline";
 
 export interface TransitionClip {
   id: string;

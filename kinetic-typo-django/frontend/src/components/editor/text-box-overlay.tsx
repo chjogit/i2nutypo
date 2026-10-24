@@ -156,6 +156,7 @@ export function TextBoxOverlay({
         return;
       }
       indexRef.current = index;
+      // Text boxes are recorded in canvas pixels (through the preview's quality scale)
       const sx = canvas.clientWidth / canvas.width;
       const sy = canvas.clientHeight / canvas.height;
       const left = clamp(box.x0 * sx - PAD, 0, canvas.clientWidth);

@@ -1,6 +1,7 @@
 // Builds the editor into the Django app's static folder:
 //   ../static/js/studio.js           editor (React app)
 //   ../static/js/whisper-worker.js   speech recognition worker
+//   ../static/js/ffmpeg-worker.js    ProRes export worker
 //   ../static/css/studio.css         Tailwind styles
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -60,7 +61,11 @@ const studio = {
 };
 const worker = {
   ...shared,
-  entryPoints: { "whisper-worker": "src/workers/whisper.worker.ts" },
+  entryPoints: {
+    "whisper-worker": "src/workers/whisper.worker.ts",
+    // FFmpeg (WebAssembly) runs here for ProRes export; the program itself is fetched when first used
+    "ffmpeg-worker": "node_modules/@ffmpeg/ffmpeg/dist/esm/worker.js",
+  },
   outdir: `${staticDir}js`,
 };
 

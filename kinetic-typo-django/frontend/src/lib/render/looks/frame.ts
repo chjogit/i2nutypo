@@ -152,6 +152,10 @@ export function withMoved(f: LookFrame, id: string, pivot: { x: number; y: numbe
   const dx = (st.x ?? 0) * f.W + pose.dx;
   const dy = (st.y ?? 0) * f.H + pose.dy;
   const rot = (((st.rot ?? 0) + pose.rot) * Math.PI) / 180;
+  if (f.textBounds?.elements) {
+    const p = f.ctx.getTransform().transformPoint({ x: pivot.x + dx, y: pivot.y + dy });
+    f.textBounds.elements.push({ preset: f.preset, id, x: p.x, y: p.y });
+  }
   if (dx === 0 && dy === 0 && rot === 0 && pose.reveal >= 1) {
     draw();
     return;

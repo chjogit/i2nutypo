@@ -43,11 +43,15 @@ export function resolveIllustrationImages(assets: IllustrationAssets): Illustrat
 }
 
 /** Props on the timeline whose pictures are decoded, in list order (later ones on top). */
-export function resolvePropLayers(props: readonly PropAsset[]): PropLayer[] {
+export function resolvePropLayers(
+  props: readonly PropAsset[],
+  videoFrames?: ReadonlyMap<string, LoadedImage>,
+): PropLayer[] {
   const out: PropLayer[] = [];
   for (const p of props) {
     if (!p.onTimeline || p.clips.length === 0) continue;
-    const img = getImage(p.objectUrl);
+    // A video illustration draws its current frame; without one this frame it is skipped
+    const img = p.video ? (videoFrames?.get(p.id) ?? null) : getImage(p.objectUrl);
     if (img) out.push({ img, clips: p.clips });
   }
   return out;

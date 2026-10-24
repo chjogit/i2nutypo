@@ -11,6 +11,15 @@ export interface Box {
 /** Where the last frame drew its lyrics, for the preview's text box handles. */
 export interface TextBounds {
   lyrics: Box | null;
+  /** Movable theme elements drawn this frame, at their pivot (canvas pixels), for the preview's drag handles. */
+  elements?: ElementSpot[];
+}
+
+export interface ElementSpot {
+  preset: string;
+  id: string;
+  x: number;
+  y: number;
 }
 
 /** Text drawn fainter than this (ghost words, fades) does not grow the box. */

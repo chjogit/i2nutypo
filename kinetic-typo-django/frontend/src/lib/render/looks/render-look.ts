@@ -28,6 +28,7 @@ import { drawProps } from "./props";
 import { applyMotion, motionForLine } from "./motions";
 import { applyColorFilter } from "./color-filter";
 import { drawOrganicMarks } from "./element-motion";
+import { drawReadable } from "./auto-contrast";
 
 /** How each theme's hand-drawn marks are stroked. */
 const MARK_STROKE: Partial<Record<Exclude<LookPresetId, "classic">, "glow" | "brush">> = {
@@ -103,7 +104,7 @@ export function renderLookFrame(
     ctx.clearRect(0, 0, f.W, f.H);
     ctx.save();
     ctx.translate(f.frameShake.x, f.frameShake.y);
-    if (showsKineticLyrics(f.subtitles)) drawLyrics(lyr.r, lyr.f);
+    if (showsKineticLyrics(f.subtitles)) drawLyrics(lyr.r, lyr.f, false);
     drawProps(f, true);
     ctx.restore();
   } else {
@@ -164,15 +165,25 @@ export function renderLookFrame(
   ctx.restore();
 }
 
-/** Lyrics moved by the global and per-line position, then any overlapping lines beside them. */
-function drawLyrics(r: LookRenderer, f: LookFrame): void {
+/**
+ * Lyrics moved by the global and per-line position, then any overlapping lines
+ * beside them. Over a picture they are kept readable (style.autoContrast); on
+ * the transparent layer there is no picture to read against, so they are not.
+ */
+function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): void {
   const hasOverlaps = (f.overlaps?.length ?? 0) > 0;
   f.ctx.save();
   f.ctx.translate(f.lyricShift.x, f.lyricShift.y);
-  // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
-  const draw = withMotion(f, () => r.lyrics(f));
-  const box = f.textBounds || hasOverlaps ? recordTextBounds(f.ctx, draw) : null;
-  if (!f.textBounds && !hasOverlaps) draw();
+  const mode = overPicture ? (f.style.autoContrast ?? "color") : "off";
+  const box = drawReadable(f.ctx, mode, (c) => {
+    const g = c === f.ctx ? f : { ...f, ctx: c };
+    // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
+    const draw = withMotion(g, () => r.lyrics(g));
+    // The readability check needs the box of the copy it draws on its own layer
+    if (f.textBounds || hasOverlaps || c !== f.ctx) return recordTextBounds(g.ctx, draw);
+    draw();
+    return null;
+  });
   if (f.textBounds) f.textBounds.lyrics = box;
   f.ctx.restore();
   if (hasOverlaps) drawOverlapLines(r, f, box);

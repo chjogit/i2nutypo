@@ -1,6 +1,7 @@
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
+import { logicalSize } from "@/lib/render/canvas-size";
 import { usePropUiStore } from "@/store/prop-ui-store";
 
 /** The picked illustration in frame shares: center, size and turn. */
@@ -62,7 +63,7 @@ export function IllustrationOverlay({ canvasRef }: { canvasRef: RefObject<HTMLCa
       const el = boxRef.current;
       const canvas = canvasRef.current;
       if (!el || !canvas) return;
-      const p = placement(canvas.width, canvas.height);
+      const p = placement(logicalSize(canvas).width, logicalSize(canvas).height);
       placeRef.current = p;
       if (!p) {
         el.style.display = "none";

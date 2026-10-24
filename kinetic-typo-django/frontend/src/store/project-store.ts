@@ -116,6 +116,7 @@ export const DEFAULT_STYLE: StyleSettings = {
   elementMotion: DEFAULT_ELEMENT_MOTION,
   exitMotion: true,
   lyricRoam: 0,
+  autoContrast: "color",
   snapToBeats: false,
 };
 
@@ -315,6 +316,10 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
       elementMotion: sanitizeElementMotion(p.style?.elementMotion),
       exitMotion: p.style?.exitMotion !== false,
       lyricRoam: sanitizeUnit(p.style?.lyricRoam, 0),
+      autoContrast:
+        p.style?.autoContrast === "off" || p.style?.autoContrast === "outline"
+          ? p.style.autoContrast
+          : "color",
       snapToBeats: p.style?.snapToBeats === true,
     },
     sfx: sanitizeSfx(p.sfx),

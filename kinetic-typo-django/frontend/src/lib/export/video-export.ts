@@ -22,6 +22,9 @@ import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks
 import type { IllustrationImages } from "@/lib/render/looks/illustration";
 import { bassLevels, mixDown } from "./beat-envelope";
 import { ZipWriter } from "./zip";
+import { encodeSgi, encodeTga, SEQUENCE_EXT, type SequenceFormat } from "./image-formats";
+import { openProResWriter, type ProResWriter } from "./prores";
+import { openPropVideoReaders } from "@/lib/media/prop-video";
 import { mixSoundEffects } from "@/lib/sfx/mix";
 import { openVideoReader, type VideoFrameReader } from "@/lib/media/video-bg";
 import { beatGridPulse } from "@/lib/beats/detect";
@@ -35,8 +38,9 @@ export type EncodeLevel = "standard" | "high" | "best";
  * the illustrations in front of them and the subtitles on a flat color, for
  * keying in another editor. "png": the same front layer as transparent PNG
  * frames in a ZIP. "layers": front and back layers as two PNG folders in a ZIP.
+ * "mov": the front layer as a MOV in ProRes 4444 XQ with alpha.
  */
-export type ExportKind = "video" | "green" | "black" | "png" | "layers";
+export type ExportKind = "video" | "green" | "black" | "png" | "layers" | "mov";
 
 export interface VideoExportOptions {
   kind: ExportKind;
@@ -48,6 +52,10 @@ export interface VideoExportOptions {
   range?: { start: number; end: number };
   /** Put the song in the video (video kinds only). */
   withAudio: boolean;
+  /** Image format of the frames for "png" and "layers" (PNG, TGA or SGI). */
+  sequence?: SequenceFormat;
+  /** What the export is doing besides drawing frames (downloading the ProRes encoder, encoding). */
+  onStage?: (text: string | null) => void;
   signal: AbortSignal;
   /** 0..1 */
   onProgress: (done: number) => void;
@@ -55,7 +63,7 @@ export interface VideoExportOptions {
 
 export interface VideoExportResult {
   blob: Blob;
-  extension: "mp4" | "webm" | "zip";
+  extension: "mp4" | "webm" | "zip" | "mov";
   width: number;
   height: number;
   frames: number;
@@ -114,7 +122,8 @@ async function decodeSong(project: Project): Promise<AudioBuffer | null> {
 /** Images still decoding resolve to null; the export waits for them so no frame misses a layer. */
 async function loadImages(project: Project, signal: AbortSignal): Promise<IllustrationImages> {
   const want = (["background", "character", "cover"] as const).filter((k) => project.images[k]);
-  const wantProps = project.props.filter((p) => p.onTimeline && p.clips.length > 0).length;
+  // Video illustrations get their frames from a reader, not the image cache
+  const wantProps = project.props.filter((p) => p.onTimeline && p.clips.length > 0 && !p.video).length;
   for (let i = 0; i < 50; i++) {
     const images = resolveIllustrationImages(project.images);
     if (want.every((k) => images[k]) && resolvePropLayers(project.props).length === wantProps) return images;
@@ -224,7 +233,8 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d", { alpha: o.kind !== "video" });
+  const sequence: SequenceFormat = o.kind === "png" || o.kind === "layers" ? (o.sequence ?? "png") : "png";
+  const ctx = canvas.getContext("2d", { alpha: o.kind !== "video", willReadFrequently: sequence !== "png" });
   if (!ctx) throw new Error("캔버스를 만들지 못했습니다.");
   const keyed = o.kind === "green" || o.kind === "black";
   const out = keyed ? document.createElement("canvas") : canvas;
@@ -263,9 +273,24 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         width,
       ).catch(() => null)
     : null;
+  // Video illustrations, decoded frame by frame like the background video
+  const propReader = project.props.some((p) => p.video && p.onTimeline)
+    ? await openPropVideoReaders(
+        project.props,
+        Array.from({ length: frames }, (_, i) => (firstFrame + i) / o.fps),
+        width,
+      )
+    : null;
   const nextBg = async () => {
     if (bgReader) job.bgFrame = (await bgReader.next()) ?? job.bgFrame;
+    if (propReader) job.props = resolvePropLayers(project.props, await propReader.next());
   };
+  const frameFile = async (): Promise<Uint8Array<ArrayBuffer>> => {
+    if (sequence === "png") return canvasPng(canvas);
+    const data = ctx.getImageData(0, 0, width, height).data;
+    return sequence === "tga" ? encodeTga(data, width, height) : encodeSgi(data, width, height);
+  };
+  let prores: ProResWriter | null = null;
   const step = (energy: number) => {
     for (let s = 0; s < extraSteps; s++)
       stepParticles(job.particles, project.fx.particleBeatDrift ? energy * 1.4 : 0);
@@ -280,9 +305,35 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
   };
 
   try {
+    if (o.kind === "mov") {
+      o.onStage?.("ProRes 인코더 준비 중");
+      prores = await openProResWriter({
+        fps: o.fps,
+        onDownload: (share) => o.onStage?.(`ProRes 인코더 내려받는 중 ${Math.round(share * 100)}%`),
+      });
+      o.onStage?.(null);
+      for (let i = 0; i < frames; i++) {
+        await tick(i);
+        const f = firstFrame + i;
+        const t = f / o.fps;
+        const energy = energyAt(f, t);
+        await nextBg();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+        drawAt(job, t, energy, "front");
+        await prores.add(await canvasPng(canvas));
+        step(energy);
+      }
+      o.onStage?.("MOV 파일 마무리 중");
+      const blob = await prores.finish();
+      o.onStage?.(null);
+      o.onProgress(1);
+      return { blob, extension: "mov", width, height, frames };
+    }
     if (!video) {
       const zip = new ZipWriter();
       const pad = (n: number) => String(n).padStart(6, "0");
+      const ext = SEQUENCE_EXT[sequence];
       for (let i = 0; i < frames; i++) {
         await tick(i);
         const f = firstFrame + i;
@@ -291,12 +342,12 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         await nextBg();
         if (o.kind === "layers") {
           drawAt(job, t, energy, "back");
-          zip.add(`back/${pad(i)}.png`, await canvasPng(canvas));
+          zip.add(`back/${pad(i)}.${ext}`, await frameFile());
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.clearRect(0, 0, width, height);
         }
         drawAt(job, t, energy, "front");
-        zip.add(`${o.kind === "layers" ? "front/" : ""}${pad(i)}.png`, await canvasPng(canvas));
+        zip.add(`${o.kind === "layers" ? "front/" : ""}${pad(i)}.${ext}`, await frameFile());
         step(energy);
       }
       o.onProgress(1);
@@ -305,6 +356,9 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
     return await encode();
   } finally {
     bgReader?.dispose();
+    propReader?.dispose();
+    prores?.dispose();
+    o.onStage?.(null);
     canvas.width = 0;
     canvas.height = 0;
     out.width = 0;

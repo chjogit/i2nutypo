@@ -4,9 +4,11 @@ import { BEGINNER_THEMES } from "@/lib/mode/mode";
 import { getLookPreset } from "@/lib/render/looks/presets";
 import { recommendThemes } from "@/lib/render/looks/theme-advisor";
 import { useProjectStore } from "@/store/project-store";
+import { useLayoutStore } from "@/store/layout-store";
 import { AlbumCoverPicker } from "./album-cover-picker";
 import { AudioInput } from "./audio-input";
 import { BgVideoPicker } from "./bg-video-picker";
+import { AutoContrastControl, ElementMotionToggle } from "./readability-controls";
 import { ExportPanel } from "./export-panel";
 import { LyricFontPicker } from "./lyric-font-picker";
 import { LyricsEditor } from "./lyrics-editor";
@@ -168,7 +170,8 @@ function LyricLook() {
         미리보기에서 바로 고치는 법
         <Tip>
           미리보기의 가사 상자를 끌면 위치, 모서리는 크기, 좌우 막대는 줄바꿈 폭이 바뀝니다. 두 번 클릭하면
-          가사와 줄바꿈을 직접 고칠 수 있어요. 시간이 어긋난 줄은 아래 타임라인에서 끌어 맞추세요.
+          가사와 줄바꿈을 직접 고칠 수 있어요. 미리보기에 마우스를 올리면 나오는 ⌖ 점을 끌면 테마 장식을 옮길
+          수 있어요. 시간이 어긋난 줄은 아래 타임라인에서 끌어 맞추세요.
         </Tip>
       </p>
       <label className="flex items-center justify-between gap-3">
@@ -198,6 +201,8 @@ function LyricLook() {
           <span className="w-10 text-right font-mono text-zinc-300">{Math.round(fontScale * 100)}%</span>
         </span>
       </label>
+      <AutoContrastControl />
+      <ElementMotionToggle />
       <LyricFontPicker />
     </div>
   );
@@ -210,6 +215,7 @@ function LyricLook() {
 export function BeginnerShell() {
   useEffect(() => {
     void useProjectStore.persist.rehydrate();
+    useLayoutStore.getState().load();
   }, []);
 
   const [themePicked, setThemePicked] = useState(false);
