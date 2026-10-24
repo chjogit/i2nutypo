@@ -1,4 +1,4 @@
-import type { StyleSettings, ThemeClip } from "@/types/project";
+import type { StyleSettings, ThemeClip, ThemeColors } from "@/types/project";
 import { getLookPreset, isThemedPresetId, sanitizeMixLooks } from "./looks/presets";
 
 /** The theme clip covering timeSec, if any. */
@@ -16,6 +16,7 @@ export function themeAt(style: StyleSettings, timeSec: number): StyleSettings {
   return {
     ...style,
     ...getLookPreset(clip.lookPreset).palette,
+    ...clip.colors,
     lookPreset: clip.lookPreset,
     mixLooks: clip.mixLooks,
     lyricLook: clip.lyricLook,
@@ -45,10 +46,26 @@ export function sanitizeThemeClips(saved: unknown): ThemeClip[] {
       lookPreset: c.lookPreset,
       mixLooks,
       lyricLook: isThemedPresetId(c.lyricLook) && mixLooks.includes(c.lyricLook) ? c.lyricLook : null,
+      ...(sanitizeColors(c.colors) ? { colors: sanitizeColors(c.colors) } : {}),
     });
   }
   out.sort((a, b) => a.start - b.start);
   return out.filter((c, i) => i === 0 || c.start >= out[i - 1].end);
+}
+
+const COLOR_KEYS = ["bgColor", "textColor", "accentColor", "secondaryColor"] as const;
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** Saved clip colors kept when they are "#rrggbb"; undefined when none are. */
+export function sanitizeColors(saved: unknown): Partial<ThemeColors> | undefined {
+  if (!saved || typeof saved !== "object") return undefined;
+  const c = saved as Record<string, unknown>;
+  const out: Partial<ThemeColors> = {};
+  for (const k of COLOR_KEYS) {
+    const v = c[k];
+    if (typeof v === "string" && HEX.test(v)) out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 type Themed = ThemeClip["lookPreset"];

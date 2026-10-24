@@ -20,6 +20,7 @@ import {
 } from "@/lib/export/video-export";
 import { ProjectFile } from "./project-file";
 import { TimeField } from "./time-field";
+import { RangeBar } from "./range-bar";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 
@@ -200,7 +201,7 @@ export function ExportPanel() {
         <div
           role="radiogroup"
           aria-label="저장 방식"
-          className="flex flex-wrap rounded-md border border-zinc-800 text-xs"
+          className="grid grid-cols-3 overflow-hidden rounded-md border border-zinc-800 text-xs sm:grid-cols-5"
         >
           {KINDS.map((k) => (
             <button
@@ -304,6 +305,16 @@ export function ExportPanel() {
               value={range.end}
               onCommit={(v) => setRange({ start: range.start, end: Math.max(v, range.start + 0.5) })}
             />
+            <div className="sm:col-span-2">
+              <RangeBar
+                start={range.start}
+                end={range.end}
+                duration={duration}
+                marks={lines.map((l) => l.startTime)}
+                disabled={running}
+                onChange={(start, end) => setRange({ start, end })}
+              />
+            </div>
           </div>
         )}
         {!isVideoKind(kind) && (

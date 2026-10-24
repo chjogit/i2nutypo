@@ -30,6 +30,7 @@ import { usePlaybackStore } from "@/store/playback-store";
 import { activeMotions, motionLabel, MOTIONS_PER_SONG, THEME_MOTIONS } from "@/lib/render/looks/motions";
 import { freshSeed, mulberry32, pickSome } from "@/lib/random";
 import { FEATURES_NOW } from "@/lib/mode/mode";
+import { COLOR_FILTERS } from "@/lib/render/looks/color-filter";
 import { AutoComposeBox } from "./auto-compose-box";
 import { Fold } from "./fold";
 import { FinishPanel } from "./finish-panel";
@@ -39,7 +40,7 @@ const COLOR_FIELDS: Array<{
   label: string;
 }> = [
   { key: "bgColor", label: "배경" },
-  { key: "textColor", label: "글자" },
+  { key: "textColor", label: "가사 글자" },
   { key: "accentColor", label: "포인트" },
   { key: "secondaryColor", label: "보조" },
 ];
@@ -544,6 +545,94 @@ function ThemeClipBanner({ clip }: { clip: ThemeClip }) {
   );
 }
 
+/**
+ * The theme colors: the whole video's, or the picked theme clip's own over
+ * its background theme's palette. The subtitles keep the colors set in the
+ * subtitle panel. Below, a color filter for everything but the subtitles.
+ */
+function ThemeColorsFold({ target }: { target: ThemeTarget }) {
+  const style = useProjectStore((s) => s.style);
+  const setStyle = useProjectStore((s) => s.setStyle);
+  const updateThemeClip = useProjectStore((s) => s.updateThemeClip);
+  const applyPalette = useProjectStore((s) => s.applyPalette);
+  const clip = target.clip;
+  const palette = clip ? getLookPreset(clip.lookPreset).palette : null;
+  const value = (key: (typeof COLOR_FIELDS)[number]["key"]) =>
+    clip ? (clip.colors?.[key] ?? palette?.[key] ?? style[key]) : style[key];
+  const set = (key: (typeof COLOR_FIELDS)[number]["key"], v: string) => {
+    if (clip) updateThemeClip(clip.id, { colors: { ...clip.colors, [key]: v } });
+    else setStyle({ [key]: v });
+  };
+  const reset = () => {
+    if (clip) updateThemeClip(clip.id, { colors: undefined });
+    else applyPalette(style.lookPreset);
+  };
+  const filter = style.colorFilter;
+  return (
+    <Fold
+      className="space-y-2 border-t border-zinc-800/70 pt-3"
+      title={clip ? "🎨 이 구간 테마 색상" : "🎨 테마 색상"}
+      right={
+        <button type="button" onClick={reset} className="text-indigo-400 hover:underline">
+          테마 기본 색
+        </button>
+      }
+    >
+      <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+        {COLOR_FIELDS.map((c) => (
+          <label key={c.key} className="inline-flex items-center gap-1.5">
+            <input
+              type="color"
+              value={value(c.key)}
+              onChange={(e) => set(c.key, e.target.value)}
+              aria-label={`테마 ${c.label} 색`}
+              className="h-6 w-8 cursor-pointer rounded border border-zinc-800 bg-zinc-950"
+            />
+            {c.label}
+          </label>
+        ))}
+      </div>
+      <p className="text-[11px] leading-snug text-zinc-500">
+        배경·가사 글자·장식에 쓰는 색입니다. 하단 자막 색은 아래 자막 칸에서 따로 정합니다.
+      </p>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+        <span>필터</span>
+        <div className="grid grid-cols-4 overflow-hidden rounded-md border border-zinc-800">
+          {COLOR_FILTERS.map((f) => (
+            <button
+              key={f.kind}
+              type="button"
+              aria-pressed={filter.kind === f.kind}
+              onClick={() => setStyle({ colorFilter: { ...filter, kind: f.kind } })}
+              className={`px-2 py-1 ${filter.kind === f.kind ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {filter.kind !== "none" && (
+          <label className="flex items-center gap-1.5">
+            <input
+              type="range"
+              min={0.1}
+              max={1}
+              step={0.05}
+              value={filter.amount}
+              onChange={(e) => setStyle({ colorFilter: { ...filter, amount: Number(e.target.value) } })}
+              aria-label="필터 강도"
+              className="w-20 accent-indigo-500"
+            />
+            <span className="w-8 font-mono text-zinc-300">{Math.round(filter.amount * 100)}%</span>
+          </label>
+        )}
+      </div>
+      <p className="text-[11px] leading-snug text-zinc-500">
+        필터는 영상 전체에 걸리고, 하단 자막에는 걸리지 않습니다.
+      </p>
+    </Fold>
+  );
+}
+
 function ThemeTab() {
   const style = useProjectStore((s) => s.style);
   const setStyle = useProjectStore((s) => s.setStyle);
@@ -555,6 +644,7 @@ function ThemeTab() {
       {target.clip && <ThemeClipBanner clip={target.clip} />}
       {!target.clip && FEATURES_NOW.themeMix && <AutoComposeBox />}
       <ThemeGrid target={target} />
+      <ThemeColorsFold target={target} />
       {picked.some((id) => isThemedPresetId(id) && LOOK_ELEMENTS[id].some((d) => d.move)) && (
         <p className="text-[11px] leading-snug text-zinc-500">
           ⌖ 표시가 있는 요소(레코드, 커버, 원, 낙관 등)는 눌러서 위치를 옮기고 돌릴 수 있습니다.
@@ -587,23 +677,6 @@ function ThemeTab() {
           />
         </Fold>
       )}
-
-      <Fold title="색">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
-          {COLOR_FIELDS.map((c) => (
-            <label key={c.key} className="inline-flex items-center gap-1.5">
-              <input
-                type="color"
-                value={style[c.key]}
-                onChange={(e) => setStyle({ [c.key]: e.target.value })}
-                aria-label={`${c.label} 색`}
-                className="h-6 w-8 cursor-pointer rounded border border-zinc-800 bg-zinc-950"
-              />
-              {c.label}
-            </label>
-          ))}
-        </div>
-      </Fold>
     </div>
   );
 }

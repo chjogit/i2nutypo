@@ -252,6 +252,18 @@ export interface ThemeClip {
   lookPreset: Exclude<LookPresetId, "classic">;
   mixLooks: Exclude<LookPresetId, "classic">[];
   lyricLook: Exclude<LookPresetId, "classic"> | null;
+  /** The clip's own theme colors over its background theme's palette; missing keys use the palette. */
+  colors?: Partial<ThemeColors>;
+}
+
+/** Theme colors (not the subtitles', which the subtitle panel sets). */
+export type ThemeColors = Pick<StyleSettings, "bgColor" | "textColor" | "accentColor" | "secondaryColor">;
+
+/** Whole-frame color filter over everything but the subtitles. */
+export interface ColorFilter {
+  kind: "none" | "blue" | "yellow" | "mono";
+  /** Strength 0..1. */
+  amount: number;
 }
 
 /**
@@ -325,6 +337,8 @@ export interface StyleSettings {
   motionPicks: Partial<Record<Exclude<LookPresetId, "classic">, string[]>>;
   /** The song the motion picks were made for ("file name|seconds"); another song picks again. */
   motionSong: string;
+  /** Blue, yellow or black-and-white over the picture, the subtitles left as they are. */
+  colorFilter: ColorFilter;
   activePresetId: string;
   collabRelay: boolean;
   fixedMotif: MotifId;

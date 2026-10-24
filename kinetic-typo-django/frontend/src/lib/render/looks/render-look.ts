@@ -26,6 +26,7 @@ import { drawOverlapLines } from "./overlap-layer";
 import { albumJacket } from "./album-jacket";
 import { drawProps } from "./props";
 import { motionForLine } from "./motions";
+import { applyColorFilter } from "./color-filter";
 
 const RENDERERS: Record<Exclude<LookPresetId, "classic">, LookRenderer> = {
   album_jacket: albumJacket,
@@ -109,6 +110,8 @@ export function renderLookFrame(
     r.overlay(f);
     for (const m of mixes) m.r.overlay(m.f);
   }
+  // Everything so far gets the color filter; the subtitles below keep their colors
+  applyColorFilter(ctx, f.style.colorFilter);
   if (f.line && layer !== "back") {
     ctx.save();
     ctx.translate(f.subtitleShift.x, f.subtitleShift.y);

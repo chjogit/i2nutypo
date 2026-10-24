@@ -28,6 +28,7 @@ import {
 import { normalizeMultilineJapaneseBlocks, splitLyricTriplet } from "@/lib/lyrics/triplet";
 import { SAMPLE_LYRICS } from "@/lib/lyrics/samples";
 import { pickMotions, sanitizeMotionPicks } from "@/lib/render/looks/motions";
+import { sanitizeColorFilter } from "@/lib/render/looks/color-filter";
 import { freshSeed, mulberry32, textSeed } from "@/lib/random";
 import { composeLines, composeStyle, rerollMotion } from "@/lib/compose/auto-compose";
 import { linesToLrc } from "@/lib/sync/align";
@@ -91,6 +92,7 @@ export const DEFAULT_STYLE: StyleSettings = {
   centerClear: false,
   motionPicks: {},
   motionSong: "",
+  colorFilter: { kind: "none", amount: 0.6 },
 };
 
 export const DEFAULT_SYNC: SyncSettings = {
@@ -261,6 +263,7 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
       centerClear: p.style?.centerClear === true,
       motionPicks: sanitizeMotionPicks(p.style?.motionPicks),
       motionSong: typeof p.style?.motionSong === "string" ? p.style.motionSong : "",
+      colorFilter: sanitizeColorFilter(p.style?.colorFilter),
     },
     sync: { ...current.sync, ...p.sync },
     subtitles: {
