@@ -12,6 +12,7 @@ import {
 import { probeVideo, releasePreviewVideo } from "@/lib/media/video-bg";
 import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
+import { BgVideoFilterControls } from "./bg-video-filter";
 
 const CHIP_ON = "border-indigo-500 bg-indigo-500/15 text-zinc-100";
 const CHIP_OFF = "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200";
@@ -152,6 +153,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
           </button>
         </div>
       )}
+      {bgVideo && <BgVideoFilterControls />}
 
       <div className="flex flex-wrap gap-1">
         {(

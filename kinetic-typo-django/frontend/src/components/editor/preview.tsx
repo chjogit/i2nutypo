@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { filterBackground } from "@/lib/render/bg-filter";
 import type { TextBounds } from "@/lib/render/text-bounds";
 import { readBassEnergy } from "@/lib/audio/audio-graph";
 import { createParticles } from "@/lib/render/particles";
@@ -70,7 +71,7 @@ export function Preview() {
       sfx.tick(t, playback.isPlaying, project.sfx, project.sounds);
       const images = resolveIllustrationImages(project.images);
       const video = previewVideoFrame(project.bgVideo, t, playback.isPlaying);
-      if (video) images.background = video;
+      if (video) images.background = filterBackground(video, project.style.bgVideoFilter, "preview");
       const pulse = project.beats
         ? beatGridPulse(t, project.beats, project.style.beatReact, playback.isPlaying)
         : bpmPulseEnergy(t, project.style.bpm, project.style.beatReact, playback.isPlaying);

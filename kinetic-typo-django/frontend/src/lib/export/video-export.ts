@@ -13,6 +13,7 @@ import {
   type AudioCodec,
   type VideoCodec,
 } from "mediabunny";
+import { filterBackground } from "@/lib/render/bg-filter";
 import type { Project } from "@/types/project";
 import { CANVAS_SIZE } from "@/lib/render/canvas-size";
 import { stepParticles, createParticles } from "@/lib/render/particles";
@@ -173,7 +174,9 @@ interface FrameJob {
 
 function drawAt(job: FrameJob, t: number, energy: number, layer: FrameLayer) {
   const { project, ctx, scale, base } = job;
-  const images = job.bgFrame ? { ...job.images, background: job.bgFrame } : job.images;
+  const images = job.bgFrame
+    ? { ...job.images, background: filterBackground(job.bgFrame, project.style.bgVideoFilter, "export") }
+    : job.images;
   // Logical size stays the preview's, so everything sits where it does there; only the pixels are finer
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   renderFrame({

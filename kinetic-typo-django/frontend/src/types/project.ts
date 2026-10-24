@@ -271,6 +271,21 @@ export interface ThemeClip {
 /** Theme colors (not the subtitles', which the subtitle panel sets). */
 export type ThemeColors = Pick<StyleSettings, "bgColor" | "textColor" | "accentColor" | "secondaryColor">;
 
+/** A filter on the background video alone (style.bgVideoFilter); the lyrics and decorations keep their colors. */
+export interface BgVideoFilter {
+  /** 1 leaves the video as it is. */
+  brightness: number;
+  contrast: number;
+  saturate: number;
+  /** Degrees, -180..180. */
+  hue: number;
+  /** 0..1, up to 2% of the frame height. */
+  blur: number;
+  tint: ColorFilter["kind"];
+  /** 0..1. */
+  tintAmount: number;
+}
+
 /** Whole-frame color filter over everything but the subtitles. */
 export interface ColorFilter {
   kind: "none" | "blue" | "yellow" | "mono";
@@ -353,6 +368,8 @@ export interface StyleSettings {
   motionSong: string;
   /** Blue, yellow or black-and-white over the picture, the subtitles left as they are. */
   colorFilter: ColorFilter;
+  /** Brightness, color and blur of the background video only. */
+  bgVideoFilter: BgVideoFilter;
   /** Screen transitions on the timeline's transition lane (cut at each clip's middle). */
   transitions: TransitionClip[];
   /** Adjustment layers: an effect over everything for a stretch of the song. */

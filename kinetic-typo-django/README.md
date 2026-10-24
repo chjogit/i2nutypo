@@ -83,6 +83,7 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 가사 텍스트 박스: 모서리는 글자 크기, 좌우 막대는 가로 폭(글자 크기는 그대로 두고 줄바꿈 위치만 바뀜), 위아래 막대는 줄 간격입니다. 막대를 두 번 클릭하면 원래대로 돌아갑니다. 키보드는 `[` `]` 가로 폭, `{` `}` 줄 간격. 타임라인의 "이 줄 스타일"에서도 같은 값을 숫자로 고칠 수 있고, 가사 텍스트에는 `;width=0.80;height=1.20`처럼 저장됩니다.
 - 코드: `frontend/src/components/editor/mini-preview.tsx`, `text-box-overlay.tsx`, `frontend/src/lib/render/looks/frame.ts`(`fitWidth`, `boxHeight`)
 - 세부 타이밍: 타임라인에서 줄을 고르면 "세부 타이밍" 줄이 열립니다. 단어 단위나 글자 단위로 나오는 순간을 표시로 끌어 정하고(미리보기가 그 순간으로 따라감, ←→ 키로 0.05초씩), "탭으로 찍기"로 줄을 재생하며 탭 버튼(또는 스페이스)을 눌러 차례로 찍습니다. 가사 텍스트에는 줄 길이에 대한 비율로 `;t=0,0.12,0.3`처럼 저장되어 줄을 옮기거나 늘려도 모양이 유지되고, 가사를 고쳐 개수가 달라지면 고르게 나오도록 돌아갑니다. 코드: `frontend/src/lib/lyrics/timing.ts`, `parse.ts`(`placeTiming`), `components/editor/line-timing.tsx`
+- 배경 영상 필터: 배경 영상을 넣으면 그 아래 "영상 필터" 칸이 생깁니다. 원본·어둡게·흐리게·선명하게·빛바랜·차갑게·모노톤 프리셋과 밝기·대비·채도·색조·흐림·색(파랑·노랑·흑백) 조절이 배경 영상에만 걸리고, 가사·장식·일러스트·자막 색은 그대로입니다. 미리보기와 내보내기에 같게 들어갑니다. 코드: `frontend/src/lib/render/bg-filter.ts`, `components/editor/bg-video-filter.tsx`
 - 글자 자동 대비: 색 맞추기·테두리·끄기와 세기(0~100%, 50%가 3:1 기준)를 고릅니다. 코드: `frontend/src/lib/render/looks/auto-contrast.ts`
 
 ## 테마 요소 옮기기와 캐릭터 연출

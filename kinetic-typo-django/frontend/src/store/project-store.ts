@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { NEUTRAL_BG_FILTER, sanitizeBgFilter } from "@/lib/render/bg-filter";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { BEGINNER_THEMES, FEATURES_NOW, MODE, projectStorageKey } from "@/lib/mode/mode";
 import type {
@@ -111,6 +112,7 @@ export const DEFAULT_STYLE: StyleSettings = {
   motionPicks: {},
   motionSong: "",
   colorFilter: { kind: "none", amount: 0.6 },
+  bgVideoFilter: NEUTRAL_BG_FILTER,
   transitions: [],
   adjustClips: [],
   elementMotion: DEFAULT_ELEMENT_MOTION,
@@ -313,6 +315,7 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
       motionPicks: sanitizeMotionPicks(p.style?.motionPicks),
       motionSong: typeof p.style?.motionSong === "string" ? p.style.motionSong : "",
       colorFilter: sanitizeColorFilter(p.style?.colorFilter),
+      bgVideoFilter: sanitizeBgFilter(p.style?.bgVideoFilter),
       transitions: sanitizeTransitions(p.style?.transitions),
       adjustClips: sanitizeAdjustClips(p.style?.adjustClips),
       elementMotion: sanitizeElementMotion(p.style?.elementMotion),
