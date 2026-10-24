@@ -32,3 +32,26 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(129 140 248 / 0.6);
 }
+
+/*
+ * Screen contrast (toolbar): the zinc scale shifts so text and dividers read
+ * stronger or softer everywhere at once. Utilities read these variables.
+ */
+html[data-contrast="high"] {
+  --color-zinc-300: oklch(0.92 0.004 286.32);
+  --color-zinc-400: oklch(0.82 0.008 286.2);
+  --color-zinc-500: oklch(0.7 0.014 286.07);
+  --color-zinc-600: oklch(0.58 0.016 285.9);
+  --color-zinc-700: oklch(0.47 0.015 285.8);
+  --color-zinc-800: oklch(0.36 0.01 285.9);
+  --color-zinc-950: oklch(0.1 0.004 285.8);
+}
+html[data-contrast="dim"] {
+  --color-zinc-50: oklch(0.9 0.003 286.3);
+  --color-zinc-100: oklch(0.88 0.003 286.3);
+  --color-zinc-200: oklch(0.83 0.005 286.3);
+  --color-zinc-300: oklch(0.77 0.008 286.2);
+  --color-zinc-800: oklch(0.29 0.006 286);
+  --color-zinc-900: oklch(0.23 0.006 285.9);
+  --color-zinc-950: oklch(0.18 0.005 285.8);
+}

@@ -6,10 +6,14 @@ import { ASPECT_RATIOS, CANVAS_SIZE } from "@/lib/render/canvas-size";
 import { bpmPulseEnergy, renderFrame, steppedTime } from "@/lib/render/render-frame";
 import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks/image-cache";
 import { FEATURES_NOW } from "@/lib/mode/mode";
+import { previewVideoFrame } from "@/lib/media/video-bg";
+import { beatGridPulse } from "@/lib/beats/detect";
+import { SfxFollower } from "@/lib/sfx/player";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { IllustrationOverlay } from "./illustration-overlay";
 import { MiniPreview, useMiniPreviewEnabled } from "./mini-preview";
+import { Tip } from "@/components/ui/tip";
 import { applyOverride, TextBoxOverlay, type LineOverride } from "./text-box-overlay";
 
 /**
@@ -35,6 +39,7 @@ export function Preview() {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const particles = createParticles();
+    const sfx = new SfxFollower();
     let raf = 0;
     let last = performance.now();
 
@@ -56,6 +61,14 @@ export function Preview() {
         playback.setCurrentTime(t);
       }
 
+      sfx.tick(t, playback.isPlaying, project.sfx, project.sounds);
+      const images = resolveIllustrationImages(project.images);
+      const video = previewVideoFrame(project.bgVideo, t, playback.isPlaying);
+      if (video) images.background = video;
+      const pulse = project.beats
+        ? beatGridPulse(t, project.beats, project.style.beatReact, playback.isPlaying)
+        : bpmPulseEnergy(t, project.style.bpm, project.style.beatReact, playback.isPlaying);
+
       renderFrame({
         ctx,
         W: canvas.width,
@@ -67,11 +80,9 @@ export function Preview() {
         subtitles: project.subtitles,
         introGateSec: project.sync.introGateSec,
         particles,
-        energy:
-          (playback.isPlaying ? readBassEnergy(el, project.style.beatReact) : null) ??
-          bpmPulseEnergy(t, project.style.bpm, project.style.beatReact, playback.isPlaying),
+        energy: (playback.isPlaying ? readBassEnergy(el, project.style.beatReact) : null) ?? pulse,
         animateParticles: true,
-        images: resolveIllustrationImages(project.images),
+        images,
         props: resolvePropLayers(project.props),
         bounds: boundsRef.current,
       });
@@ -96,11 +107,14 @@ export function Preview() {
         </div>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs text-zinc-500">
-          가사 박스를 끌어 옮기고, 모서리로 글자 크기, 좌우 막대로 가로 폭(줄바꿈), 위아래 막대로 줄 간격을
-          바꿉니다. 두 번 클릭하면 가사와 줄바꿈을 고칩니다.
-          {FEATURES_NOW.characters &&
-            " 일러스트 칸이나 타임라인에서 캐릭터·소품을 고르면 여기서 끌어 옮기고 모서리로 크기, 위쪽 점으로 회전을 바꿉니다."}
+        <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+          미리보기에서 바로 고치기
+          <Tip label="미리보기 조작법">
+            가사 박스를 끌어 옮기고, 모서리로 글자 크기, 좌우 막대로 가로 폭(줄바꿈), 위아래 막대로 줄 간격을
+            바꿉니다. 두 번 클릭하면 가사와 줄바꿈을 고칩니다.
+            {FEATURES_NOW.characters &&
+              " 일러스트 칸이나 타임라인에서 캐릭터·소품을 고르면 여기서 끌어 옮기고 모서리로 크기, 위쪽 점으로 회전을 바꿉니다."}
+          </Tip>
         </span>
         <label
           className="ml-auto flex shrink-0 items-center gap-1 text-xs text-zinc-500"

@@ -22,6 +22,9 @@ import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks
 import type { IllustrationImages } from "@/lib/render/looks/illustration";
 import { bassLevels, mixDown } from "./beat-envelope";
 import { ZipWriter } from "./zip";
+import { mixSoundEffects } from "@/lib/sfx/mix";
+import { openVideoReader, type VideoFrameReader } from "@/lib/media/video-bg";
+import { beatGridPulse } from "@/lib/beats/detect";
 
 export type VideoQuality = 720 | 1080;
 export type VideoFps = 24 | 30 | 60;
@@ -155,10 +158,13 @@ interface FrameJob {
   images: IllustrationImages;
   props: ReturnType<typeof resolvePropLayers>;
   particles: ReturnType<typeof createParticles>;
+  /** This frame of the background video, when there is one. */
+  bgFrame?: IllustrationImages["background"];
 }
 
 function drawAt(job: FrameJob, t: number, energy: number, layer: FrameLayer) {
   const { project, ctx, scale, base } = job;
+  const images = job.bgFrame ? { ...job.images, background: job.bgFrame } : job.images;
   // Logical size stays the preview's, so everything sits where it does there; only the pixels are finer
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   renderFrame({
@@ -174,7 +180,7 @@ function drawAt(job: FrameJob, t: number, energy: number, layer: FrameLayer) {
     particles: job.particles,
     energy,
     animateParticles: true,
-    images: job.images,
+    images,
     props: job.props,
     layer,
   });
@@ -201,7 +207,9 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
   const from = Math.max(0, Math.min(o.range?.start ?? 0, songEnd));
   const to = Math.max(from + 1 / o.fps, Math.min(o.range?.end ?? songEnd, songEnd));
   const video = isVideoKind(o.kind);
-  const audio = video && o.withAudio ? song : null;
+  // The sound effects on the timeline go into the soundtrack along with the song
+  const audio =
+    video && o.withAudio ? await mixSoundEffects(song, songEnd, project.sfx, project.sounds) : null;
   const codecs = video ? await pickCodecs(width, height, audio, LEVEL_QUALITY[o.level]) : null;
   if (video && !codecs)
     throw new Error(
@@ -243,7 +251,20 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
     const level = levels ? (levels[Math.min(levels.length - 1, f)] ?? 0) : 0;
     return level > 0.05
       ? Math.min(1, level * (style.beatReact / 80))
-      : bpmPulseEnergy(t, style.bpm, style.beatReact, true);
+      : project.beats
+        ? beatGridPulse(t, project.beats, style.beatReact, true)
+        : bpmPulseEnergy(t, style.bpm, style.beatReact, true);
+  };
+  // Background video frames, decoded for exactly the frames written
+  const bgReader: VideoFrameReader | null = project.bgVideo
+    ? await openVideoReader(
+        project.bgVideo,
+        Array.from({ length: frames }, (_, i) => (firstFrame + i) / o.fps),
+        width,
+      ).catch(() => null)
+    : null;
+  const nextBg = async () => {
+    if (bgReader) job.bgFrame = (await bgReader.next()) ?? job.bgFrame;
   };
   const step = (energy: number) => {
     for (let s = 0; s < extraSteps; s++)
@@ -267,6 +288,7 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         const f = firstFrame + i;
         const t = f / o.fps;
         const energy = energyAt(f, t);
+        await nextBg();
         if (o.kind === "layers") {
           drawAt(job, t, energy, "back");
           zip.add(`back/${pad(i)}.png`, await canvasPng(canvas));
@@ -282,6 +304,7 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
     }
     return await encode();
   } finally {
+    bgReader?.dispose();
     canvas.width = 0;
     canvas.height = 0;
     out.width = 0;
@@ -320,6 +343,7 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         const t = f / o.fps;
         await feedAudio(i / o.fps + AUDIO_CHUNK_SEC);
         const energy = energyAt(f, t);
+        await nextBg();
         if (keyed) {
           job.ctx.setTransform(1, 0, 0, 1, 0, 0);
           job.ctx.clearRect(0, 0, width, height);

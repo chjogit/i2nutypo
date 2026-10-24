@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { ensureAudioGraph } from "@/lib/audio/audio-graph";
+import { wakeSfx } from "@/lib/sfx/player";
 
 /**
  * High-frequency playback state, kept apart from the project store so the
@@ -32,6 +33,8 @@ export const usePlaybackStore = create<PlaybackStore>()((set, get) => ({
 
   play: async () => {
     const { audioEl, currentTime } = get();
+    // Sound effects play from their own audio context, which may only start from this click
+    wakeSfx();
     if (!audioEl) {
       set({ isPlaying: true });
       return;

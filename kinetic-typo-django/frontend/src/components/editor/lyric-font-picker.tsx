@@ -8,6 +8,7 @@ import {
 } from "@/lib/fonts/catalog";
 import { addUserFont, onUserFontsChange, userFonts } from "@/lib/fonts/user-fonts";
 import { useProjectStore } from "@/store/project-store";
+import { Tip } from "@/components/ui/tip";
 
 const LANGS: FontLanguage[] = ["ko", "ja", "en"];
 /** The font tabs: the catalog's languages, then the user's own font files. */
@@ -159,9 +160,12 @@ export function LyricFontPicker() {
                   );
                 })}
               </div>
-              <p className="text-[11px] leading-snug text-zinc-500">
-                글꼴 파일은 이 브라우저 안에서만 읽고, 페이지를 닫으면 다시 올려야 합니다. 영상에 쓸 수 있는
-                라이선스인지 확인하세요.
+              <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                내 글꼴은 이 브라우저에서만 쓰임
+                <Tip>
+                  글꼴 파일은 이 브라우저 안에서만 읽고, 페이지를 닫으면 다시 올려야 합니다. 영상에 쓸 수 있는
+                  라이선스인지 확인하세요.
+                </Tip>
               </p>
             </div>
           ) : (
@@ -192,9 +196,12 @@ export function LyricFontPicker() {
             </div>
           )}
           {lang !== "mine" && (
-            <p className="text-[11px] leading-snug text-zinc-500">
-              모두 Google Fonts의 무료 글꼴(OFL)이라 영상에 상업적으로 써도 됩니다. 고른 글씨체만 인터넷에서
-              받아옵니다.
+            <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+              무료 글꼴(OFL) · 상업 사용 가능
+              <Tip>
+                모두 Google Fonts의 무료 글꼴(OFL)이라 영상에 상업적으로 써도 됩니다. 고른 글씨체만 인터넷에서
+                받아옵니다.
+              </Tip>
             </p>
           )}
         </div>

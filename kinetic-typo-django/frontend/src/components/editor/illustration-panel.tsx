@@ -7,6 +7,7 @@ import { cellRect, CELLS, GRID, sanitizeCells } from "@/lib/render/looks/layout"
 import { pickedLooks } from "@/lib/render/looks/presets";
 import { Fold } from "./fold";
 import { useProjectStore } from "@/store/project-store";
+import { Tip } from "@/components/ui/tip";
 
 type ImageSlot = "background" | "cover";
 type StageTool = "move" | "cells";
@@ -359,9 +360,12 @@ export function IllustrationPanel() {
         />
         {tool === "cells" ? (
           <>
-            <p className="text-[11px] leading-snug text-zinc-500">
-              칸을 누르거나 끌어서 빨간 칸으로 지정하세요. 가사는 빨간 칸을 피해 가고, 맨 아래 가운데 두 칸 중
-              하나가 빨간색이면 하단 자막은 위로 올라갑니다.
+            <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+              빨간 칸 = 가사 금지
+              <Tip>
+                칸을 누르거나 끌어서 빨간 칸으로 지정하세요. 가사는 빨간 칸을 피해 가고, 맨 아래 가운데 두 칸
+                중 하나가 빨간색이면 하단 자막은 위로 올라갑니다.
+              </Tip>
             </p>
             <div className="flex gap-3 text-[11px]">
               <button
@@ -374,9 +378,12 @@ export function IllustrationPanel() {
             </div>
           </>
         ) : (
-          <p className="text-[11px] leading-snug text-zinc-500">
-            배경을 끌어서 옮기세요. 가사가 들어가면 안 되는 곳은 &quot;가사 금지 칸&quot;에서 지정합니다.
-            일러스트마다 따로 정하는 빨간 칸은 일러스트 칸에서 지정합니다.
+          <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+            배경을 끌어서 옮기기
+            <Tip>
+              배경을 끌어서 옮기세요. 가사가 들어가면 안 되는 곳은 &quot;가사 금지 칸&quot;에서 지정합니다.
+              일러스트마다 따로 정하는 빨간 칸은 일러스트 칸에서 지정합니다.
+            </Tip>
           </p>
         )}
       </div>

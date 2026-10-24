@@ -2,7 +2,15 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { BEGINNER_THEMES, FEATURES_NOW, MODE, projectStorageKey } from "@/lib/mode/mode";
 import type {
+  AdjustClip,
+  AdjustKind,
   AudioSource,
+  BeatGrid,
+  SfxClip,
+  SoundAsset,
+  TransitionClip,
+  TransitionKind,
+  VideoAsset,
   FxToggleKey,
   FxToggles,
   ImageAsset,
@@ -51,6 +59,16 @@ import { sanitizeCues } from "@/lib/render/looks/cues";
 import { fitClip, freeAt, makeClip, MIN_CLIP, newId, sortClips } from "@/lib/props/clips";
 import { sanitizeThemeClips } from "@/lib/render/theme-clips";
 import { sanitizeCells } from "@/lib/render/looks/layout";
+import {
+  DEFAULT_ELEMENT_MOTION,
+  makeAdjust,
+  makeTransition,
+  sanitizeAdjustClips,
+  sanitizeElementMotion,
+  sanitizeTransitions,
+} from "@/lib/timeline-fx/defs";
+import { makeSfxClip, sanitizeSfx } from "@/lib/sfx/library";
+import { sanitizeBeats, snapToBeat } from "@/lib/beats/detect";
 
 /** A saved 0..1 setting, or the fallback when missing or broken. */
 const sanitizeUnit = (v: unknown, fallback: number): number =>
@@ -93,6 +111,12 @@ export const DEFAULT_STYLE: StyleSettings = {
   motionPicks: {},
   motionSong: "",
   colorFilter: { kind: "none", amount: 0.6 },
+  transitions: [],
+  adjustClips: [],
+  elementMotion: DEFAULT_ELEMENT_MOTION,
+  exitMotion: true,
+  lyricRoam: 0,
+  snapToBeats: false,
 };
 
 export const DEFAULT_SYNC: SyncSettings = {
@@ -194,6 +218,28 @@ interface ProjectActions {
   setFxGroup: (keys: readonly FxToggleKey[], on: boolean) => void;
   /** Replaces the lyrics and settings with a saved project file's; media stay. */
   importProject: (saved: unknown) => void;
+  /** Adds a transition centered on `at` when it fits between the others; returns its id. */
+  addTransition: (kind: TransitionKind, at: number) => string | null;
+  updateTransition: (id: string, patch: Partial<TransitionClip>) => void;
+  removeTransition: (id: string) => void;
+  /** Replaces every transition (the batch actions). */
+  setTransitions: (list: TransitionClip[]) => void;
+  /** Adds an adjustment layer from `start` (to `end`, or a default length) when free; returns its id. */
+  addAdjust: (kind: AdjustKind, start: number, end?: number) => string | null;
+  updateAdjust: (id: string, patch: Partial<AdjustClip>) => void;
+  removeAdjust: (id: string) => void;
+  /** Puts a sound on the sound effect lane at `at`; returns its id. */
+  addSfx: (sound: string, at: number, len: number) => string | null;
+  updateSfx: (id: string, patch: Partial<SfxClip>) => void;
+  removeSfx: (id: string) => void;
+  setSfxClips: (list: SfxClip[]) => void;
+  addSound: (asset: SoundAsset) => void;
+  /** Takes a user's sound out with its clips; the caller revokes the object URL. */
+  removeSound: (id: string) => void;
+  setBgVideo: (asset: VideoAsset | null) => void;
+  setBeats: (grid: BeatGrid | null) => void;
+  /** Moves each line's start (and the previous line's end) onto the nearest beat within `reach` seconds. */
+  snapLinesToBeats: (times: readonly number[], reach: number) => number;
 }
 
 export type ProjectStore = Project & ProjectActions;
@@ -264,7 +310,15 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
       motionPicks: sanitizeMotionPicks(p.style?.motionPicks),
       motionSong: typeof p.style?.motionSong === "string" ? p.style.motionSong : "",
       colorFilter: sanitizeColorFilter(p.style?.colorFilter),
+      transitions: sanitizeTransitions(p.style?.transitions),
+      adjustClips: sanitizeAdjustClips(p.style?.adjustClips),
+      elementMotion: sanitizeElementMotion(p.style?.elementMotion),
+      exitMotion: p.style?.exitMotion !== false,
+      lyricRoam: sanitizeUnit(p.style?.lyricRoam, 0),
+      snapToBeats: p.style?.snapToBeats === true,
     },
+    sfx: sanitizeSfx(p.sfx),
+    beats: sanitizeBeats(p.beats),
     sync: { ...current.sync, ...p.sync },
     subtitles: {
       ...current.subtitles,
@@ -293,6 +347,9 @@ export const savedPart = (s: ProjectStore) => ({
   fx: s.fx,
   sync: s.sync,
   subtitles: s.subtitles,
+  // A user's own sounds do not outlive the page, so only built-in ones are kept
+  sfx: s.sfx.filter((c) => !c.sound.startsWith("user:")),
+  beats: s.beats,
 });
 
 export const useProjectStore = create<ProjectStore>()(
@@ -301,6 +358,10 @@ export const useProjectStore = create<ProjectStore>()(
       audio: { kind: "none" },
       images: { background: null, character: null, cover: null },
       props: [],
+      bgVideo: null,
+      sfx: [],
+      sounds: [],
+      beats: null,
       duration: DEFAULT_DURATION,
       lyricsText: initialLyrics,
       lyricsCollapsed: false,
@@ -671,6 +732,131 @@ export const useProjectStore = create<ProjectStore>()(
       setFx: (key, on) => set((s) => ({ fx: { ...s.fx, [key]: on } })),
 
       importProject: (saved) => set((s) => restoreProject(saved, s)),
+
+      addTransition: (kind, at) => {
+        let added: string | null = null;
+        set((s) => {
+          const list = s.style.transitions ?? [];
+          const made = makeTransition(kind, at, s.duration);
+          const clip = fitClip(made, made, list, s.duration);
+          if (
+            clip.end - clip.start < MIN_CLIP - 1e-6 ||
+            list.some((o) => clip.start < o.end && clip.end > o.start)
+          )
+            return {};
+          added = clip.id;
+          return { style: { ...s.style, transitions: sortClips([...list, clip]) } };
+        });
+        return added;
+      },
+
+      updateTransition: (id, patch) =>
+        set((s) => {
+          const list = s.style.transitions ?? [];
+          const cur = list.find((c) => c.id === id);
+          if (!cur) return {};
+          const next = { ...cur, ...patch };
+          const timed = patch.start !== undefined || patch.end !== undefined;
+          const clip = timed ? fitClip(next, cur, list, s.duration) : next;
+          return { style: { ...s.style, transitions: sortClips(list.map((c) => (c.id === id ? clip : c))) } };
+        }),
+
+      removeTransition: (id) =>
+        set((s) => ({
+          style: { ...s.style, transitions: (s.style.transitions ?? []).filter((c) => c.id !== id) },
+        })),
+
+      setTransitions: (list) => set((s) => ({ style: { ...s.style, transitions: sortClips(list) } })),
+
+      addAdjust: (kind, start, end) => {
+        let added: string | null = null;
+        set((s) => {
+          const list = s.style.adjustClips ?? [];
+          if (!freeAt(list, start)) return {};
+          const from = Math.min(Math.max(0, start), Math.max(0, s.duration - MIN_CLIP));
+          const made = makeAdjust(kind, from, Math.min(s.duration, end ?? from + 4));
+          const clip = fitClip(made, made, list, s.duration);
+          if (clip.end - clip.start < MIN_CLIP - 1e-6) return {};
+          added = clip.id;
+          return { style: { ...s.style, adjustClips: sortClips([...list, clip]) } };
+        });
+        return added;
+      },
+
+      updateAdjust: (id, patch) =>
+        set((s) => {
+          const list = s.style.adjustClips ?? [];
+          const cur = list.find((c) => c.id === id);
+          if (!cur) return {};
+          const next = { ...cur, ...patch };
+          const timed = patch.start !== undefined || patch.end !== undefined;
+          const clip = timed ? fitClip(next, cur, list, s.duration) : next;
+          return { style: { ...s.style, adjustClips: sortClips(list.map((c) => (c.id === id ? clip : c))) } };
+        }),
+
+      removeAdjust: (id) =>
+        set((s) => ({
+          style: { ...s.style, adjustClips: (s.style.adjustClips ?? []).filter((c) => c.id !== id) },
+        })),
+
+      addSfx: (sound, at, len) => {
+        let added: string | null = null;
+        set((s) => {
+          if (!freeAt(s.sfx, at)) return {};
+          const made = makeSfxClip(sound, at, len, s.duration);
+          const clip = fitClip(made, made, s.sfx, s.duration);
+          if (clip.end - clip.start < 0.05) return {};
+          added = clip.id;
+          return { sfx: sortClips([...s.sfx, clip]) };
+        });
+        return added;
+      },
+
+      updateSfx: (id, patch) =>
+        set((s) => {
+          const cur = s.sfx.find((c) => c.id === id);
+          if (!cur) return {};
+          const next = { ...cur, ...patch };
+          const timed = patch.start !== undefined || patch.end !== undefined;
+          const clip = timed ? fitClip(next, cur, s.sfx, s.duration) : next;
+          return { sfx: sortClips(s.sfx.map((c) => (c.id === id ? clip : c))) };
+        }),
+
+      removeSfx: (id) => set((s) => ({ sfx: s.sfx.filter((c) => c.id !== id) })),
+
+      setSfxClips: (list) => set({ sfx: sortClips(list) }),
+
+      addSound: (asset) => set((s) => ({ sounds: [...s.sounds, asset] })),
+
+      removeSound: (id) =>
+        set((s) => ({
+          sounds: s.sounds.filter((x) => x.id !== id),
+          sfx: s.sfx.filter((c) => c.sound !== `user:${id}`),
+        })),
+
+      setBgVideo: (bgVideo) => set({ bgVideo }),
+
+      setBeats: (beats) => set({ beats }),
+
+      snapLinesToBeats: (times, reach) => {
+        let moved = 0;
+        set((s) => {
+          if (times.length === 0 || s.lines.length === 0) return {};
+          const timed = s.lines.map(toTimed);
+          for (let i = 0; i < timed.length; i++) {
+            const l = timed[i];
+            const to = snapToBeat(l.startTime, times, reach);
+            if (to === l.startTime || to >= l.endTime - MIN_CLIP) continue;
+            const prev = timed[i - 1];
+            if (prev && !l.overlap && to < prev.startTime + MIN_CLIP) continue;
+            if (prev && !l.overlap && Math.abs(prev.endTime - l.startTime) < 0.02) prev.endTime = to;
+            l.startTime = to;
+            moved++;
+          }
+          return moved ? fromTimed(s, timed) : {};
+        });
+        return moved;
+      },
 
       setFxGroup: (keys, on) =>
         set((s) => {

@@ -33,6 +33,9 @@ import { FEATURES_NOW } from "@/lib/mode/mode";
 import { COLOR_FILTERS } from "@/lib/render/looks/color-filter";
 import { AutoComposeBox } from "./auto-compose-box";
 import { Fold } from "./fold";
+import { Tip } from "@/components/ui/tip";
+import { ELEMENT_MOTIONS } from "@/lib/timeline-fx/defs";
+import type { ElementMotionMode } from "@/types/project";
 import { FinishPanel } from "./finish-panel";
 
 const COLOR_FIELDS: Array<{
@@ -157,10 +160,13 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
       </button>
       {open && (
         <div id="theme-grid" className="space-y-1.5 border-t border-zinc-800 p-2">
-          <p className="text-[11px] leading-snug text-zinc-500">
-            {target.clip
-              ? "이 구간에 쓸 테마를 최대 3개까지 고르세요. 1번이 배경을 그립니다."
-              : "최대 3개까지 고르세요. 1번이 배경을 그립니다. 모두 해제하면 기본 테마(앨범 자켓)로 돌아갑니다. 새로 고른 테마는 재생 위치의 빈 구간(테마 줄이 비어 있으면 곡 전체)에 테마 줄로 올라갑니다."}
+          <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+            최대 3개 · 1번이 배경
+            <Tip>
+              {target.clip
+                ? "이 구간에 쓸 테마를 최대 3개까지 고르세요. 1번이 배경을 그립니다."
+                : "최대 3개까지 고르세요. 1번이 배경을 그립니다. 모두 해제하면 기본 테마(앨범 자켓)로 돌아갑니다. 새로 고른 테마는 재생 위치의 빈 구간(테마 줄이 비어 있으면 곡 전체)에 테마 줄로 올라갑니다."}
+            </Tip>
           </p>
           {/* As many columns as the sidebar width fits */}
           <div className="grid max-h-[50vh] grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-1.5 overflow-y-auto pr-0.5">
@@ -406,7 +412,7 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
 }
 
 /**
- * The theme's eight lyric motions as chips: the lit ones are used (five per
+ * The theme's twelve lyric motions as chips: the lit ones are used (six per
  * song, picked again when another song is loaded), and a click turns one on
  * or off.
  */
@@ -592,11 +598,14 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
           </label>
         ))}
       </div>
-      <p className="text-[11px] leading-snug text-zinc-500">
-        배경·가사 글자·장식에 쓰는 색입니다. 하단 자막 색은 아래 자막 칸에서 따로 정합니다.
-      </p>
       <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-        <span>필터</span>
+        <span className="inline-flex items-center gap-1.5">
+          필터
+          <Tip>
+            위 색은 배경·가사 글자·장식에 쓰고, 하단 자막 색은 아래 자막 칸에서 따로 정합니다. 필터는 영상
+            전체에 걸리고, 하단 자막에는 걸리지 않습니다.
+          </Tip>
+        </span>
         <div className="grid grid-cols-4 overflow-hidden rounded-md border border-zinc-800">
           {COLOR_FILTERS.map((f) => (
             <button
@@ -626,9 +635,83 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
           </label>
         )}
       </div>
-      <p className="text-[11px] leading-snug text-zinc-500">
-        필터는 영상 전체에 걸리고, 하단 자막에는 걸리지 않습니다.
-      </p>
+    </Fold>
+  );
+}
+
+/**
+ * How the themes' decorations move on their own, so they do not sit in the
+ * same place all song: drift, hop to a new spot each line, draw themselves on,
+ * or a mix of all three, plus hand-drawn marks that come and go around the
+ * edges. Also where the lyrics sit from line to line and how they leave.
+ */
+function ElementMotionFold() {
+  const style = useProjectStore((s) => s.style);
+  const setStyle = useProjectStore((s) => s.setStyle);
+  const em = style.elementMotion;
+  const set = (patch: Partial<typeof em>) => setStyle({ elementMotion: { ...em, ...patch } });
+  const row = (label: string, value: number, onChange: (v: number) => void, tip?: string) => (
+    <label className="flex items-center gap-2 text-xs text-zinc-400">
+      <span className="inline-flex w-24 shrink-0 items-center gap-1">
+        {label}
+        {tip && <Tip>{tip}</Tip>}
+      </span>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={label}
+        className="min-w-0 flex-1 accent-indigo-500"
+      />
+      <span className="w-10 text-right font-mono text-zinc-300">{Math.round(value * 100)}%</span>
+    </label>
+  );
+  return (
+    <Fold
+      className="space-y-2 border-t border-zinc-800/70 pt-3"
+      title="✎ 요소 움직임 · 가사 배치"
+      defaultOpen={false}
+    >
+      <div className="flex flex-wrap gap-1">
+        {ELEMENT_MOTIONS.map(([mode, label, hint]) => (
+          <button
+            key={mode}
+            type="button"
+            aria-pressed={em.mode === mode}
+            title={hint}
+            onClick={() => set({ mode: mode as ElementMotionMode })}
+            className={`rounded-full border px-2 py-0.5 text-[11px] ${em.mode === mode ? ON : OFF}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {em.mode !== "still" && row("움직임 크기", em.amount, (amount) => set({ amount }))}
+      {row(
+        "손그림 마크",
+        em.marks,
+        (marks) => set({ marks }),
+        "가장자리에 동그라미·밑줄·별 같은 손그림이 줄마다 다른 곳에 그려졌다 사라집니다. 0이면 그리지 않습니다.",
+      )}
+      {row(
+        "가사 자리 옮기기",
+        style.lyricRoam,
+        (lyricRoam) => setStyle({ lyricRoam }),
+        "줄이 바뀔 때마다 가사가 화면의 다른 자리에 놓입니다. 0이면 늘 같은 자리입니다.",
+      )}
+      <label className="flex items-center gap-2 text-xs text-zinc-200">
+        <input
+          type="checkbox"
+          checked={style.exitMotion}
+          onChange={(e) => setStyle({ exitMotion: e.target.checked })}
+          className="accent-indigo-500"
+        />
+        가사가 나갈 때도 움직임
+        <Tip>줄이 끝날 때 등장 움직임에 맞춰 날아가거나 접히며 사라집니다. 끄면 흐려지며 사라집니다.</Tip>
+      </label>
     </Fold>
   );
 }
@@ -645,9 +728,11 @@ function ThemeTab() {
       {!target.clip && FEATURES_NOW.themeMix && <AutoComposeBox />}
       <ThemeGrid target={target} />
       <ThemeColorsFold target={target} />
+      {!target.clip && <ElementMotionFold />}
       {picked.some((id) => isThemedPresetId(id) && LOOK_ELEMENTS[id].some((d) => d.move)) && (
-        <p className="text-[11px] leading-snug text-zinc-500">
-          ⌖ 표시가 있는 요소(레코드, 커버, 원, 낙관 등)는 눌러서 위치를 옮기고 돌릴 수 있습니다.
+        <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+          ⌖ 요소는 옮기고 돌릴 수 있음
+          <Tip>⌖ 표시가 있는 요소(레코드, 커버, 원, 낙관 등)는 눌러서 위치를 옮기고 돌릴 수 있습니다.</Tip>
         </p>
       )}
 
@@ -656,11 +741,16 @@ function ThemeTab() {
       )}
 
       {picked.includes("album_jacket") && (
-        <Fold className="space-y-1.5 border-t border-zinc-800/70 pt-3" title="앨범 자켓 제목 · 크레딧">
-          <p className="text-[11px] leading-snug text-zinc-500">
-            앨범 자켓: 오른쪽 일러스트 칸에서 앨범 커버를 따로 올릴 수 있고, 없으면 배경 이미지가 커버로
-            쓰입니다. 제목을 비워 두면 제목 줄은 그리지 않습니다.
-          </p>
+        <Fold
+          className="space-y-1.5 border-t border-zinc-800/70 pt-3"
+          title="앨범 자켓 제목 · 크레딧"
+          right={
+            <Tip>
+              앨범 자켓: 오른쪽 일러스트 칸에서 앨범 커버를 따로 올릴 수 있고, 없으면 배경 이미지가 커버로
+              쓰입니다. 제목을 비워 두면 제목 줄은 그리지 않습니다.
+            </Tip>
+          }
+        >
           <input
             value={style.coverTitle}
             onChange={(e) => setStyle({ coverTitle: e.target.value })}
@@ -727,13 +817,18 @@ function DetailTab() {
 
   return (
     <div className="space-y-3">
-      <Fold title="효과" className="space-y-2">
+      <Fold
+        title="효과"
+        className="space-y-2"
+        right={
+          <Tip>
+            글리치는 슬라이스, RGB 분리, 화면 밀림에 걸립니다. 흔들림은 카메라 기울기, 창 흔들림, 캐릭터
+            흔들림에 걸리고,
+            {` ${Math.round(DEFAULT_DETAIL.shake * 100)}%`}보다 올리면 비트마다 화면 전체가 흔들립니다.
+          </Tip>
+        }
+      >
         {DETAIL_SLIDERS.map((d) => slider(d.key, d.label, d.min, d.max, d.format))}
-        <p className="text-[11px] leading-snug text-zinc-500">
-          글리치는 슬라이스, RGB 분리, 화면 밀림에 걸립니다. 흔들림은 카메라 기울기, 창 흔들림, 캐릭터
-          흔들림에 걸리고,
-          {` ${Math.round(DEFAULT_DETAIL.shake * 100)}%`}보다 올리면 비트마다 화면 전체가 흔들립니다.
-        </p>
       </Fold>
 
       <Fold title="움직임 느낌 · 배치" className="space-y-2">
@@ -759,10 +854,10 @@ function DetailTab() {
               </button>
             ))}
           </div>
+          <Tip>
+            2·3프레임은 움직임을 24fps 기준 두세 장씩 멈췄다 넘겨 손그림 애니메이션 같은 느낌을 냅니다.
+          </Tip>
         </div>
-        <p className="text-[11px] leading-snug text-zinc-500">
-          2·3프레임은 움직임을 24fps 기준 두세 장씩 멈췄다 넘겨 손그림 애니메이션 같은 느낌을 냅니다.
-        </p>
         <label className="flex items-center gap-2 text-xs text-zinc-200">
           <input
             type="checkbox"
@@ -771,31 +866,33 @@ function DetailTab() {
             className="accent-indigo-500"
           />
           가운데 비우기
+          <Tip>
+            화면 가운데를 캐릭터 자리로 비우고, 가사를 줄마다 왼쪽·오른쪽(세로 화면은 위·아래)으로 번갈아
+            놓습니다.
+          </Tip>
         </label>
-        <p className="text-[11px] leading-snug text-zinc-500">
-          화면 가운데를 캐릭터 자리로 비우고, 가사를 줄마다 왼쪽·오른쪽(세로 화면은 위·아래)으로 번갈아
-          놓습니다.
-        </p>
       </Fold>
 
       <Fold
         title="가사 위치 (전체)"
         right={
-          <button
-            type="button"
-            onClick={() => setDetail({ lyricX: 0, lyricY: 0 })}
-            className="text-indigo-400 hover:underline"
-          >
-            가운데로
-          </button>
+          <span className="flex items-center gap-2">
+            <Tip>
+              줄마다 따로 옮기려면 아래 타임라인에서 자막 구간을 고르세요. 줄별 위치는 여기 전체 위치에
+              더해집니다.
+            </Tip>
+            <button
+              type="button"
+              onClick={() => setDetail({ lyricX: 0, lyricY: 0 })}
+              className="text-indigo-400 hover:underline"
+            >
+              가운데로
+            </button>
+          </span>
         }
       >
         {slider("lyricX", "가로", -0.5, 0.5, signedPct)}
         {slider("lyricY", "세로", -0.5, 0.5, signedPct)}
-        <p className="text-[11px] leading-snug text-zinc-500">
-          줄마다 따로 옮기려면 아래 타임라인에서 자막 구간을 고르세요. 줄별 위치는 여기 전체 위치에
-          더해집니다.
-        </p>
       </Fold>
 
       <Fold

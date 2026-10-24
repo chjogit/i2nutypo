@@ -1,4 +1,12 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  type DragEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
+import { snapToBeat } from "@/lib/beats/detect";
 import { formatLrcTime } from "@/lib/lyrics/parse";
 import { MIN_CLIP, snapToLines, type Span } from "@/lib/props/clips";
 import { usePlaybackStore } from "@/store/playback-store";
@@ -39,6 +47,14 @@ export interface ClipLaneProps<T extends Span> {
   title: (clip: T) => string;
   /** Tailwind classes for a clip, picked or not. */
   tone: { on: string; off: string; handle: string; label: string };
+  /** Drag data type this lane takes from the effects library, and what to do with a drop at `at`. */
+  dropType?: string;
+  onDropData?: (at: number, data: string) => void;
+  /** Right click on a clip, or on the empty lane at `at`. */
+  onClipMenu?: (e: ReactMouseEvent, clip: T) => void;
+  onLaneMenu?: (e: ReactMouseEvent, at: number) => void;
+  /** Lane height in pixels (CLIP_LANE_HEIGHT when missing). */
+  height?: number;
 }
 
 /**
@@ -54,10 +70,17 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
   /** Times shown while dragging; saved to the store on release. */
   const [draft, setDraft] = useState<{ clipId: string; start: number; end: number } | null>(null);
 
+  const [dropAt, setDropAt] = useState<number | null>(null);
+
   const snap = (t: number) => {
-    const { style, lines } = useProjectStore.getState();
-    return style.snapToLyrics ? snapToLines(t, lines, SNAP_PX / p.pps) : t;
+    const { style, lines, beats } = useProjectStore.getState();
+    const reach = SNAP_PX / p.pps;
+    const onLine = style.snapToLyrics ? snapToLines(t, lines, reach) : t;
+    if (onLine !== t || !style.snapToBeats || !beats) return onLine;
+    return snapToBeat(t, beats.times, reach);
   };
+
+  const accepts = (e: DragEvent) => p.dropType !== undefined && e.dataTransfer.types.includes(p.dropType);
 
   const onClipDown = (e: ReactPointerEvent<HTMLElement>, clip: T, kind: DragKind) => {
     if (e.button !== 0) return;
@@ -124,10 +147,33 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
         const id = p.onAdd(snap(p.timeAt(e.clientX)));
         if (id) p.onSelect(id);
       }}
-      title="빈 곳 두 번 클릭: 구간 추가 · 구간 고르고 Delete: 지우기"
-      className="relative border-b border-zinc-900"
-      style={{ height: CLIP_LANE_HEIGHT }}
+      onContextMenu={(e) => {
+        if (e.target !== e.currentTarget || !p.onLaneMenu) return;
+        p.onLaneMenu(e, snap(p.timeAt(e.clientX)));
+      }}
+      onDragOver={(e) => {
+        if (!accepts(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        setDropAt(snap(p.timeAt(e.clientX)));
+      }}
+      onDragLeave={() => setDropAt(null)}
+      onDrop={(e) => {
+        if (!accepts(e) || !p.dropType) return;
+        e.preventDefault();
+        setDropAt(null);
+        p.onDropData?.(snap(p.timeAt(e.clientX)), e.dataTransfer.getData(p.dropType));
+      }}
+      title="빈 곳 두 번 클릭: 구간 추가 · 우클릭: 메뉴 · 구간 고르고 Delete: 지우기"
+      className={`relative border-b border-zinc-900 ${dropAt !== null ? "bg-indigo-500/10" : ""}`}
+      style={{ height: p.height ?? CLIP_LANE_HEIGHT }}
     >
+      {dropAt !== null && (
+        <span
+          className="pointer-events-none absolute inset-y-0 z-[2] w-0.5 bg-indigo-400"
+          style={{ left: dropAt * p.pps }}
+        />
+      )}
       <span
         className={`pointer-events-none sticky left-0 inline-flex h-full max-w-[9rem] items-center gap-1 truncate pl-1 pr-1.5 text-[10px] ${p.tone.label}`}
       >
@@ -148,6 +194,11 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
             onPointerMove={onClipMove}
             onPointerUp={onClipUp}
             onPointerCancel={onClipUp}
+            onContextMenu={(e) => {
+              if (!p.onClipMenu) return;
+              p.onSelect(c.id);
+              p.onClipMenu(e, c);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 p.onSelect(c.id);

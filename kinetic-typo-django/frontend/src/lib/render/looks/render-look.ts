@@ -25,8 +25,22 @@ import { neonSign } from "./neon-sign";
 import { drawOverlapLines } from "./overlap-layer";
 import { albumJacket } from "./album-jacket";
 import { drawProps } from "./props";
-import { motionForLine } from "./motions";
+import { applyMotion, motionForLine } from "./motions";
 import { applyColorFilter } from "./color-filter";
+import { drawOrganicMarks } from "./element-motion";
+
+/** How each theme's hand-drawn marks are stroked. */
+const MARK_STROKE: Partial<Record<Exclude<LookPresetId, "classic">, "glow" | "brush">> = {
+  digital_crt: "glow",
+  dark_glitch: "glow",
+  neon_sign: "glow",
+  eclipse_nebula: "glow",
+  deep_sea: "glow",
+  crimson_ink: "brush",
+  manga_panel: "brush",
+  vintage_paper: "brush",
+  pop_cutout: "brush",
+};
 
 const RENDERERS: Record<Exclude<LookPresetId, "classic">, LookRenderer> = {
   album_jacket: albumJacket,
@@ -100,6 +114,19 @@ export function renderLookFrame(
     ctx.translate(f.frameShake.x, f.frameShake.y);
     r.scene(f);
     for (const m of mixes) m.r.decor?.(m.f);
+    drawOrganicMarks({
+      ctx,
+      W: f.W,
+      H: f.H,
+      timeSec: f.timeSec,
+      hop: f.hop,
+      motion: f.style.elementMotion,
+      blocked: f.blocked,
+      color: f.style.accentColor,
+      second: f.style.textColor,
+      stroke: MARK_STROKE[preset] ?? "pen",
+      energy: f.energy,
+    });
     drawProps(f, false);
     if (layer === "full") {
       // In the bottom-only display the line is shown in the subtitles alone
@@ -154,10 +181,13 @@ function drawLyrics(r: LookRenderer, f: LookFrame): void {
 /** The line's lyric motion (see motions.ts) wrapped around the theme's own lyrics. */
 function withMotion(f: LookFrame, draw: () => void): () => void {
   const line = f.line;
-  const motion = line ? motionForLine(f.style, line) : null;
-  if (!line || !motion) return draw;
+  if (!line) return draw;
+  const motion = motionForLine(f.style, line);
+  const exits = f.style.exitMotion !== false;
+  if (!motion && !exits) return draw;
   return () =>
-    motion.apply(
+    applyMotion(
+      motion,
       {
         ctx: f.ctx,
         W: f.W,
@@ -170,5 +200,6 @@ function withMotion(f: LookFrame, draw: () => void): () => void {
         seed: line.index,
       },
       draw,
+      exits,
     );
 }

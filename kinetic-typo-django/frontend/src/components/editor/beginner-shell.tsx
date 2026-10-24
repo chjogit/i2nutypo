@@ -5,12 +5,15 @@ import { getLookPreset } from "@/lib/render/looks/presets";
 import { recommendThemes } from "@/lib/render/looks/theme-advisor";
 import { useProjectStore } from "@/store/project-store";
 import { AudioInput } from "./audio-input";
+import { BgVideoPicker } from "./bg-video-picker";
 import { ExportPanel } from "./export-panel";
 import { LyricFontPicker } from "./lyric-font-picker";
 import { LyricsEditor } from "./lyrics-editor";
 import { Preview } from "./preview";
 import { SubtitlePanel } from "./subtitle-panel";
 import { Timeline } from "./timeline";
+import { Tip } from "@/components/ui/tip";
+import { ContextMenuHost } from "@/components/ui/context-menu";
 
 /**
  * A numbered step. The step to do next has an indigo border and a "지금 할
@@ -160,9 +163,12 @@ function LyricLook() {
   const setStyle = useProjectStore((s) => s.setStyle);
   return (
     <div className="space-y-2.5 px-4 pt-4 text-xs text-zinc-400">
-      <p className="rounded-md bg-zinc-800/60 px-3 py-2 leading-relaxed text-zinc-300">
-        미리보기의 가사 상자를 끌면 위치, 모서리는 크기, 좌우 막대는 줄바꿈 폭이 바뀝니다. 두 번 클릭하면
-        가사와 줄바꿈을 직접 고칠 수 있어요. 시간이 어긋난 줄은 아래 타임라인에서 끌어 맞추세요.
+      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        미리보기에서 바로 고치는 법
+        <Tip>
+          미리보기의 가사 상자를 끌면 위치, 모서리는 크기, 좌우 막대는 줄바꿈 폭이 바뀝니다. 두 번 클릭하면
+          가사와 줄바꿈을 직접 고칠 수 있어요. 시간이 어긋난 줄은 아래 타임라인에서 끌어 맞추세요.
+        </Tip>
       </p>
       <label className="flex items-center justify-between gap-3">
         <span>가사 색</span>
@@ -245,12 +251,15 @@ export function BeginnerShell() {
           <StepCard
             n={4}
             title="자막 다듬기"
-            hint="색, 크기, 줄바꿈을 원하는 대로 바꾸세요."
+            hint="색, 크기, 줄바꿈과 배경 영상을 원하는 대로 바꾸세요."
             done={false}
             current={false}
           >
             <LyricLook />
             <SubtitlePanel />
+            <div className="px-4 pb-4">
+              <BgVideoPicker compact />
+            </div>
           </StepCard>
           <StepCard
             n={5}
@@ -269,6 +278,7 @@ export function BeginnerShell() {
         </div>
       </div>
       <Timeline />
+      <ContextMenuHost />
     </div>
   );
 }

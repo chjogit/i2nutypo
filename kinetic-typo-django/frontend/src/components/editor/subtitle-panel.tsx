@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useProjectStore } from "@/store/project-store";
+import { Tip } from "@/components/ui/tip";
 
 const SUBTITLE_FONTS: Array<{ value: string; label: string }> = [
   { value: "'Noto Sans KR', sans-serif", label: "Noto Sans KR (고딕)" },
@@ -184,8 +185,9 @@ export function SubtitlePanel() {
               />
               반투명 배경 박스
             </label>
-            <p className="text-[11px] leading-relaxed text-zinc-500">
-              크기와 여백은 720p 기준이며 화면 비율에 맞춰 자동으로 조절됩니다.
+            <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+              720p 기준 크기
+              <Tip>크기와 여백은 720p 기준이며 화면 비율에 맞춰 자동으로 조절됩니다.</Tip>
             </p>
           </div>
         )}

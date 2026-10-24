@@ -25,6 +25,8 @@ import { renderLookFrame, type FrameLayer } from "./looks/render-look";
 import { applyFinish } from "./finish/gl-finish";
 import { sanitizeFinish } from "./finish/settings";
 import { hashSigned } from "./looks/noise";
+import { hopClock, type HopClock } from "./looks/element-motion";
+import { applyTimelineFx } from "@/lib/timeline-fx/render-fx";
 
 export interface FrameInput {
   ctx: Ctx2D;
@@ -147,8 +149,33 @@ function withJolt(s: { x: number; y: number }, flash: number, timeSec: number, W
 /** Draws one frame, then the final color grade and filters over it (not on the text-only layer). */
 export function renderFrame(input: FrameInput): void {
   drawFrame(input);
-  if (input.layer !== "front" && input.style.finish)
-    applyFinish(input.ctx, sanitizeFinish(input.style.finish), input.timeSec);
+  if (input.layer === "front") return;
+  applyTimelineFx(input.ctx, themeAt(input.style, input.timeSec), input.timeSec, input.energy);
+  if (input.style.finish) applyFinish(input.ctx, sanitizeFinish(input.style.finish), input.timeSec);
+}
+
+const ROAM_SEC = 0.35;
+
+/**
+ * Moves each line's lyrics to another spot near the middle, so the lines do
+ * not all land in the same place; a line the user placed stays where it is.
+ */
+export function lyricRoamOffset(
+  roam: number | undefined,
+  hop: HopClock,
+  line: LyricLine | null,
+  W: number,
+  H: number,
+): { x: number; y: number } {
+  if (!roam || roam <= 0 || !line || hop.index < 0 || line.offsetX !== 0 || line.offsetY !== 0)
+    return { x: 0, y: 0 };
+  const at = (i: number) =>
+    i < 0 ? { x: 0, y: 0 } : { x: hashSigned(i, 401) * 0.16, y: hashSigned(i, 402) * 0.12 };
+  const a = at(hop.index - 1);
+  const b = at(hop.index);
+  const e = Math.min(1, hop.elapsed / ROAM_SEC);
+  const k = e * e * (3 - 2 * e);
+  return { x: (a.x + (b.x - a.x) * k) * roam * W, y: (a.y + (b.y - a.y) * k) * roam * H };
 }
 
 /** Draws one frame of the kinetic typography video. Ported from renderFrame in the original studio. */
@@ -166,7 +193,10 @@ function drawFrame(input: FrameInput): void {
   const detail = style.detail ?? DEFAULT_DETAIL;
   const flash = activeLine ? flashAmount(activeLine, timeSec) : 0;
   const shake = withJolt(frameShake(detail, energy, timeSec, W, H), flash, timeSec, W, H);
-  const lyricShift = lyricOffset(detail, lineForOffsets(style, activeLine), W, H);
+  const hop = hopClock(lines, timeSec);
+  const roam = lyricRoamOffset(style.lyricRoam, hop, activeLine, W, H);
+  const baseShift = lyricOffset(detail, lineForOffsets(style, activeLine), W, H);
+  const lyricShift = { x: baseShift.x + roam.x, y: baseShift.y + roam.y };
   const subtitleShift = { x: detail.subtitleX * W, y: detail.subtitleY * H };
 
   if (style.lookPreset !== "classic") {
@@ -213,6 +243,7 @@ function drawFrame(input: FrameInput): void {
         lyricShift,
         subtitleShift,
         textBounds: input.bounds,
+        hop,
       },
       layer,
     );

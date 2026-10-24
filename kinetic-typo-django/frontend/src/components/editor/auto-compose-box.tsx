@@ -2,6 +2,7 @@ import { useState } from "react";
 import { freshSeed } from "@/lib/random";
 import { useComposeStore } from "@/store/compose-store";
 import { useProjectStore } from "@/store/project-store";
+import { Tip } from "@/components/ui/tip";
 
 const BTN =
   "rounded-md border border-zinc-800 px-2 py-1 text-[11px] text-zinc-300 hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40";
@@ -75,9 +76,12 @@ export function AutoComposeBox() {
           </span>
         )}
       </div>
-      <p className="text-[11px] leading-snug text-zinc-500">
-        테마·색·요소·강도와 줄마다의 움직임을 한 번에 정합니다. 타임라인에서 잠근 줄은 그대로 둡니다. 같은
-        시드는 같은 결과를 냅니다.
+      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        테마·색·움직임을 한 번에
+        <Tip>
+          테마·색·요소·강도와 줄마다의 움직임을 한 번에 정합니다. 타임라인에서 잠근 줄은 그대로 둡니다. 같은
+          시드는 같은 결과를 냅니다.
+        </Tip>
       </p>
     </div>
   );

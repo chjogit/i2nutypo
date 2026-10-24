@@ -13,6 +13,7 @@ import { freeSpan, pickCell } from "./layout";
 import { hash01 } from "./noise";
 import type { PropLayer } from "./props";
 import { getLookElement, lookElementAmount } from "./presets";
+import { clipDrawOn, elementPose, type HopClock } from "./element-motion";
 
 /** Everything a look preset needs for one frame. */
 export interface LookFrame {
@@ -58,6 +59,8 @@ export interface LookFrame {
   textBounds?: TextBounds;
   /** True while drawing a theme mixed over another one: it draws only its decor and overlay. */
   mixed?: boolean;
+  /** Which lyric line the song is on, for elements that move or redraw as the lines change. */
+  hop?: HopClock;
 }
 
 export interface LookRenderer {
@@ -139,14 +142,17 @@ export function drawCharacterLayer(
 
 /**
  * Draws a movable element moved and turned by the user (its x, y and rot),
- * turning around pivot, the element's own center in frame pixels.
+ * turning around pivot, the element's own center in frame pixels. On top of
+ * that it floats, moves to a new place each line, or is drawn on again, as
+ * the theme element motion setting says.
  */
 export function withMoved(f: LookFrame, id: string, pivot: { x: number; y: number }, draw: () => void): void {
   const st = getLookElement(f.style.lookElements, f.preset, id);
-  const dx = (st.x ?? 0) * f.W;
-  const dy = (st.y ?? 0) * f.H;
-  const rot = ((st.rot ?? 0) * Math.PI) / 180;
-  if (dx === 0 && dy === 0 && rot === 0) {
+  const pose = elementPose(f.style.elementMotion, `${f.preset}.${id}`, f.timeSec, f.hop, f.W, f.H);
+  const dx = (st.x ?? 0) * f.W + pose.dx;
+  const dy = (st.y ?? 0) * f.H + pose.dy;
+  const rot = (((st.rot ?? 0) + pose.rot) * Math.PI) / 180;
+  if (dx === 0 && dy === 0 && rot === 0 && pose.reveal >= 1) {
     draw();
     return;
   }
@@ -155,6 +161,10 @@ export function withMoved(f: LookFrame, id: string, pivot: { x: number; y: numbe
   ctx.translate(pivot.x + dx, pivot.y + dy);
   ctx.rotate(rot);
   ctx.translate(-pivot.x, -pivot.y);
+  if (pose.reveal < 1) {
+    ctx.globalAlpha *= Math.min(1, 0.15 + pose.reveal * 1.5);
+    clipDrawOn(ctx, pivot, f.W, f.H, pose);
+  }
   draw();
   ctx.restore();
 }

@@ -339,6 +339,18 @@ export interface StyleSettings {
   motionSong: string;
   /** Blue, yellow or black-and-white over the picture, the subtitles left as they are. */
   colorFilter: ColorFilter;
+  /** Screen transitions on the timeline's transition lane (cut at each clip's middle). */
+  transitions: TransitionClip[];
+  /** Adjustment layers: an effect over everything for a stretch of the song. */
+  adjustClips: AdjustClip[];
+  /** How the themes' movable elements move on their own instead of staying put. */
+  elementMotion: ElementMotion;
+  /** Lyrics leave with a matching motion at the end of each line, not only fade. */
+  exitMotion: boolean;
+  /** 0..1: each line's lyrics sit somewhere else on screen instead of the same place every time. */
+  lyricRoam: number;
+  /** Timeline clips also snap to the analysed beats while dragged. */
+  snapToBeats: boolean;
   activePresetId: string;
   collabRelay: boolean;
   fixedMotif: MotifId;
@@ -415,11 +427,132 @@ export interface SubtitleSettings {
 
 export type SubtitleDisplay = "bottomOnly" | "kinetic";
 
+/** A screen transition: the picture is covered (or moved) up to the clip's middle and uncovered after it. */
+export type TransitionKind =
+  | "flash"
+  | "dip"
+  | "zoom"
+  | "whip"
+  | "spin"
+  | "glitch"
+  | "rgb"
+  | "pixel"
+  | "circle"
+  | "diagonal"
+  | "bars"
+  | "shutter"
+  | "ink"
+  | "leak"
+  | "slide"
+  | "blur";
+
+/** Color a covering transition paints with. */
+export type TransitionColor = "accent" | "bg" | "white" | "black";
+
+export interface TransitionClip {
+  id: string;
+  /** Seconds on the song timeline; the cut is halfway. */
+  start: number;
+  end: number;
+  kind: TransitionKind;
+  color: TransitionColor;
+}
+
+/** An effect laid over a stretch of the song, like an adjustment layer. */
+export type AdjustKind =
+  | "zoom"
+  | "shake"
+  | "tilt"
+  | "blur"
+  | "invert"
+  | "mono"
+  | "bright"
+  | "saturate"
+  | "hue"
+  | "rgb"
+  | "pixel"
+  | "mirror"
+  | "vhs"
+  | "beatFlash";
+
+export interface AdjustClip {
+  id: string;
+  start: number;
+  end: number;
+  kind: AdjustKind;
+  /** Strength 0..1. */
+  amount: number;
+  /** Seconds the effect takes to come in and go out. */
+  fade: number;
+}
+
+/**
+ * How the themes' movable elements behave over time: "still" stays where it
+ * was put, "drift" floats slowly, "hop" moves to a new place each line,
+ * "draw" is drawn on each line, "organic" does all of these together.
+ */
+export type ElementMotionMode = "still" | "drift" | "hop" | "draw" | "organic";
+
+export interface ElementMotion {
+  mode: ElementMotionMode;
+  /** 0..1. */
+  amount: number;
+  /** 0..1: hand-drawn marks (circles, swooshes, sparkles) drawn on around the lyrics, a new place each line. */
+  marks: number;
+}
+
+/** Beats found in the song (beat markers on the timeline). */
+export interface BeatGrid {
+  bpm: number;
+  /** Beat times in seconds, in order. */
+  times: number[];
+  /** Index (0..3) of the first beat that starts a bar. */
+  downbeat: number;
+}
+
+/** A sound effect on the timeline. */
+export interface SfxClip {
+  id: string;
+  start: number;
+  /** start plus the sound's length; kept so the lane can draw it. */
+  end: number;
+  /** A built-in sound id, or "user:<id>" for one of the user's files. */
+  sound: string;
+  /** Volume 0..1.5. */
+  gain: number;
+}
+
+/** A sound file the user added; like the images, kept for the page session only. */
+export interface SoundAsset {
+  id: string;
+  fileName: string;
+  objectUrl: string;
+  duration: number;
+}
+
+/** A moving background, uploaded or picked from the free stock videos; decoded in the browser. */
+export interface VideoAsset {
+  fileName: string;
+  objectUrl: string;
+  width: number;
+  height: number;
+  duration: number;
+  /** Where a stock video came from, shown as its credit. */
+  stock?: { id: string; title: string; pageUrl: string };
+}
+
 export interface Project {
   audio: AudioSource;
   images: IllustrationAssets;
   /** Extra pictures (props); like the images they last for the page session only. */
   props: PropAsset[];
+  /** Moving background drawn in place of the background picture; page session only. */
+  bgVideo: VideoAsset | null;
+  /** Sound effects on the timeline (saved) and the user's own sound files (page session only). */
+  sfx: SfxClip[];
+  sounds: SoundAsset[];
+  /** Beats found in the song, or null before the analysis runs. */
+  beats: BeatGrid | null;
   /** Song length in seconds; falls back to a default until audio is loaded. */
   duration: number;
   lyricsText: string;

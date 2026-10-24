@@ -21,6 +21,7 @@ import {
 import { useEngineStore } from "@/store/engine-store";
 import { useProjectStore } from "@/store/project-store";
 import { LocalEnginePanel } from "./local-engine-panel";
+import { Tip } from "@/components/ui/tip";
 
 type Phase =
   | { kind: "idle" }
@@ -253,9 +254,12 @@ export function SyncPanel() {
     <div className="space-y-2.5 border-t border-zinc-800/70 pt-3 text-xs">
       <h3 className="text-xs font-semibold tracking-wide text-zinc-400">자동 싱크</h3>
       <div className="space-y-2.5">
-        <p className="leading-relaxed text-zinc-500">
-          음원을 {useLocal ? "이 컴퓨터의 GPU로" : "브라우저 안에서"} 음성 인식(Whisper)해 각 줄의 시작 시간을
-          맞춥니다. 음원은 밖으로 보내지 않습니다. 처음 한 번은 모델 파일을 내려받습니다.
+        <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+          음성 인식으로 줄 시작 맞추기 · 음원은 밖으로 안 나감
+          <Tip>
+            음원을 {useLocal ? "이 컴퓨터의 GPU로" : "브라우저 안에서"} 음성 인식(Whisper)해 각 줄의 시작
+            시간을 맞춥니다. 음원은 밖으로 보내지 않습니다. 처음 한 번은 모델 파일을 내려받습니다.
+          </Tip>
         </p>
         {desktop && <LocalEnginePanel disabled={busy} />}
         <label className="flex items-start gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-2">

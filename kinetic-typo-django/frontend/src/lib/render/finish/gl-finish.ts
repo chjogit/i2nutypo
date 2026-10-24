@@ -1,6 +1,6 @@
 import type { Ctx2D } from "../motifs";
 import type { FinishSettings } from "@/types/finish";
-import { finishUniforms, isNeutralFinish, needsBlur } from "./settings";
+import { filmMotion, finishUniforms, isNeutralFinish, needsBlur } from "./settings";
 
 /**
  * Final-look pass. The finished 2D frame is copied into a WebGL texture,
@@ -57,6 +57,16 @@ uniform int uGrade;
 uniform float uGradeAmt;
 uniform vec3 uShadowTint, uHighTint;
 uniform float uVignette, uGrain, uBloom, uHalation, uChroma, uLeak, uMist, uSharpen, uScan, uDust;
+uniform float uPoster, uPixel, uEdges, uHalftone, uTwoTone, uKaleido, uGate;
+uniform vec3 uLift, uGamma, uGain;
+uniform float uShadows, uHighlights, uVibrance;
+uniform int uMask;
+uniform float uMaskFeather, uMaskInvert;
+uniform int uFilm;
+uniform float uFilmAmt, uPush;
+uniform vec3 uCmy, uToning;
+uniform float uCompress, uGrainSize, uBreath;
+uniform vec2 uWeave;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 float luma(vec3 c) { return dot(c, LUMA); }
@@ -78,6 +88,93 @@ vec3 keepLuma(vec3 c, float l) { return clamp(c + (l - luma(c)), 0.0, 1.0); }
 vec3 saturate3(vec3 c, float s) { return mix(vec3(luma(c)), c, s); }
 
 vec3 sCurve(vec3 c, float k) { return mix(c, c * c * (3.0 - 2.0 * c), k); }
+
+// Film stocks: tone curve, crossover and color balance of each, mixed in by uFilmAmt
+vec3 film(vec3 c) {
+  float l = luma(c);
+  vec3 f = c;
+  if (uFilm == 1) {
+    f = sCurve(c, 0.22);
+    f = mix(vec3(0.03, 0.045, 0.035), vec3(0.98, 0.95, 0.88), f);
+    f.r += 0.03 * smoothstep(0.5, 1.0, l);
+    f.b -= 0.04 * smoothstep(0.5, 1.0, l);
+    f = saturate3(f, 0.92);
+  } else if (uFilm == 2) {
+    f = sCurve(sCurve(c, 0.5), 0.2) - 0.02;
+    f.b += 0.04 * (1.0 - smoothstep(0.0, 0.4, l));
+    f = saturate3(f, 1.28);
+  } else if (uFilm == 3) {
+    vec3 tone = mix(vec3(0.0, 0.38, 0.42), vec3(1.0, 0.66, 0.4), smoothstep(0.1, 0.9, l));
+    f = keepLuma(softLight(c, tone), l);
+    f = sCurve(f, 0.35);
+    f = f / (1.0 + max(f - 0.8, 0.0) * 1.6);
+    f = saturate3(f, 1.05);
+  } else if (uFilm == 4) {
+    f = sCurve(c, 0.25);
+    f.g = mix(f.g, f.g * 1.06, smoothstep(0.2, 0.7, l));
+    f.r *= 0.96;
+    f = mix(vec3(0.02, 0.04, 0.05), vec3(0.95, 0.97, 0.94), f);
+    f = saturate3(f, 0.9);
+  } else if (uFilm == 5) {
+    f = mix(vec3(0.1, 0.12, 0.14), vec3(0.97, 0.93, 0.84), c);
+    f.r += 0.03 * (1.0 - abs(l - 0.5) * 2.0);
+    f.b += 0.02 * (1.0 - abs(l - 0.5) * 2.0);
+    f = saturate3(sCurve(f, -0.1), 0.82);
+  } else if (uFilm == 6) {
+    f.r = sCurve(vec3(c.r), 0.6).r;
+    f.g = c.g * 0.95 + 0.04;
+    f.b = mix(0.12, 0.85, c.b);
+    f = mix(vec3(0.08, 0.02, 0.1), vec3(1.0, 0.97, 0.75), f);
+    f = saturate3(f, 1.1);
+  } else if (uFilm == 7) {
+    float m = dot(c, vec3(0.3, 0.59, 0.11));
+    f = mix(vec3(0.06), vec3(0.95), sCurve(vec3(m), 0.35));
+  } else if (uFilm == 8) {
+    float m = dot(c, vec3(0.45, 0.45, 0.1));
+    f = sCurve(sCurve(vec3(m), 0.7), 0.3);
+  }
+  return mix(c, clamp(f, 0.0, 1.0), uFilmAmt);
+}
+
+// Where the color correction applies (1 inside the mask)
+float gradeMask(vec2 uv) {
+  if (uMask == 0) return 1.0;
+  float aspect = uRes.x / uRes.y;
+  float soft = 0.05 + uMaskFeather * 0.6;
+  float m = 1.0;
+  if (uMask == 1) {
+    vec2 d = (uv - 0.5) * vec2(aspect, 1.0);
+    m = 1.0 - smoothstep(0.35 - soft * 0.5, 0.35 + soft * 0.5, length(d) / max(aspect, 1.0) * 1.2);
+  } else if (uMask == 2) {
+    m = smoothstep(0.5 - soft * 0.5, 0.5 + soft * 0.5, uv.y);
+  } else {
+    m = 1.0 - smoothstep(0.5 - soft * 0.5, 0.5 + soft * 0.5, uv.y);
+  }
+  return mix(m, 1.0 - m, uMaskInvert);
+}
+
+// Three-way wheels, tone, vibrance, printer lights and print toning
+vec3 primary(vec3 c) {
+  c = clamp(c * uGain + uLift * (1.0 - c), 0.0, 1.0);
+  c = pow(max(c, 0.0), 1.0 / uGamma);
+  float l = luma(c);
+  c += uShadows * 0.25 * (1.0 - smoothstep(0.0, 0.5, l));
+  c += uHighlights * 0.25 * smoothstep(0.5, 1.0, l);
+  float sat = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+  c = saturate3(c, 1.0 + uVibrance * (1.0 - sat));
+  c *= pow(vec3(2.0), -vec3(uCmy.x, uCmy.y, uCmy.z) * 0.35);
+  l = luma(c);
+  float ws = 1.0 - smoothstep(0.0, 0.45, l);
+  float wh = smoothstep(0.55, 1.0, l);
+  float wm = 1.0 - ws - wh;
+  float warm = uToning.x * ws + uToning.y * wm + uToning.z * wh;
+  c += vec3(0.06, 0.01, -0.06) * warm;
+  if (uCompress > 0.0) {
+    float k = 1.0 - uCompress * 0.4;
+    c = mix(c, k + (1.0 - k) * (1.0 - exp(-(c - k) / max(1.0 - k, 0.01))), step(k, c));
+  }
+  return clamp(c, 0.0, 1.0);
+}
 
 vec3 grade(vec3 c) {
   float l = luma(c);
@@ -109,8 +206,23 @@ vec3 grade(vec3 c) {
   return mix(c, g, uGradeAmt);
 }
 
+vec2 geom(vec2 uv) {
+  // Kaleidoscope: the right half mirrors the left, and from halfway up the bottom mirrors the top
+  if (uKaleido > 0.0) {
+    vec2 m = vec2(0.5) - abs(uv - 0.5);
+    uv.x = m.x;
+    if (uKaleido >= 0.5) uv.y = m.y;
+  }
+  uv = (uv - 0.5) / (1.0 + length(uWeave) * 4.0) + 0.5 + uWeave;
+  if (uPixel > 0.0) {
+    vec2 cells = uRes / (2.0 + uPixel * 22.0);
+    uv = (floor(uv * cells) + 0.5) / cells;
+  }
+  return clamp(uv, 0.0, 1.0);
+}
+
 void main() {
-  vec2 uv = vUv;
+  vec2 uv = geom(vUv);
   vec2 px = 1.0 / uRes;
   float aspect = uRes.x / uRes.y;
 
@@ -137,16 +249,27 @@ void main() {
   if (uBloom > 0.0) c += max(blur - 0.6, 0.0) / 0.4 * uBloom * 0.75;
   if (uHalation > 0.0) c += vec3(1.0, 0.28, 0.1) * smoothstep(0.55, 1.0, luma(blur)) * uHalation * 0.7;
 
-  // Basic correction
-  c *= pow(2.0, uExposure * 1.5);
+  if (uEdges > 0.0) {
+    float gx = luma(texture2D(uSrc, uv + vec2(px.x, 0.0)).rgb) - luma(texture2D(uSrc, uv - vec2(px.x, 0.0)).rgb);
+    float gy = luma(texture2D(uSrc, uv + vec2(0.0, px.y)).rgb) - luma(texture2D(uSrc, uv - vec2(0.0, px.y)).rgb);
+    float e = clamp(length(vec2(gx, gy)) * 4.0, 0.0, 1.0);
+    c = mix(c, c * (1.0 - uEdges * 0.6) + e * (0.4 + c) * uEdges * 1.5, uEdges);
+  }
+
+  // Basic correction (with the film's frame-to-frame flicker)
+  c *= pow(2.0, uExposure * 1.5 + uBreath + uPush * 0.6);
   c.r += uTemp * 0.08;
   c.b -= uTemp * 0.08;
   c.g -= uTint * 0.06;
   c = clamp(c, 0.0, 1.0);
   c = clamp((c - 0.45) * (1.0 + uContrast * 0.6) + 0.45, 0.0, 1.0);
   c = clamp(saturate3(c, 1.0 + uSaturation), 0.0, 1.0);
+  if (uPush != 0.0) c = clamp(saturate3(sCurve(c, uPush * 0.25), 1.0 + uPush * 0.1), 0.0, 1.0);
 
-  c = grade(c);
+  c = film(c);
+  vec3 before = c;
+  c = grade(primary(c));
+  c = mix(before, c, gradeMask(vUv));
 
   if (uLeak > 0.0) {
     vec2 p = vec2(uv.x * aspect, uv.y);
@@ -169,9 +292,27 @@ void main() {
     c *= 1.0 - uScan * (0.32 * (1.0 - s) + 0.06 * (1.0 - roll));
   }
 
+  if (uPoster > 0.0) {
+    float levels = mix(12.0, 3.0, uPoster);
+    c = floor(c * levels + 0.5) / levels;
+  }
+  if (uTwoTone > 0.0) {
+    float t2 = smoothstep(0.42, 0.58, luma(c));
+    c = mix(c, mix(uShadowTint * 0.6, uHighTint, t2), uTwoTone);
+  }
+  if (uHalftone > 0.0) {
+    float cell = 4.0 + uHalftone * 6.0;
+    vec2 p = vUv * uRes;
+    vec2 rot = mat2(0.7071, -0.7071, 0.7071, 0.7071) * p;
+    vec2 g = fract(rot / cell) - 0.5;
+    float r = sqrt(1.0 - luma(c)) * 0.7;
+    float dotMask = smoothstep(r + 0.06, r - 0.06, length(g));
+    c = mix(c, mix(c * 1.1 + 0.08, c * 0.15, dotMask), uHalftone);
+  }
+
   if (uGrain > 0.0) {
     float frame = floor(uTime * 24.0);
-    float n = hash(floor(uv * uRes) + vec2(frame * 17.0, frame * 31.0)) - 0.5;
+    float n = hash(floor(vUv * uRes / uGrainSize) + vec2(frame * 17.0, frame * 31.0)) - 0.5;
     c += n * uGrain * 0.2 * (1.0 - 0.5 * luma(c));
   }
 
@@ -193,6 +334,21 @@ void main() {
       float w = abs(uv.x - sx) * uRes.x;
       c = mix(c, vec3(0.9), (1.0 - smoothstep(0.4, 1.4, w)) * 0.35 * uDust);
     }
+  }
+
+  if (uGate > 0.0) {
+    // A film frame: rounded black edge and sprocket holes running past on both sides
+    vec2 p = (vUv - 0.5) * vec2(aspect, 1.0);
+    vec2 hb = vec2(aspect * 0.5 - 0.06 * aspect, 0.47);
+    vec2 q = abs(p) - hb + 0.04;
+    float box = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 0.04;
+    float edge = smoothstep(-0.004, 0.004, box);
+    float side = smoothstep(hb.x + 0.005, hb.x + 0.01, abs(p.x));
+    float y = fract(vUv.y * 6.0);
+    vec2 hole = vec2(abs(abs(p.x) - (hb.x + 0.035 * aspect)), abs(y - 0.5) / 6.0);
+    float holes = side * (1.0 - smoothstep(0.012, 0.016, max(hole.x - 0.01, hole.y - 0.025)));
+    c = mix(c, vec3(0.02), edge * uGate);
+    c = mix(c, vec3(0.85, 0.82, 0.75), holes * uGate);
   }
 
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
@@ -424,6 +580,32 @@ export function applyFinish(ctx: Ctx2D, finish: FinishSettings, timeSec: number)
   gl.uniform1f(loc(p, prog, "uSharpen"), u.filters.sharpen);
   gl.uniform1f(loc(p, prog, "uScan"), u.filters.scanlines);
   gl.uniform1f(loc(p, prog, "uDust"), u.filters.dust);
+  gl.uniform1f(loc(p, prog, "uPoster"), u.filters.posterize);
+  gl.uniform1f(loc(p, prog, "uPixel"), u.filters.pixelate);
+  gl.uniform1f(loc(p, prog, "uEdges"), u.filters.edges);
+  gl.uniform1f(loc(p, prog, "uHalftone"), u.filters.halftone);
+  gl.uniform1f(loc(p, prog, "uTwoTone"), u.filters.twoTone);
+  gl.uniform1f(loc(p, prog, "uKaleido"), u.filters.kaleido);
+  gl.uniform1f(loc(p, prog, "uGate"), u.filters.gate);
+  gl.uniform3fv(loc(p, prog, "uLift"), u.lift);
+  gl.uniform3fv(loc(p, prog, "uGamma"), u.gamma);
+  gl.uniform3fv(loc(p, prog, "uGain"), u.gain);
+  gl.uniform1f(loc(p, prog, "uShadows"), u.shadows);
+  gl.uniform1f(loc(p, prog, "uHighlights"), u.highlights);
+  gl.uniform1f(loc(p, prog, "uVibrance"), u.vibrance);
+  gl.uniform1i(loc(p, prog, "uMask"), u.mask);
+  gl.uniform1f(loc(p, prog, "uMaskFeather"), u.maskFeather);
+  gl.uniform1f(loc(p, prog, "uMaskInvert"), u.maskInvert);
+  gl.uniform1i(loc(p, prog, "uFilm"), u.film);
+  gl.uniform1f(loc(p, prog, "uFilmAmt"), u.filmAmount);
+  gl.uniform1f(loc(p, prog, "uPush"), u.push);
+  gl.uniform3fv(loc(p, prog, "uCmy"), u.cmy);
+  gl.uniform3fv(loc(p, prog, "uToning"), u.toning);
+  gl.uniform1f(loc(p, prog, "uCompress"), u.compression);
+  gl.uniform1f(loc(p, prog, "uGrainSize"), u.grainSize);
+  const motion = filmMotion(finish, timeSec);
+  gl.uniform2f(loc(p, prog, "uWeave"), motion.weave[0], motion.weave[1]);
+  gl.uniform1f(loc(p, prog, "uBreath"), motion.breath);
   draw(p, prog, null, W, H);
 
   ctx.save();

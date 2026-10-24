@@ -3,6 +3,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
@@ -22,6 +23,11 @@ import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { FEATURES_NOW } from "@/lib/mode/mode";
 import { PROP_LANE_HEIGHT, PropLanes, ThemeLane } from "./prop-lanes";
+import { AdjustLane, BeatMarks, SfxLane, TransitionLane } from "./fx-lanes";
+import { Tip } from "@/components/ui/tip";
+import { openMenu } from "@/components/ui/context-menu";
+import { isTextEntry } from "@/lib/ui/text-entry";
+import { useLayoutStore } from "@/store/layout-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
 import { motionForLine } from "@/lib/render/looks/motions";
 import { themeAt } from "@/lib/render/theme-clips";
@@ -61,7 +67,11 @@ const MIN_TIMELINE_HEIGHT = 120;
 const DEFAULT_MAX_HEIGHT = 600;
 /** Heights before the user drags the edge: track only, and track with the selected line's editor. */
 const DEFAULT_HEIGHT = 170;
+// The "timeline" layout preset opens the track this tall
+const TALL_HEIGHT = 380;
 const DEFAULT_EDIT_HEIGHT = 560;
+// Transitions, adjustment layers and sound effects
+const FX_LANES = 3;
 /** The selected line's editor grows with the section, up to this zoom and this width before zooming. */
 const MAX_EDITOR_SCALE = 1.8;
 const EDITOR_MAX_WIDTH = 1120;
@@ -129,14 +139,6 @@ function useFitEditor(
   }, [panelRef, sizerRef, innerRef, line]);
 }
 
-const TEXT_INPUT_TYPES = new Set(["text", "search", "email", "url", "tel", "password", "number"]);
-
-/** Fields where Space types a character; everywhere else it is the play key. */
-function isTextEntry(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable || target instanceof HTMLTextAreaElement) return true;
-  return target instanceof HTMLInputElement && TEXT_INPUT_TYPES.has(target.type);
-}
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 function tickStep(pps: number): number {
@@ -293,12 +295,14 @@ export function Timeline() {
   const onResizeUp = () => {
     resizeRef.current = null;
   };
+  const tallLayout = useLayoutStore((s) => s.preset === "timeline");
   const sel = selected !== null && selected < lines.length ? selected : null;
   const shownHeight = Math.min(
     maxHeight,
     height ??
-      (sel !== null ? DEFAULT_EDIT_HEIGHT : DEFAULT_HEIGHT) +
-        ((FEATURES_NOW.characters ? propLanes : 0) + (FEATURES_NOW.themeMix ? 1 : 0)) * PROP_LANE_HEIGHT,
+      (sel !== null ? DEFAULT_EDIT_HEIGHT : tallLayout ? TALL_HEIGHT : DEFAULT_HEIGHT) +
+        ((FEATURES_NOW.characters ? propLanes : 0) + (FEATURES_NOW.themeMix ? 1 + FX_LANES : 0)) *
+          PROP_LANE_HEIGHT,
   );
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -337,6 +341,58 @@ export function Timeline() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Right click on a lyric block: the usual next steps for that line, one click away
+  const lineMenu = (e: ReactMouseEvent, i: number) => {
+    const line = lines[i];
+    if (!line) return;
+    const project = useProjectStore.getState();
+    const ui = usePropUiStore.getState();
+    openMenu(
+      e,
+      [
+        { label: "이 줄부터 재생", onSelect: () => (seek(line.startTime), void play()) },
+        { label: "이 줄 편집", hint: "Enter", onSelect: () => setSelected(i) },
+        ...(FEATURES_NOW.themeMix
+          ? ([
+              "sep",
+              {
+                label: "줄 시작에 전환 넣기",
+                onSelect: () => {
+                  const id = project.addTransition(ui.lastTransition, line.startTime);
+                  if (id) ui.selectFx({ lane: "transition", id });
+                },
+              },
+              {
+                label: "이 줄 동안 카메라 흔들림",
+                onSelect: () => {
+                  const id = project.addAdjust("shake", line.startTime, line.endTime);
+                  if (id) ui.selectFx({ lane: "adjust", id });
+                },
+              },
+              {
+                label: "이 줄 동안 흑백",
+                onSelect: () => {
+                  const id = project.addAdjust("mono", line.startTime, line.endTime);
+                  if (id) ui.selectFx({ lane: "adjust", id });
+                },
+              },
+              {
+                label: "이 줄 동안 이 테마로",
+                onSelect: () => {
+                  const id = project.setThemeSpan(line.startTime, line.endTime);
+                  if (id) ui.selectThemeClip(id);
+                },
+              },
+            ] as const)
+          : []),
+        "sep",
+        { label: "움직임 다시 고르기", onSelect: () => project.rerollLine(i) },
+        { label: "줄 삭제", danger: true, onSelect: () => removeLine(i) },
+      ],
+      line.cleanText.slice(0, 24) || `${i + 1}번 줄`,
+    );
+  };
+
   const togglePlay = () => {
     stopAtRef.current = null;
     if (usePlaybackStore.getState().isPlaying) pause();
@@ -363,6 +419,11 @@ export function Timeline() {
       } else if (ui.themeClip) {
         project.removeThemeClip(ui.themeClip);
         ui.selectThemeClip(null);
+      } else if (ui.fx) {
+        if (ui.fx.lane === "transition") project.removeTransition(ui.fx.id);
+        else if (ui.fx.lane === "adjust") project.removeAdjust(ui.fx.id);
+        else project.removeSfx(ui.fx.id);
+        ui.selectFx(null);
       } else return;
       e.preventDefault();
     };
@@ -572,9 +633,10 @@ export function Timeline() {
           {isPlaying ? "정지" : "재생"}
         </button>
         <span ref={clockRef} className="w-40 whitespace-nowrap font-mono text-zinc-300" />
-        <span className="hidden text-zinc-500 sm:inline">
-          빈 곳 클릭: 이동 · 구간 끌기: 옮기기 · 양 끝 끌기: 시작/끝 조정 · Space: 재생
-        </span>
+        <Tip label="타임라인 조작법">
+          빈 곳 클릭: 이동 · 구간 끌기: 옮기기 · 양 끝 끌기: 시작/끝 조정 · 오른쪽 클릭: 바로 할 일 메뉴 ·
+          효과 카드를 레인에 끌어 놓기 · Space: 재생 · Delete: 고른 구간 지우기 · Ctrl(⌘)+K: 빠른 작업
+        </Tip>
         {(FEATURES_NOW.themeMix || FEATURES_NOW.characters) && (
           <label
             className="ml-auto flex items-center gap-1.5 text-zinc-400"
@@ -638,6 +700,7 @@ export function Timeline() {
               onPointerCancel={onTrackUp}
               className={`relative flex-1 cursor-text select-none ${twoLanes ? "min-h-[150px]" : "min-h-[84px]"}`}
             >
+              <BeatMarks pps={pps} />
               {/* Ruler */}
               {ticks.map((t) => (
                 <div
@@ -681,6 +744,7 @@ export function Timeline() {
                     onPointerMove={onSegmentMove}
                     onPointerUp={onSegmentUp}
                     onPointerCancel={onSegmentUp}
+                    onContextMenu={(e) => lineMenu(e, i)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         setSelected(i);
@@ -744,6 +808,13 @@ export function Timeline() {
               <div className="shrink-0 border-t border-zinc-800/80">
                 {FEATURES_NOW.themeMix && <ThemeLane pps={pps} timeAt={timeAt} />}
                 {FEATURES_NOW.characters && <PropLanes pps={pps} timeAt={timeAt} />}
+                {FEATURES_NOW.themeMix && (
+                  <>
+                    <TransitionLane pps={pps} timeAt={timeAt} />
+                    <AdjustLane pps={pps} timeAt={timeAt} />
+                    <SfxLane pps={pps} timeAt={timeAt} />
+                  </>
+                )}
               </div>
             )}
             {/* Playhead */}
@@ -1007,8 +1078,11 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
           선택 해제
         </button>
       </div>
-      <p className="text-[11px] text-zinc-500">
-        Ctrl(⌘)+클릭: 줄 더하기·빼기 · Shift+클릭: 사이의 줄 모두 · 고른 줄 하나를 끌면 함께 움직입니다
+      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        여러 줄 고르는 법
+        <Tip>
+          Ctrl(⌘)+클릭: 줄 더하기·빼기 · Shift+클릭: 사이의 줄 모두 · 고른 줄 하나를 끌면 함께 움직입니다
+        </Tip>
       </p>
       <PositionRow
         offsetX={first.offsetX}

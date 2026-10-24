@@ -10,6 +10,7 @@ import { useProjectStore } from "@/store/project-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
 import { Fold } from "./fold";
 import { TimeField } from "./time-field";
+import { Tip } from "@/components/ui/tip";
 
 const now = () => usePlaybackStore.getState().currentTime;
 
@@ -295,11 +296,14 @@ export function PropsPanel() {
           />
         </label>
       </div>
-      <p className="text-[11px] leading-snug text-zinc-500">
-        캐릭터, 소품, 스티커 같은 그림(PNG 권장)을 올리면 일러스트 1, 2, 3… 으로 쌓이고, 그림마다 아래
-        타임라인에 줄이 하나씩 생깁니다. 새 그림은 재생 위치에서 4초 구간으로 시작합니다. 구간마다 나타나는
-        효과와 사라지는 효과, 흔들림, 비트 움직임, 빨간 칸을 따로 정할 수 있습니다. 구간을 고르고 Delete 키를
-        누르면 그 구간이 지워집니다.
+      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        그림을 올리면 일러스트 레이어로
+        <Tip>
+          캐릭터, 소품, 스티커 같은 그림(PNG 권장)을 올리면 일러스트 1, 2, 3… 으로 쌓이고, 그림마다 아래
+          타임라인에 줄이 하나씩 생깁니다. 새 그림은 재생 위치에서 4초 구간으로 시작합니다. 구간마다 나타나는
+          효과와 사라지는 효과, 흔들림, 비트 움직임, 빨간 칸을 따로 정할 수 있습니다. 구간을 고르고 Delete
+          키를 누르면 그 구간이 지워집니다.
+        </Tip>
       </p>
       {error && <p className="text-xs text-red-400">{error}</p>}
 
@@ -505,9 +509,12 @@ export function PropsPanel() {
                 })
               }
             />
-            <p className="text-[10px] leading-snug text-zinc-500">
-              퇴장 후 다른 자리에서 다시 나오게 하려면 &quot;타임라인 추가&quot;로 구간을 하나 더 만들고
-              옮기세요.
+            <p className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+              다른 자리에서 다시 나오게 하기
+              <Tip>
+                퇴장 후 다른 자리에서 다시 나오게 하려면 &quot;타임라인 추가&quot;로 구간을 하나 더 만들고
+                옮기세요.
+              </Tip>
             </p>
           </Fold>
           <Fold title="흔들림 · 비트 움직임" className="space-y-1.5 border-t border-zinc-800/70 pt-2">
@@ -535,8 +542,11 @@ export function PropsPanel() {
             ))}
           </Fold>
           <Fold title="빨간 칸 (가사 금지)" className="space-y-1.5 border-t border-zinc-800/70 pt-2">
-            <p className="text-[10px] leading-snug text-zinc-500">
-              이 구간이 화면에 있는 동안 가사가 빨간 칸을 피해 갑니다. 칸을 누르거나 끌어서 만들고 지웁니다.
+            <p className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+              빨간 칸 = 가사가 피하는 곳
+              <Tip>
+                이 구간이 화면에 있는 동안 가사가 빨간 칸을 피해 갑니다. 칸을 누르거나 끌어서 만들고 지웁니다.
+              </Tip>
             </p>
             <ClipCells
               clip={selClip}
@@ -547,9 +557,12 @@ export function PropsPanel() {
         </div>
       ) : (
         onTimeline > 0 && (
-          <p className="text-[11px] leading-snug text-zinc-500">
-            타임라인의 초록 구간을 누르면 여기서 위치, 크기, 효과, 흔들림, 빨간 칸을 바꿀 수 있습니다. 구간은
-            끌어서 옮기고 양 끝을 끌어 길이를 바꾸며, 빈 줄을 두 번 누르면 구간이 추가됩니다.
+          <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+            초록 구간을 눌러 편집
+            <Tip>
+              타임라인의 초록 구간을 누르면 여기서 위치, 크기, 효과, 흔들림, 빨간 칸을 바꿀 수 있습니다.
+              구간은 끌어서 옮기고 양 끝을 끌어 길이를 바꾸며, 빈 줄을 두 번 누르면 구간이 추가됩니다.
+            </Tip>
           </p>
         )
       )}

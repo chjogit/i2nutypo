@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { savedPart, useProjectStore } from "@/store/project-store";
+import { Tip } from "@/components/ui/tip";
 
 const FILE_KIND = "kinetic-typo-project";
 
@@ -54,9 +55,12 @@ export function ProjectFile() {
   return (
     <div className="space-y-2">
       <h3 className="text-xs font-medium text-zinc-200">프로젝트 파일</h3>
-      <p className="text-xs leading-snug text-zinc-500">
-        가사, 싱크, 테마, 테마 구간과 모든 설정을 JSON 파일로 저장하고 다시 엽니다. 음원과 그림은 파일에
-        들어가지 않습니다.
+      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        설정 전체를 JSON으로 · 음원·그림 제외
+        <Tip>
+          가사, 싱크, 테마, 테마 구간과 모든 설정을 JSON 파일로 저장하고 다시 엽니다. 음원과 그림은 파일에
+          들어가지 않습니다.
+        </Tip>
       </p>
       <div className="grid grid-cols-2 gap-2">
         <button
