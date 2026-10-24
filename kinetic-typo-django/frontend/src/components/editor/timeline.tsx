@@ -38,6 +38,10 @@ interface Drag {
   minStart: number;
   maxEnd: number;
   moved: boolean;
+  /** Ctrl/⌘ adds or drops the line from the picked group; Shift picks the run from the selected line. */
+  mod: "toggle" | "range" | null;
+  /** Moving a line of a picked group moves the whole group. */
+  group: boolean;
 }
 
 interface Draft {
@@ -57,7 +61,7 @@ const MIN_TIMELINE_HEIGHT = 120;
 const DEFAULT_MAX_HEIGHT = 600;
 /** Heights before the user drags the edge: track only, and track with the selected line's editor. */
 const DEFAULT_HEIGHT = 170;
-const DEFAULT_EDIT_HEIGHT = 400;
+const DEFAULT_EDIT_HEIGHT = 560;
 /** The selected line's editor grows with the section, up to this zoom and this width before zooming. */
 const MAX_EDITOR_SCALE = 1.8;
 const EDITOR_MAX_WIDTH = 1120;
@@ -215,6 +219,7 @@ export function Timeline() {
   const lines = useProjectStore((s) => s.lines);
   const duration = useProjectStore((s) => s.duration);
   const updateLine = useProjectStore((s) => s.updateLine);
+  const updateLines = useProjectStore((s) => s.updateLines);
   const rerollLine = useProjectStore((s) => s.rerollLine);
   const removeLine = useProjectStore((s) => s.removeLine);
   const fontScale = useProjectStore((s) => s.style.fontScale);
@@ -228,6 +233,11 @@ export function Timeline() {
 
   const [pps, setPps] = useState(40);
   const [selected, setSelected] = useState<number | null>(null);
+  /** Lines picked together (two or more) for changing at once; empty for one line. */
+  const [group, setGroup] = useState<number[]>([]);
+  /** How far a dragged group has moved so far, in seconds. */
+  const [groupDelta, setGroupDelta] = useState(0);
+  const groupDeltaRef = useRef(0);
   const [draft, setDraft] = useState<Draft | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -398,7 +408,14 @@ export function Timeline() {
     if (e.button !== 0) return;
     e.stopPropagation();
     const line = lines[index];
-    const { minStart, maxEnd } = lineBounds(lines, index, duration);
+    const inGroup = kind === "move" && group.length > 1 && group.includes(index);
+    // A group moves as one, kept inside the song
+    const { minStart, maxEnd } = inGroup
+      ? {
+          minStart: line.startTime - Math.min(...group.map((i) => lines[i]?.startTime ?? line.startTime)),
+          maxEnd: line.endTime + duration - Math.max(...group.map((i) => lines[i]?.endTime ?? line.endTime)),
+        }
+      : lineBounds(lines, index, duration);
     dragRef.current = {
       kind,
       index,
@@ -408,6 +425,8 @@ export function Timeline() {
       minStart,
       maxEnd,
       moved: false,
+      mod: e.ctrlKey || e.metaKey ? "toggle" : e.shiftKey ? "range" : null,
+      group: inGroup,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -432,21 +451,52 @@ export function Timeline() {
     }
     draftRef.current = { index: d.index, start: round2(start), end: round2(end) };
     setDraft(draftRef.current);
+    if (d.group) {
+      groupDeltaRef.current = round2(start - d.origStart);
+      setGroupDelta(groupDeltaRef.current);
+    }
+  };
+
+  /** A click with Ctrl/⌘ or Shift: adds lines to, or drops them from, the picked group. */
+  const pickInGroup = (index: number, mod: "toggle" | "range") => {
+    const base = group.length > 0 ? group : sel !== null ? [sel] : [];
+    let next: number[];
+    if (mod === "range" && sel !== null) {
+      const [a, b] = sel < index ? [sel, index] : [index, sel];
+      next = [...new Set([...base, ...Array.from({ length: b - a + 1 }, (_, k) => a + k)])];
+    } else {
+      next = base.includes(index) ? base.filter((i) => i !== index) : [...base, index];
+    }
+    next.sort((a, b) => a - b);
+    setGroup(next.length > 1 ? next : []);
+    setSelected(next.includes(index) ? index : (next[0] ?? null));
   };
 
   const onSegmentUp = () => {
     const d = dragRef.current;
     dragRef.current = null;
     if (!d) return;
-    setSelected(d.index);
     if (!d.moved) {
+      if (d.mod) return pickInGroup(d.index, d.mod);
+      // A plain click on a line outside the group starts over with that line alone
+      if (!group.includes(d.index)) setGroup([]);
+      setSelected(d.index);
       stopAtRef.current = null;
       seek(d.origStart);
       return;
     }
+    setSelected(d.index);
     const cur = draftRef.current;
     draftRef.current = null;
     setDraft(null);
+    if (d.group) {
+      const dt = groupDeltaRef.current;
+      groupDeltaRef.current = 0;
+      setGroupDelta(0);
+      if (dt !== 0)
+        updateLines(group, (l) => ({ startTime: round2(l.startTime + dt), endTime: round2(l.endTime + dt) }));
+      return;
+    }
     if (cur && (cur.start !== d.origStart || cur.end !== d.origEnd)) {
       updateLine(d.index, { startTime: cur.start, endTime: cur.end });
     }
@@ -573,10 +623,10 @@ export function Timeline() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {/* Track and editor split the height 3:7 while a line is selected */}
+        {/* Track and editor split the height 7:3 while a line is selected */}
         <div
           ref={scrollRef}
-          className={`min-h-[96px] overflow-x-auto overflow-y-auto px-4 pb-1 pt-1 ${sel !== null ? "flex-[3]" : "flex-1"} ${QUIET_SCROLLBAR}`}
+          className={`min-h-[96px] overflow-x-auto overflow-y-auto px-4 pb-1 pt-1 ${sel !== null ? "flex-[7]" : "flex-1"} ${QUIET_SCROLLBAR}`}
         >
           {/* Lyric track on top, then one illustration lane per prop, sharing the playhead */}
           <div className="relative flex h-full flex-col" style={{ width }}>
@@ -615,9 +665,11 @@ export function Timeline() {
 
               {/* Lyric blocks */}
               {lines.map((line, i) => {
-                const start = draft?.index === i ? draft.start : line.startTime;
-                const end = draft?.index === i ? draft.end : line.endTime;
-                const isSel = sel === i;
+                const inGroup = group.includes(i);
+                const shift = inGroup && draft?.index !== i ? groupDelta : 0;
+                const start = draft?.index === i ? draft.start : line.startTime + shift;
+                const end = draft?.index === i ? draft.end : line.endTime + shift;
+                const isSel = sel === i || inGroup;
                 return (
                   <div
                     key={`${i}-${line.rawText}`}
@@ -707,130 +759,142 @@ export function Timeline() {
         {selLine && sel !== null && selBounds && (
           <div
             ref={panelRef}
-            className={`flex min-h-0 flex-[7] flex-col overflow-y-auto border-t border-zinc-800 ${QUIET_SCROLLBAR}`}
+            className={`flex min-h-0 flex-[3] flex-col overflow-y-auto border-t border-zinc-800 ${QUIET_SCROLLBAR}`}
           >
             <div ref={sizerRef} className="m-auto shrink-0">
               <div
                 ref={editorRef}
                 className="flex origin-top-left flex-col items-center gap-2 px-4 py-2 text-xs"
               >
-                <div className="grid w-full gap-2 sm:grid-cols-[1.5fr_1fr_1fr]">
-                  <label className="flex items-center gap-2 text-zinc-400">
-                    <span className="shrink-0">{sel + 1}번 가사</span>
-                    <CommitInput
-                      label="선택한 자막 가사"
-                      value={selLine.rawText}
-                      onCommit={(v) => v.trim() && updateLine(sel, { rawText: v.trim() })}
-                      className="min-w-0 flex-1"
-                      inputRef={lyricInputRef}
-                      title="/n 을 넣은 자리에서 줄이 나뉩니다"
-                    />
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={insertBreak}
-                      title="커서 자리에 줄 나눔(/n)을 넣습니다. Enter로 저장"
-                      className={SMALL_BTN}
-                    >
-                      ↵ 줄 나눔
-                    </button>
-                  </label>
-                  <label className="flex items-center gap-2 text-zinc-400">
-                    <span className="shrink-0">발음</span>
-                    <CommitInput
-                      label="선택한 자막 발음"
-                      value={selLine.pronText}
-                      onCommit={(v) => updateLine(sel, { pronText: v.trim() })}
-                      className="min-w-0 flex-1"
-                    />
-                  </label>
-                  <label className="flex items-center gap-2 text-zinc-400">
-                    <span className="shrink-0">뜻</span>
-                    <CommitInput
-                      label="선택한 자막 뜻"
-                      value={selLine.transText}
-                      onCommit={(v) => updateLine(sel, { transText: v.trim() })}
-                      className="min-w-0 flex-1"
-                    />
-                  </label>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-1.5 text-zinc-400">
-                  <span>시작</span>
-                  <CommitInput
-                    type="number"
-                    label="선택한 자막 시작(초)"
-                    value={selLine.startTime.toFixed(2)}
-                    onCommit={(v) => setStart(Number(v))}
-                    className="w-20 font-mono"
-                  />
-                  <NudgeButtons onNudge={(d) => setStart(selLine.startTime + d)} />
-                  <button type="button" onClick={() => setStart(now())} className={SMALL_BTN}>
-                    현재 위치
-                  </button>
-                  <span className="ml-2">끝</span>
-                  <CommitInput
-                    type="number"
-                    label="선택한 자막 끝(초)"
-                    value={selLine.endTime.toFixed(2)}
-                    onCommit={(v) => setEnd(Number(v))}
-                    className="w-20 font-mono"
-                  />
-                  <NudgeButtons onNudge={(d) => setEnd(selLine.endTime + d)} />
-                  <button type="button" onClick={() => setEnd(now())} className={SMALL_BTN}>
-                    현재 위치
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      seek(selLine.startTime);
-                      stopAtRef.current = selLine.endTime;
-                      void play();
-                    }}
-                    className="ml-2 rounded-md bg-indigo-600 px-2 py-1 font-semibold text-white hover:bg-indigo-500"
-                  >
-                    ▶ 구간 재생
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      removeLine(sel);
+                {group.length > 1 ? (
+                  <GroupEditor
+                    indices={group}
+                    onDone={() => {
+                      setGroup([]);
                       setSelected(null);
                     }}
-                    className="rounded-md px-2 py-1 text-red-300 hover:bg-red-500/10"
-                  >
-                    줄 삭제
-                  </button>
-                  <label
-                    className="ml-2 flex items-center gap-1.5 text-zinc-300"
-                    title="켜면 앞 줄과 같은 시간에 작게 함께 나옵니다 (가사 앞에 & 를 붙인 것과 같습니다)"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selLine.overlap}
-                      disabled={sel === 0 && !selLine.overlap}
-                      onChange={(e) => updateLine(sel, { overlap: e.target.checked })}
-                      className="accent-violet-500"
+                  />
+                ) : (
+                  <>
+                    <div className="grid w-full gap-2 sm:grid-cols-[1.5fr_1fr_1fr]">
+                      <label className="flex items-center gap-2 text-zinc-400">
+                        <span className="shrink-0">{sel + 1}번 가사</span>
+                        <CommitInput
+                          label="선택한 자막 가사"
+                          value={selLine.rawText}
+                          onCommit={(v) => v.trim() && updateLine(sel, { rawText: v.trim() })}
+                          className="min-w-0 flex-1"
+                          inputRef={lyricInputRef}
+                          title="/n 을 넣은 자리에서 줄이 나뉩니다"
+                        />
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={insertBreak}
+                          title="커서 자리에 줄 나눔(/n)을 넣습니다. Enter로 저장"
+                          className={SMALL_BTN}
+                        >
+                          ↵ 줄 나눔
+                        </button>
+                      </label>
+                      <label className="flex items-center gap-2 text-zinc-400">
+                        <span className="shrink-0">발음</span>
+                        <CommitInput
+                          label="선택한 자막 발음"
+                          value={selLine.pronText}
+                          onCommit={(v) => updateLine(sel, { pronText: v.trim() })}
+                          className="min-w-0 flex-1"
+                        />
+                      </label>
+                      <label className="flex items-center gap-2 text-zinc-400">
+                        <span className="shrink-0">뜻</span>
+                        <CommitInput
+                          label="선택한 자막 뜻"
+                          value={selLine.transText}
+                          onCommit={(v) => updateLine(sel, { transText: v.trim() })}
+                          className="min-w-0 flex-1"
+                        />
+                      </label>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 text-zinc-400">
+                      <span>시작</span>
+                      <CommitInput
+                        type="number"
+                        label="선택한 자막 시작(초)"
+                        value={selLine.startTime.toFixed(2)}
+                        onCommit={(v) => setStart(Number(v))}
+                        className="w-20 font-mono"
+                      />
+                      <NudgeButtons onNudge={(d) => setStart(selLine.startTime + d)} />
+                      <button type="button" onClick={() => setStart(now())} className={SMALL_BTN}>
+                        현재 위치
+                      </button>
+                      <span className="ml-2">끝</span>
+                      <CommitInput
+                        type="number"
+                        label="선택한 자막 끝(초)"
+                        value={selLine.endTime.toFixed(2)}
+                        onCommit={(v) => setEnd(Number(v))}
+                        className="w-20 font-mono"
+                      />
+                      <NudgeButtons onNudge={(d) => setEnd(selLine.endTime + d)} />
+                      <button type="button" onClick={() => setEnd(now())} className={SMALL_BTN}>
+                        현재 위치
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          seek(selLine.startTime);
+                          stopAtRef.current = selLine.endTime;
+                          void play();
+                        }}
+                        className="ml-2 rounded-md bg-indigo-600 px-2 py-1 font-semibold text-white hover:bg-indigo-500"
+                      >
+                        ▶ 구간 재생
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          removeLine(sel);
+                          setSelected(null);
+                        }}
+                        className="rounded-md px-2 py-1 text-red-300 hover:bg-red-500/10"
+                      >
+                        줄 삭제
+                      </button>
+                      <label
+                        className="ml-2 flex items-center gap-1.5 text-zinc-300"
+                        title="켜면 앞 줄과 같은 시간에 작게 함께 나옵니다 (가사 앞에 & 를 붙인 것과 같습니다)"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selLine.overlap}
+                          disabled={sel === 0 && !selLine.overlap}
+                          onChange={(e) => updateLine(sel, { overlap: e.target.checked })}
+                          className="accent-violet-500"
+                        />
+                        겹치는 줄(&)
+                      </label>
+                      <button type="button" onClick={() => setSelected(null)} className={SMALL_BTN}>
+                        닫기
+                      </button>
+                    </div>
+                    <PositionRow
+                      offsetX={selLine.offsetX}
+                      offsetY={selLine.offsetY}
+                      onChange={(offsetX, offsetY) => updateLine(sel, { offsetX, offsetY })}
                     />
-                    겹치는 줄(&)
-                  </label>
-                  <button type="button" onClick={() => setSelected(null)} className={SMALL_BTN}>
-                    닫기
-                  </button>
-                </div>
-                <PositionRow
-                  offsetX={selLine.offsetX}
-                  offsetY={selLine.offsetY}
-                  onChange={(offsetX, offsetY) => updateLine(sel, { offsetX, offsetY })}
-                />
-                <LineStyleRow
-                  value={selLine.lineStyle}
-                  onChange={(lineStyle) => updateLine(sel, { lineStyle })}
-                />
-                <LineMotionRow
-                  line={selLine}
-                  onReroll={() => rerollLine(sel)}
-                  onChange={(lineStyle) => updateLine(sel, { lineStyle })}
-                />
+                    <LineStyleRow
+                      value={selLine.lineStyle}
+                      onChange={(lineStyle) => updateLine(sel, { lineStyle })}
+                    />
+                    <LineMotionRow
+                      line={selLine}
+                      onReroll={() => rerollLine(sel)}
+                      onChange={(lineStyle) => updateLine(sel, { lineStyle })}
+                    />
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -841,6 +905,151 @@ export function Timeline() {
 }
 
 const SMALL_BTN = "rounded-md border border-zinc-800 px-1.5 py-1 text-zinc-300 hover:border-indigo-500";
+
+/** Keys a style change touched: those whose value differs between before and after. */
+function changedKeys(before: LineStyle, after: LineStyle): Array<keyof LineStyle> {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)] as Array<keyof LineStyle>);
+  return [...keys].filter((k) => before[k] !== after[k]);
+}
+
+/** Copies only the touched settings onto a line, keeping its other settings. */
+function applyKeys(target: LineStyle, from: LineStyle, keys: ReadonlyArray<keyof LineStyle>): LineStyle {
+  const next: LineStyle = { ...target };
+  for (const k of keys) {
+    if (from[k] === undefined) delete next[k];
+    else next[k] = from[k];
+  }
+  return next;
+}
+
+/**
+ * Several lines picked together (Ctrl/⌘ or Shift + click): move them in time,
+ * place and style them, roll their motions, lock or flash them, delete them,
+ * or put a theme clip over them, all at once. Each control starts from the
+ * first picked line and changes only the setting it touches.
+ */
+function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: () => void }) {
+  const lines = useProjectStore((s) => s.lines);
+  const duration = useProjectStore((s) => s.duration);
+  const updateLines = useProjectStore((s) => s.updateLines);
+  const removeLines = useProjectStore((s) => s.removeLines);
+  const rerollLines = useProjectStore((s) => s.rerollLines);
+  const setThemeSpan = useProjectStore((s) => s.setThemeSpan);
+  const selectThemeClip = usePropUiStore((s) => s.selectThemeClip);
+  const picked = indices.map((i) => lines[i]).filter((l): l is LyricLine => Boolean(l));
+  if (picked.length === 0) return null;
+  const first = picked[0];
+  const from = Math.min(...picked.map((l) => l.startTime));
+  const to = Math.max(...picked.map((l) => l.endTime));
+  const all = (key: "lock" | "flash") => picked.every((l) => Boolean(l.lineStyle[key]));
+
+  const shift = (dt: number) => {
+    const d = clamp(dt, -from, duration - to);
+    if (d !== 0)
+      updateLines(indices, (l) => ({ startTime: round2(l.startTime + d), endTime: round2(l.endTime + d) }));
+  };
+  const setStyleKeys = (next: LineStyle) => {
+    const keys = changedKeys(first.lineStyle, next);
+    if (keys.length > 0) updateLines(indices, (l) => ({ lineStyle: applyKeys(l.lineStyle, next, keys) }));
+  };
+  const toggle = (key: "lock" | "flash", on: boolean) =>
+    updateLines(indices, (l) => ({
+      lineStyle: on ? { ...l.lineStyle, [key]: 1 } : applyKeys(l.lineStyle, {}, [key]),
+    }));
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-center gap-2 text-zinc-300">
+        <span className="font-semibold text-indigo-200">{picked.length}줄 선택</span>
+        <span className="text-zinc-500">
+          {formatLrcTime(from)} ~ {formatLrcTime(to)}
+        </span>
+        <button
+          type="button"
+          onClick={() => shift(-0.1)}
+          className={SMALL_BTN}
+          title="고른 줄을 모두 0.1초 앞으로"
+        >
+          ◀ 0.1초
+        </button>
+        <button
+          type="button"
+          onClick={() => shift(0.1)}
+          className={SMALL_BTN}
+          title="고른 줄을 모두 0.1초 뒤로"
+        >
+          0.1초 ▶
+        </button>
+        {FEATURES_NOW.themeMix && (
+          <button
+            type="button"
+            onClick={() => {
+              const id = setThemeSpan(from, to);
+              if (id) selectThemeClip(id);
+            }}
+            title="고른 줄이 나오는 동안 쓸 테마 구간을 만들고, 왼쪽 테마 칸에서 고르게 합니다"
+            className={SMALL_BTN}
+          >
+            🎨 이 줄들에 테마 타임라인 추가
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            removeLines(indices);
+            onDone();
+          }}
+          className="rounded-md px-2 py-1 text-red-300 hover:bg-red-500/10"
+        >
+          고른 줄 삭제
+        </button>
+        <button type="button" onClick={onDone} className={SMALL_BTN}>
+          선택 해제
+        </button>
+      </div>
+      <p className="text-[11px] text-zinc-500">
+        Ctrl(⌘)+클릭: 줄 더하기·빼기 · Shift+클릭: 사이의 줄 모두 · 고른 줄 하나를 끌면 함께 움직입니다
+      </p>
+      <PositionRow
+        offsetX={first.offsetX}
+        offsetY={first.offsetY}
+        onChange={(offsetX, offsetY) => updateLines(indices, () => ({ offsetX, offsetY }))}
+      />
+      <LineStyleRow value={first.lineStyle} onChange={setStyleKeys} />
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-zinc-400">
+        <span>움직임</span>
+        <button type="button" onClick={() => rerollLines(indices)} className={SMALL_BTN}>
+          🎲 모두 다시 뽑기
+        </button>
+        <button
+          type="button"
+          onClick={() => updateLines(indices, (l) => ({ lineStyle: applyKeys(l.lineStyle, {}, ["motion"]) }))}
+          className={SMALL_BTN}
+        >
+          모두 테마에 맡기기
+        </button>
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={all("lock")}
+            onChange={(e) => toggle("lock", e.target.checked)}
+            className="accent-indigo-500"
+          />
+          🔒 모두 잠금
+        </label>
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={all("flash")}
+            onChange={(e) => toggle("flash", e.target.checked)}
+            className="accent-indigo-500"
+          />
+          ⚡ 모두 번쩍
+        </label>
+      </div>
+    </>
+  );
+}
 
 function NudgeButtons({ onNudge }: { onNudge: (delta: number) => void }) {
   return (

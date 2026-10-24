@@ -25,7 +25,8 @@ import {
 import { useProjectStore } from "@/store/project-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
 import { formatLrcTime } from "@/lib/lyrics/parse";
-import { setClipBase, toggleClipTheme } from "@/lib/render/theme-clips";
+import { setClipBase, themeClipAt, toggleClipTheme } from "@/lib/render/theme-clips";
+import { usePlaybackStore } from "@/store/playback-store";
 import { activeMotions, motionLabel, MOTIONS_PER_SONG, THEME_MOTIONS } from "@/lib/render/looks/motions";
 import { freshSeed, mulberry32, pickSome } from "@/lib/random";
 import { FEATURES_NOW } from "@/lib/mode/mode";
@@ -129,7 +130,7 @@ export function StyleSidebar() {
 function ThemeGrid({ target }: { target: ThemeTarget }) {
   const [open, setOpen] = useState(true);
   const picked = target.picked;
-  const full = picked.length > MAX_MIX_LOOKS;
+  const full = picked.length > MAX_MIX_LOOKS && (target.clip !== null || !FEATURES_NOW.themeMix);
   return (
     <div className="rounded-md border border-zinc-800">
       <button
@@ -158,7 +159,7 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
           <p className="text-[11px] leading-snug text-zinc-500">
             {target.clip
               ? "이 구간에 쓸 테마를 최대 3개까지 고르세요. 1번이 배경을 그립니다."
-              : "최대 3개까지 고르세요. 1번이 배경을 그립니다. 모두 해제하면 기본 테마(앨범 자켓)로 돌아갑니다. 타임라인의 테마 줄에서 구간마다 다른 테마를 쓸 수 있습니다."}
+              : "최대 3개까지 고르세요. 1번이 배경을 그립니다. 모두 해제하면 기본 테마(앨범 자켓)로 돌아갑니다. 새로 고른 테마는 재생 위치의 빈 구간(테마 줄이 비어 있으면 곡 전체)에 테마 줄로 올라갑니다."}
           </p>
           {/* As many columns as the sidebar width fits */}
           <div className="grid max-h-[50vh] grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-1.5 overflow-y-auto pr-0.5">
@@ -472,6 +473,8 @@ function useThemeTarget(): ThemeTarget {
   const setBaseLook = useProjectStore((s) => s.setBaseLook);
   const setLyricLook = useProjectStore((s) => s.setLyricLook);
   const updateThemeClip = useProjectStore((s) => s.updateThemeClip);
+  const placeTheme = useProjectStore((s) => s.placeTheme);
+  const selectThemeClip = usePropUiStore((s) => s.selectThemeClip);
   const clipId = usePropUiStore((s) => s.themeClip);
   const clip = style.themeClips.find((c) => c.id === clipId) ?? null;
   if (!clip)
@@ -479,7 +482,21 @@ function useThemeTarget(): ThemeTarget {
       clip: null,
       style,
       picked: pickedLooks(style),
-      toggle: toggleTheme,
+      toggle: (id) => {
+        // With a theme timeline, a newly picked theme goes onto it at the playhead
+        if (!FEATURES_NOW.themeMix || !isThemedPresetId(id) || pickedLooks(style).includes(id))
+          return toggleTheme(id);
+        const at = usePlaybackStore.getState().currentTime;
+        const over = themeClipAt(style.themeClips, at);
+        if (over) {
+          updateThemeClip(over.id, toggleClipTheme(over, id));
+          selectThemeClip(over.id);
+          return;
+        }
+        const made = placeTheme(id, at);
+        if (made) selectThemeClip(made);
+        else toggleTheme(id);
+      },
       setBase: setBaseLook,
       setLyric: setLyricLook,
     };
@@ -518,7 +535,7 @@ function ThemeClipBanner({ clip }: { clip: ThemeClip }) {
         }}
         className="text-indigo-400 hover:underline"
       >
-        구간 삭제
+        현재 구간 삭제
       </button>
       <button type="button" onClick={() => selectThemeClip(null)} className="text-indigo-400 hover:underline">
         전체 테마로

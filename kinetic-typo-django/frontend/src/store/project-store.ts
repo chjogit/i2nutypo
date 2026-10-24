@@ -108,7 +108,7 @@ export const DEFAULT_SUBTITLES: SubtitleSettings = {
   bgBox: true,
   bottomOffset: 48,
   position: "bottom",
-  display: "bottomOnly",
+  display: "kinetic",
   mainFontSize: 34,
   mainColor: "#ffffff",
 };
@@ -133,6 +133,16 @@ interface ProjectActions {
   restoreComposition: (snap: { style: StyleSettings; lyricsText: string }) => void;
   /** Gives one line another of the lyric theme's motions. */
   rerollLine: (index: number) => void;
+  /** Changes several lines at once (lines picked together in the timeline). */
+  updateLines: (indices: readonly number[], patch: (line: TimedLyric) => Partial<TimedLyric>) => void;
+  removeLines: (indices: readonly number[]) => void;
+  /** Gives each of these lines another motion. */
+  rerollLines: (indices: readonly number[]) => void;
+  /**
+   * Puts a theme clip with the whole video's themes over start..end, cutting
+   * back any theme clips already there; returns its id.
+   */
+  setThemeSpan: (start: number, end: number) => string | null;
   autoDistribute: () => void;
   loadSampleLyrics: () => void;
   setAudio: (audio: AudioSource) => void;
@@ -164,6 +174,11 @@ interface ProjectActions {
   removePropClip: (id: string, clipId: string) => void;
   /** Adds a theme clip at `at` with the whole video's current themes, when that time is free; returns its id. */
   addThemeClip: (at: number) => string | null;
+  /**
+   * Puts one theme on the theme timeline over the empty stretch around `at`
+   * (the whole song when the lane is empty); returns the new clip's id.
+   */
+  placeTheme: (id: Exclude<LookPresetId, "classic">, at: number) => string | null;
   updateThemeClip: (id: string, patch: Partial<ThemeClip>) => void;
   removeThemeClip: (id: string) => void;
   /** Switches one element on/off or changes its strength; the theme defaults to the background theme. */
@@ -252,7 +267,7 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
       ...current.subtitles,
       ...p.subtitles,
       position: p.subtitles?.position === "top" ? "top" : "bottom",
-      display: p.subtitles?.display === "kinetic" ? "kinetic" : "bottomOnly",
+      display: p.subtitles?.display === "bottomOnly" ? "bottomOnly" : "kinetic",
     },
     fx: sanitizeFxToggles(p.fx),
   };
@@ -351,6 +366,65 @@ export const useProjectStore = create<ProjectStore>()(
           );
           return fromTimed(s, timed);
         }),
+
+      updateLines: (indices, patch) =>
+        set((s) => {
+          const pick = new Set(indices);
+          if (![...pick].some((i) => s.lines[i])) return {};
+          const timed = s.lines.map((l, i) => {
+            const t = toTimed(l);
+            return pick.has(i) ? { ...t, ...patch(t) } : t;
+          });
+          return fromTimed(s, timed);
+        }),
+
+      removeLines: (indices) =>
+        set((s) => {
+          const pick = new Set(indices);
+          const timed = s.lines.filter((_, i) => !pick.has(i)).map(toTimed);
+          if (timed.length === s.lines.length) return {};
+          return { ...fromTimed(s, timed), lyricsCollapsed: timed.length > 0 && s.lyricsCollapsed };
+        }),
+
+      rerollLines: (indices) =>
+        set((s) => {
+          const pick = new Set(indices);
+          const rand = mulberry32(freshSeed());
+          const timed = s.lines.map((l) =>
+            pick.has(s.lines.indexOf(l))
+              ? { ...toTimed(l), lineStyle: { ...l.lineStyle, motion: rerollMotion(l, s.style, rand) } }
+              : toTimed(l),
+          );
+          return fromTimed(s, timed);
+        }),
+
+      setThemeSpan: (rawStart, rawEnd) => {
+        let added: string | null = null;
+        set((s) => {
+          const start = Math.round(Math.max(0, rawStart) * 100) / 100;
+          const end = Math.round(Math.min(s.duration, rawEnd) * 100) / 100;
+          if (end - start < MIN_CLIP - 1e-6) return {};
+          // Clips under the new one are cut back to its edges (split when it lands inside one)
+          const kept = (s.style.themeClips ?? []).flatMap((c): ThemeClip[] => {
+            if (c.end <= start || c.start >= end) return [c];
+            const parts: ThemeClip[] = [];
+            if (c.start < start) parts.push({ ...c, end: start });
+            if (c.end > end) parts.push({ ...c, id: parts.length ? newId("theme") : c.id, start: end });
+            return parts.filter((p) => p.end - p.start >= MIN_CLIP - 1e-6);
+          });
+          const clip: ThemeClip = {
+            id: newId("theme"),
+            start,
+            end,
+            lookPreset: s.style.lookPreset === "classic" ? DEFAULT_STYLE_THEME : s.style.lookPreset,
+            mixLooks: s.style.mixLooks,
+            lyricLook: s.style.lyricLook,
+          };
+          added = clip.id;
+          return { style: { ...s.style, themeClips: sortClips([...kept, clip]) } };
+        });
+        return added;
+      },
 
       removeLine: (index) =>
         set((s) => {
@@ -511,6 +585,28 @@ export const useProjectStore = create<ProjectStore>()(
           };
           const clip = fitClip(made, made, clips, s.duration);
           if (clip.end - clip.start < MIN_CLIP - 1e-6) return {};
+          added = clip.id;
+          return { style: { ...s.style, themeClips: sortClips([...clips, clip]) } };
+        });
+        return added;
+      },
+
+      placeTheme: (id, at) => {
+        let added: string | null = null;
+        set((s) => {
+          const clips = s.style.themeClips ?? [];
+          if (!freeAt(clips, at)) return {};
+          const start = Math.max(0, ...clips.filter((c) => c.end <= at).map((c) => c.end));
+          const end = Math.min(s.duration, ...clips.filter((c) => c.start > at).map((c) => c.start));
+          if (end - start < MIN_CLIP - 1e-6) return {};
+          const clip: ThemeClip = {
+            id: newId("theme"),
+            start: Math.round(start * 100) / 100,
+            end: Math.round(end * 100) / 100,
+            lookPreset: id,
+            mixLooks: [],
+            lyricLook: null,
+          };
           added = clip.id;
           return { style: { ...s.style, themeClips: sortClips([...clips, clip]) } };
         });

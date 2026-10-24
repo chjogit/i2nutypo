@@ -419,7 +419,7 @@ export function PropsPanel() {
                 title="재생 위치에 이 일러스트의 구간을 하나 더 만듭니다 (다른 자리에서 다시 나타나기)"
                 className="text-indigo-400 hover:underline"
               >
-                + 지금 구간
+                타임라인 추가
               </button>
               <button
                 type="button"
@@ -429,7 +429,7 @@ export function PropsPanel() {
                 }}
                 className="text-indigo-400 hover:underline"
               >
-                구간 삭제
+                현재 구간 삭제
               </button>
             </span>
           </div>
@@ -506,7 +506,7 @@ export function PropsPanel() {
               }
             />
             <p className="text-[10px] leading-snug text-zinc-500">
-              퇴장 후 다른 자리에서 다시 나오게 하려면 &quot;+ 지금 구간&quot;으로 구간을 하나 더 만들고
+              퇴장 후 다른 자리에서 다시 나오게 하려면 &quot;타임라인 추가&quot;로 구간을 하나 더 만들고
               옮기세요.
             </p>
           </Fold>
