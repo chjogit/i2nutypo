@@ -7,7 +7,8 @@
 | 경로                                | 내용                                                                    |
 | ----------------------------------- | ----------------------------------------------------------------------- |
 | `config/`                           | Django 설정(`settings.py`), URL, WSGI 진입점(`wsgi.py`, Vercel이 사용), Jinja2 환경(`jinja2.py`) |
-| `studio/`                           | 페이지 뷰(`views.py`), URL, Jinja2 템플릿 `jinja2/studio/*.html`        |
+| `studio/`                           | 페이지 뷰(`views.py`), URL                                              |
+| `templates/`                        | Jinja2 템플릿: `base.html`+`header.html`(편집기 페이지 공통 틀), `studio.html`, 첫 화면 `intro.html`(틀 없이 단독) |
 | `static/css/studio.css`             | 편집기 스타일 (빌드 결과)                                               |
 | `static/js/studio.js`               | 편집기 (빌드 결과)                                                      |
 | `static/js/whisper-worker.js`       | 음성 인식 워커 (빌드 결과)                                              |
@@ -18,7 +19,7 @@
 
 ## 첫 페이지와 단계 (입문 · 기본 · 숙련)
 
-`/`는 단계를 고르는 첫 페이지(`landing.html`)이고, 편집기는 단계마다 주소가 다릅니다. 같은 편집기(`studio.html`)를 열되 `<div id="root" data-mode="...">`로 단계를 알려 주고, 편집기는 `frontend/src/lib/mode/mode.ts`에서 이 값을 읽어 기능을 켜고 끕니다. 모든 편집기 화면 왼쪽 위 **← 처음으로**와 오른쪽 위 단계 버튼으로 언제든 옮겨 갈 수 있습니다.
+`/`는 단계를 고르는 첫 페이지(`templates/intro.html`, 공통 틀 없이 단독)이고, 편집기는 단계마다 주소가 다릅니다. 편집기 페이지는 모두 `base.html`과 `header.html`(← 처음으로, 단계 이름·안내, 단계 버튼)을 같은 틀로 쓰고, 같은 편집기(`studio.html`)를 열되 `<div id="root" data-mode="...">`로 단계를 알려 주고, 편집기는 `frontend/src/lib/mode/mode.ts`에서 이 값을 읽어 기능을 켜고 끕니다. 모든 편집기 화면 왼쪽 위 **← 처음으로**와 오른쪽 위 단계 버튼으로 언제든 옮겨 갈 수 있습니다.
 
 | 주소         | 단계 | 쓸 수 있는 기능                                                                                     |
 | ------------ | ---- | --------------------------------------------------------------------------------------------------- |

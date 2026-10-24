@@ -1,0 +1,21 @@
+<!doctype html>
+{#- Frame shared by every editor page: head, the header (header.html), then the page.
+    Only the first page, intro.html, stands outside it. -#}
+<html lang="ko" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Kinetic Typo Studio{% endblock %}</title>
+    <meta name="description" content="음원과 가사로 키네틱 타이포그라피 영상을 만듭니다." />
+    <link rel="icon" href="{{ static('favicon.ico') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    {% block fonts %}{% endblock %}
+    <link rel="stylesheet" href="{{ static('css/studio.css') }}?v={{ v }}" />
+    {% block head %}{% endblock %}
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    {% include "header.html" %}
+    {% block content %}{% endblock %}
+  </body>
+</html>

@@ -1,7 +1,4 @@
 import { useEffect, useRef, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
-import { characterAt } from "@/lib/render/looks/cues";
-import { resolveIllustrationImages } from "@/lib/render/looks/image-cache";
-import { characterRect } from "@/lib/render/looks/layout";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
@@ -13,12 +10,8 @@ interface Placement {
   w: number;
   h: number;
   rot: number;
-  /** Shown at this moment (a prop clip outside the playhead is drawn dashed). */
+  /** Shown at this moment (a clip outside the playhead is drawn dashed). */
   live: boolean;
-  /** Character: which place the box edits. */
-  target: "prop" | "char" | "cue";
-  /** The exit whose return place is edited (target "cue"). */
-  cue: number;
 }
 
 type Gesture =
@@ -29,7 +22,7 @@ type Gesture =
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
-/** Where the picked prop clip or the character sits now, or null when nothing is picked. */
+/** Where the picked illustration clip sits, or null when nothing is picked. */
 function placement(W: number, H: number): Placement | null {
   const project = useProjectStore.getState();
   const ui = usePropUiStore.getState();
@@ -47,37 +40,14 @@ function placement(W: number, H: number): Placement | null {
       h,
       rot: clip.rot,
       live: t >= clip.start && t < clip.end,
-      target: "prop",
-      cue: -1,
     };
   }
-  if (!ui.character) return null;
-  const ill = project.style.illustration;
-  const img = resolveIllustrationImages(project.images).character;
-  // An exit being edited moves its return place; otherwise the place the character has now,
-  // which after a return is that exit's return place
-  let index = ui.cue ?? -1;
-  if (index < 0) ill.charCues.forEach((c, i) => (c.showAt <= t ? (index = i) : null));
-  const cue = index >= 0 ? ill.charCues[index] : undefined;
-  const at = cue ? { x: cue.x, y: cue.y } : characterAt(ill, t);
-  const r = characterRect({ ...ill, charX: at.x, charY: at.y, showCharacter: true }, img, W, H);
-  if (!r) return null;
-  return {
-    cx: (r.x + r.w / 2) / W,
-    cy: (r.y + r.h / 2) / H,
-    w: r.w / W,
-    h: r.h / H,
-    rot: 0,
-    live: characterAt(ill, t).reveal > 0 || ui.cue !== null,
-    target: cue ? "cue" : "char",
-    cue: index,
-  };
+  return null;
 }
 
 /**
  * Box over the preview for the illustration picked in the 일러스트 section or
- * timeline: drag it to move, its corner to resize, and (props) its top knob to
- * turn. Follows the store from a RAF loop, like the lyric text box.
+ * timeline: drag it to move, its corner to resize, and its top knob to turn. Follows the store from a RAF loop, like the lyric text box.
  */
 export function IllustrationOverlay({ canvasRef }: { canvasRef: RefObject<HTMLCanvasElement | null> }) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -107,7 +77,6 @@ export function IllustrationOverlay({ canvasRef }: { canvasRef: RefObject<HTMLCa
       el.style.height = `${h}px`;
       el.style.transform = `translate(${p.cx * cw - w / 2}px, ${p.cy * ch - h / 2}px) rotate(${p.rot}deg)`;
       el.style.borderStyle = p.live ? "solid" : "dashed";
-      el.dataset.target = p.target;
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
@@ -143,32 +112,13 @@ export function IllustrationOverlay({ canvasRef }: { canvasRef: RefObject<HTMLCa
   const apply = (from: Placement, patch: { cx?: number; cy?: number; h?: number; rot?: number }) => {
     const project = useProjectStore.getState();
     const ui = usePropUiStore.getState();
-    if (from.target === "prop" && ui.selected) {
-      project.updatePropClip(ui.selected.propId, ui.selected.clipId, {
-        ...(patch.cx !== undefined && { x: round3(clamp(patch.cx, -0.2, 1.2)) }),
-        ...(patch.cy !== undefined && { y: round3(clamp(patch.cy, -0.2, 1.2)) }),
-        ...(patch.h !== undefined && { scale: round3(clamp(patch.h, 0.03, 1.5)) }),
-        ...(patch.rot !== undefined && { rot: Math.round(patch.rot) }),
-      });
-      return;
-    }
-    const ill = project.style.illustration;
-    // The character's place is its center x and feet y
-    const feet = (cy: number, h: number) => cy + h / 2;
-    if (patch.h !== undefined) {
-      const h = clamp(patch.h, 0.2, 1.2);
-      // Keep the feet where they are while it grows
-      if (!ill.charLocked) project.setIllustration({ characterScale: round3(h) });
-      return;
-    }
-    const x = round3(clamp(patch.cx ?? from.cx, -0.2, 1.2));
-    const y = round3(clamp(feet(patch.cy ?? from.cy, from.h), 0.15, 1.4));
-    if (from.target === "cue") {
-      const i = from.cue;
-      project.setIllustration({ charCues: ill.charCues.map((c, k) => (k === i ? { ...c, x, y } : c)) });
-    } else if (!ill.charLocked) {
-      project.setIllustration({ charX: x, charY: y });
-    }
+    if (!ui.selected) return;
+    project.updatePropClip(ui.selected.propId, ui.selected.clipId, {
+      ...(patch.cx !== undefined && { x: round3(clamp(patch.cx, -0.2, 1.2)) }),
+      ...(patch.cy !== undefined && { y: round3(clamp(patch.cy, -0.2, 1.2)) }),
+      ...(patch.h !== undefined && { scale: round3(clamp(patch.h, 0.03, 1.5)) }),
+      ...(patch.rot !== undefined && { rot: Math.round(patch.rot) }),
+    });
   };
 
   const onMove = (e: ReactPointerEvent<HTMLElement>) => {
@@ -208,7 +158,7 @@ export function IllustrationOverlay({ canvasRef }: { canvasRef: RefObject<HTMLCa
       onPointerUp={onUp}
       onPointerCancel={onUp}
       title="끌기: 옮기기 · 모서리: 크기 · 위쪽 점: 회전(Shift로 15°씩)"
-      className="group absolute left-0 top-0 z-20 hidden origin-center cursor-move touch-none border-2 border-emerald-400/90 data-[target=char]:border-sky-400/90 data-[target=cue]:border-violet-400/90"
+      className="group absolute left-0 top-0 z-20 hidden origin-center cursor-move touch-none border-2 border-emerald-400/90"
     >
       {(
         [
@@ -234,7 +184,7 @@ export function IllustrationOverlay({ canvasRef }: { canvasRef: RefObject<HTMLCa
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
-        className="absolute -top-6 left-1/2 h-3 w-3 -translate-x-1/2 cursor-grab rounded-full border border-zinc-950 bg-emerald-300 group-data-[target=char]:hidden group-data-[target=cue]:hidden"
+        className="absolute -top-6 left-1/2 h-3 w-3 -translate-x-1/2 cursor-grab rounded-full border border-zinc-950 bg-emerald-300"
       />
       <span
         ref={badgeRef}

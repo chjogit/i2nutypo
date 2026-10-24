@@ -4,11 +4,14 @@ import { formatLineOptions, parseLineOptions } from "./line-options";
 import { detectWordSemanticEffect, splitManualBreaks, tokenizeMultilingualLine } from "./tokenize";
 import {
   hasJapanese,
+  interludeSeconds,
   isKoreanOnly,
   LRC_LINE,
   LRC_PREFIX,
   markOverlap,
   normalizeMultilineJapaneseBlocks,
+  splitCuts,
+  splitFlashMark,
   splitLyricTriplet,
 } from "./triplet";
 
@@ -31,6 +34,10 @@ export interface ParseLyricsOptions {
  * two become bottom subtitles. A line starting with "&" overlaps the line
  * before it: without a time of its own it starts with that line, and it
  * ends with it unless an end time is written.
+ *
+ * Notation: "[간주 8]" leaves 8 seconds empty between untimed lines, a
+ * trailing " !" flashes the screen as the line starts, " / " cuts a line into
+ * screens shown one after another, and "#" lines are notes (never shown).
  */
 export function parseLyrics(text: string, { duration, introGateSec }: ParseLyricsOptions): LyricLine[] {
   const rawLines = normalizeMultilineJapaneseBlocks(text);
@@ -47,14 +54,26 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
     pronText: string;
     transText: string;
     overlap: boolean;
+    /** Seconds left empty after this line ("[간주 N]"). */
+    gapAfter: number;
   }> = [];
+  let leadGap = 0;
   rawLines.forEach((lineStr, index) => {
+    const gap = interludeSeconds(lineStr);
+    if (gap !== null) {
+      const last = drafts.length > 0 ? drafts[drafts.length - 1] : null;
+      if (last) last.gapAfter += gap;
+      else leadGap += gap;
+      return;
+    }
     const match = lineStr.match(LRC_LINE);
-    const { mainRaw, pronText, transText, overlap } = splitLyricTriplet(match ? match[6] : lineStr);
+    const { mainRaw: marked, pronText, transText, overlap } = splitLyricTriplet(match ? match[6] : lineStr);
+    const { flash, body: mainRaw } = splitFlashMark(marked);
     if (!mainRaw) return;
     const startTime = match ? parseInt(match[1], 10) * 60 + parseFloat(match[2]) : null;
     const endTime = match?.[3] ? parseInt(match[3], 10) * 60 + parseFloat(match[4]) : null;
     const options = parseLineOptions(match?.[5]);
+    if (flash) options.lineStyle = { ...options.lineStyle, flash: 1 };
     // A first line has nothing to overlap, so it is an ordinary line
     const overlaps = overlap && drafts.length > 0;
     drafts.push({
@@ -66,21 +85,33 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
       pronText,
       transText,
       overlap: overlaps,
+      gapAfter: 0,
     });
   });
 
   // Untimed lines share the song evenly; overlapping lines take the time of the line they overlap
+  // Untimed lines share the song evenly, minus the interludes
   const mainCount = drafts.filter((d) => !d.overlap).length;
-  const sliceDur = Math.max(8, duration - introGateSec) / Math.max(1, mainCount);
+  const gapTotal = leadGap + drafts.reduce((n, d) => n + d.gapAfter, 0);
+  const sliceDur = Math.max(8, duration - introGateSec - gapTotal) / Math.max(1, mainCount);
   let mainSeen = 0;
+  let gapsSoFar = leadGap;
   let parentStart = introGateSec;
   const timed = drafts
     .map((d) => {
-      if (d.overlap) return { ...d, startTime: d.startTime ?? parentStart };
-      const startTime = d.startTime ?? round2(introGateSec + mainSeen * sliceDur);
+      if (d.overlap) {
+        gapsSoFar += d.gapAfter;
+        return { ...d, startTime: d.startTime ?? parentStart };
+      }
+      const untimed = d.startTime === null;
+      const startTime = d.startTime ?? round2(introGateSec + mainSeen * sliceDur + gapsSoFar);
       mainSeen++;
+      gapsSoFar += d.gapAfter;
       parentStart = startTime;
-      return { ...d, startTime };
+      // An untimed line before an interlude ends on time instead of running through it
+      const endTime =
+        untimed && d.gapAfter > 0 && d.endTime === null ? round2(startTime + sliceDur) : d.endTime;
+      return { ...d, startTime, endTime };
     })
     .sort((a, b) => a.startTime - b.startTime);
 
@@ -96,8 +127,9 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
     timed.map((d) => ({ startTime: d.startTime, endTime: d.endTime, overlap: d.overlap })),
     duration,
   );
-  return timed.map((d, i): LyricLine => {
-    const endTime = ends[i];
+  const screens = timed.flatMap((d, i) => cutScreens({ ...d, endTime: ends[i] }));
+  return screens.map((d, i): LyricLine => {
+    const endTime = d.endTime;
     const isBigLine = !d.overlap && i % 3 === 1;
     // Each manually broken part is tokenized alone; its first word starts a new row
     const tokenParts = splitManualBreaks(d.content).map(tokenizeMultilingualLine);
@@ -141,6 +173,26 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
         };
       }),
     };
+  });
+}
+
+/**
+ * Splits a line written with " / " into screens that share its time, each
+ * as long as its share of the text. Only the first keeps the flash.
+ */
+function cutScreens<T extends { startTime: number; endTime: number; content: string; lineStyle: LineStyle }>(
+  line: T,
+): T[] {
+  const parts = splitCuts(line.content);
+  if (parts.length < 2) return [line];
+  const total = parts.reduce((n, p) => n + Math.max(1, p.length), 0);
+  const span = line.endTime - line.startTime;
+  let at = line.startTime;
+  return parts.map((content, k) => {
+    const start = at;
+    at = k === parts.length - 1 ? line.endTime : round2(at + (span * Math.max(1, content.length)) / total);
+    const lineStyle = k === 0 ? line.lineStyle : { ...line.lineStyle, flash: undefined };
+    return { ...line, content, startTime: start, endTime: at, lineStyle };
   });
 }
 
@@ -206,21 +258,37 @@ export function formatLrcTime(sec: number): string {
  * overlapping ("&") line gets the time of the line it overlaps.
  */
 export function autoDistributeLyrics(text: string, duration: number, introGateSec: number): string {
-  const plainLines = normalizeMultilineJapaneseBlocks(text)
+  const allLines = normalizeMultilineJapaneseBlocks(text)
     .map((l) => l.replace(LRC_PREFIX, "").trim())
     .filter(Boolean);
-  if (plainLines.length === 0) return text;
-  const isOverlap = plainLines.map((l, i) => i > 0 && splitLyricTriplet(l).overlap);
-  const mainCount = isOverlap.filter((o) => !o).length;
-  const available = Math.max(8, duration - introGateSec - 0.5);
-  const step = Math.min(4.2, available / mainCount);
-  let k = -1;
-  return plainLines
-    .map((l, i) => {
-      if (!isOverlap[i]) k++;
-      return `[${formatLrcTime(introGateSec + Math.max(0, k) * step)}] ${l}`;
-    })
-    .join("\n");
+  const gaps = allLines.map(interludeSeconds);
+  if (gaps.every((g) => g !== null)) return text;
+  const isOverlap = allLines.map((l, i) => gaps[i] === null && i > 0 && splitLyricTriplet(l).overlap);
+  const mainCount = allLines.filter((_, i) => gaps[i] === null && !isOverlap[i]).length;
+  const gapTotal = gaps.reduce<number>((n, g) => n + (g ?? 0), 0);
+  const available = Math.max(8, duration - introGateSec - 0.5 - gapTotal);
+  const step = Math.min(4.2, available / Math.max(1, mainCount));
+  let at = introGateSec;
+  let start = introGateSec;
+  const out: string[] = [];
+  allLines.forEach((l, i) => {
+    const gap = gaps[i];
+    if (gap !== null) {
+      // The line before the interlude ends on time; the gap stays empty
+      const prev = out.length - 1;
+      if (prev >= 0 && !/^\[[^\]]*~/.test(out[prev])) {
+        out[prev] = out[prev].replace(/^\[([^\]]+)\]/, `[$1~${formatLrcTime(start + step)}]`);
+      }
+      at += gap;
+      return;
+    }
+    if (!isOverlap[i]) {
+      start = at;
+      at += step;
+    }
+    out.push(`[${formatLrcTime(start)}] ${l}`);
+  });
+  return out.join("\n");
 }
 
 /** One line as the timeline edits it. */

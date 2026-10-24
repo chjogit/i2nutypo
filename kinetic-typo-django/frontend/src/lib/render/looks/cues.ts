@@ -10,6 +10,24 @@ export const CUE_EFFECTS: ReadonlyArray<readonly [CueEffect, string]> = [
   ["iris", "동그랗게 오므리기"],
 ];
 
+/** The same effects named for coming on (an illustration clip's start). */
+export const ENTER_EFFECTS: ReadonlyArray<readonly [CueEffect, string]> = [
+  ["cut", "효과 없음 (바로)"],
+  ["fade", "서서히 나타나기"],
+  ["wipeDown", "아래부터 드러내기"],
+  ["wipeSide", "왼쪽부터 드러내기"],
+  ["iris", "동그랗게 펼치기"],
+];
+
+/** The same effects named for going away (an illustration clip's end). */
+export const EXIT_EFFECTS: ReadonlyArray<readonly [CueEffect, string]> = [
+  ["cut", "효과 없음 (바로)"],
+  ["fade", "서서히 사라지기"],
+  ["wipeDown", "위부터 지우기"],
+  ["wipeSide", "오른쪽부터 지우기"],
+  ["iris", "동그랗게 오므리기"],
+];
+
 export const MIN_CUE_FADE = 0.1;
 export const MAX_CUE_FADE = 3;
 

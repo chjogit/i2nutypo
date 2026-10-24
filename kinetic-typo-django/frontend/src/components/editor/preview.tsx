@@ -1,10 +1,9 @@
 import { useEffect, useRef } from "react";
-import type { AspectRatio } from "@/types/project";
 import type { TextBounds } from "@/lib/render/text-bounds";
 import { readBassEnergy } from "@/lib/audio/audio-graph";
 import { createParticles } from "@/lib/render/particles";
-import { CANVAS_SIZE } from "@/lib/render/canvas-size";
-import { bpmPulseEnergy, renderFrame } from "@/lib/render/render-frame";
+import { ASPECT_RATIOS, CANVAS_SIZE } from "@/lib/render/canvas-size";
+import { bpmPulseEnergy, renderFrame, steppedTime } from "@/lib/render/render-frame";
 import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks/image-cache";
 import { FEATURES_NOW } from "@/lib/mode/mode";
 import { usePlaybackStore } from "@/store/playback-store";
@@ -12,8 +11,6 @@ import { useProjectStore } from "@/store/project-store";
 import { IllustrationOverlay } from "./illustration-overlay";
 import { MiniPreview, useMiniPreviewEnabled } from "./mini-preview";
 import { applyOverride, TextBoxOverlay, type LineOverride } from "./text-box-overlay";
-
-const RATIOS: AspectRatio[] = ["16:9", "9:16", "1:1"];
 
 /**
  * Canvas preview. Playback time lives in the playback store and the canvas is
@@ -63,7 +60,7 @@ export function Preview() {
         ctx,
         W: canvas.width,
         H: canvas.height,
-        timeSec: t,
+        timeSec: steppedTime(t, project.style.frameStep),
         lines: applyOverride(project.lines, overrideRef.current),
         style: project.style,
         fx: project.fx,
@@ -118,8 +115,8 @@ export function Preview() {
           작은 창
         </label>
         <span className="shrink-0 text-xs text-zinc-500">화면 비율</span>
-        <div className="flex rounded-md border border-zinc-800 text-xs">
-          {RATIOS.map((r) => (
+        <div className="flex flex-wrap rounded-md border border-zinc-800 text-xs">
+          {ASPECT_RATIOS.map((r) => (
             <button
               key={r}
               type="button"

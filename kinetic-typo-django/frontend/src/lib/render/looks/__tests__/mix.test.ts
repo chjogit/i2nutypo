@@ -178,7 +178,11 @@ describe("theme mixing", () => {
   });
 
   it("puts a separately picked album cover on the sleeve, else the background", () => {
-    const pic = (name: string) => ({ source: { name } as unknown as CanvasImageSource, width: 400, height: 300 });
+    const pic = (name: string) => ({
+      source: { name } as unknown as CanvasImageSource,
+      width: 400,
+      height: 300,
+    });
     const background = pic("bg");
     const cover = pic("cover");
     const style = {

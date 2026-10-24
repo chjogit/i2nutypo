@@ -639,7 +639,8 @@ export function classicToAlbumElements(
   const s = style ?? {};
   const x = fx ?? {};
   const particles =
-    s.particles !== false && (x.particleBlue === true || x.particleYellow === true || x.particleWhite === true);
+    s.particles !== false &&
+    (x.particleBlue === true || x.particleYellow === true || x.particleWhite === true);
   const carried: Record<string, boolean | undefined> = {
     next: s.nextPreview,
     ghost: x.ghostWords,

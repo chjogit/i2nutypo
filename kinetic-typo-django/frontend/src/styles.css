@@ -1,6 +1,6 @@
 @import "tailwindcss" source("./");
-/* The landing page template uses the same stylesheet */
-@source "../../studio/jinja2";
+/* The page templates (intro, base, header) use the same stylesheet */
+@source "../../templates";
 
 body {
   font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;

@@ -28,6 +28,9 @@ const STYLE_RANGES: Record<keyof LineStyle, [number, number]> = {
   size: [MIN_LINE_SIZE, MAX_LINE_SIZE],
   width: [MIN_BOX_WIDTH, MAX_BOX_WIDTH],
   height: [MIN_BOX_HEIGHT, MAX_BOX_HEIGHT],
+  lock: [0, 1],
+  flash: [0, 1],
+  motion: [0, 99],
 };
 const STYLE_KEYS = Object.keys(STYLE_RANGES) as Array<keyof LineStyle>;
 

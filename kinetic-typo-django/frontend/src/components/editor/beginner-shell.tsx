@@ -1,6 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { LookPresetId } from "@/types/project";
 import { BEGINNER_THEMES } from "@/lib/mode/mode";
 import { getLookPreset } from "@/lib/render/looks/presets";
+import { recommendThemes } from "@/lib/render/looks/theme-advisor";
 import { useProjectStore } from "@/store/project-store";
 import { AudioInput } from "./audio-input";
 import { ExportPanel } from "./export-panel";
@@ -66,46 +68,87 @@ function StepCard({
   );
 }
 
-/** Three big theme buttons; picking one replaces the theme and its colors. */
+/**
+ * Three big theme buttons; picking one replaces the theme and its colors. One
+ * of them is marked as recommended from the lyrics and tempo.
+ */
 function ThemeChoice({ onPick }: { onPick: () => void }) {
   const current = useProjectStore((s) => s.style.lookPreset);
   const applyLookPreset = useProjectStore((s) => s.applyLookPreset);
+  const lines = useProjectStore((s) => s.lines);
+  const bpm = useProjectStore((s) => s.style.bpm);
+  const language = useProjectStore((s) => s.style.language);
+  const rec = useMemo(
+    () => recommendThemes({ lines, bpm, language }, 1, BEGINNER_THEMES)[0] ?? null,
+    [lines, bpm, language],
+  );
+  const pick = (id: LookPresetId) => {
+    applyLookPreset(id);
+    onPick();
+  };
   return (
-    <div role="radiogroup" aria-label="테마" className="grid gap-2 px-4 py-4 sm:grid-cols-3">
-      {BEGINNER_THEMES.map((id) => {
-        const p = getLookPreset(id);
-        const on = current === id;
-        return (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            onClick={() => {
-              applyLookPreset(id);
-              onPick();
-            }}
-            className={`rounded-lg border-2 p-3 text-left ${
-              on ? "border-indigo-500 bg-indigo-500/10" : "border-zinc-800 hover:border-indigo-500"
-            }`}
-          >
-            {/* The theme's own colors, so the three read apart at a glance */}
-            <span
-              aria-hidden
-              className="mb-2 flex h-14 items-center justify-center rounded-md text-2xl font-black"
-              style={{
-                background: p.palette.bgColor,
-                color: p.palette.textColor,
-                fontFamily: p.palette.mainFont,
-              }}
-            >
-              <span style={{ color: p.palette.accentColor }}>{p.emoji}</span>&nbsp;가사
+    <div className="space-y-2 px-4 py-4">
+      {rec && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/5 px-3 py-2 text-xs">
+          <span className="min-w-0 flex-1 break-keep text-zinc-300">
+            <span className="font-semibold text-indigo-200">
+              추천: {getLookPreset(rec.lookPreset).emoji} {getLookPreset(rec.lookPreset).label}
+            </span>{" "}
+            <span className="text-zinc-400">
+              가사와 템포를 보면 {rec.tags.slice(0, 2).join(" · ")} 느낌이 어울려요.
             </span>
-            <span className="block text-sm font-bold text-zinc-100">{p.label}</span>
-            <span className="block break-keep text-[11px] leading-snug text-zinc-400">{p.description}</span>
-          </button>
-        );
-      })}
+          </span>
+          {current !== rec.lookPreset && (
+            <button
+              type="button"
+              onClick={() => pick(rec.lookPreset)}
+              className="shrink-0 rounded-md bg-indigo-600 px-2.5 py-1 font-semibold text-white hover:bg-indigo-500"
+            >
+              추천 테마로
+            </button>
+          )}
+        </div>
+      )}
+      <div role="radiogroup" aria-label="테마" className="grid gap-2 sm:grid-cols-3">
+        {BEGINNER_THEMES.map((id) => {
+          const p = getLookPreset(id);
+          const on = current === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => pick(id)}
+              className={`relative rounded-lg border-2 p-3 text-left ${
+                on ? "border-indigo-500 bg-indigo-500/10" : "border-zinc-800 hover:border-indigo-500"
+              }`}
+            >
+              {/* The theme's own colors, so the three read apart at a glance */}
+              <span
+                aria-hidden
+                className="mb-2 flex h-14 items-center justify-center rounded-md text-2xl font-black"
+                style={{
+                  background: p.palette.bgColor,
+                  color: p.palette.textColor,
+                  fontFamily: p.palette.mainFont,
+                }}
+              >
+                <span style={{ color: p.palette.accentColor }}>{p.emoji}</span>&nbsp;가사
+              </span>
+              <span className="block text-sm font-bold text-zinc-100">
+                {p.label}
+                {rec?.lookPreset === id && (
+                  <span className="ml-1.5 rounded-full bg-indigo-600/25 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-indigo-200">
+                    추천
+                  </span>
+                )}
+              </span>
+              <span className="block break-keep text-[11px] leading-snug text-zinc-400">{p.description}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

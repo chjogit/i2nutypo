@@ -8,18 +8,6 @@ export type StudioMode = "beginner" | "basic" | "pro";
 
 export const STUDIO_MODES: readonly StudioMode[] = ["beginner", "basic", "pro"];
 
-export const MODE_LABEL: Record<StudioMode, string> = {
-  beginner: "입문",
-  basic: "기본",
-  pro: "숙련",
-};
-
-export const MODE_PATH: Record<StudioMode, string> = {
-  beginner: "/beginner/",
-  basic: "/basic/",
-  pro: "/pro/",
-};
-
 /** The only themes a beginner picks from, one at a time. */
 export const BEGINNER_THEMES: readonly Exclude<LookPresetId, "classic">[] = [
   "album_jacket",

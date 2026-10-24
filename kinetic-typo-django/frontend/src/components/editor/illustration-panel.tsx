@@ -1,22 +1,20 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
-import type { AspectRatio, CharacterCue, IllustrationSettings, ImageAsset } from "@/types/project";
-import type { LoadedImage } from "@/lib/render/looks/illustration";
-import { drawCharacter, drawImageRect, kenBurnsSource } from "@/lib/render/looks/illustration";
-import { characterAt, CUE_EFFECTS, MAX_CUE_FADE, MIN_CUE_FADE, sortCues } from "@/lib/render/looks/cues";
+import type { AspectRatio, IllustrationSettings, ImageAsset } from "@/types/project";
+import { CANVAS_SIZE } from "@/lib/render/canvas-size";
+import { drawImageRect, kenBurnsSource } from "@/lib/render/looks/illustration";
 import { forgetImage, resolveIllustrationImages } from "@/lib/render/looks/image-cache";
-import { blockedCells, cellRect, CELLS, characterRect, GRID, sanitizeCells } from "@/lib/render/looks/layout";
+import { cellRect, CELLS, GRID, sanitizeCells } from "@/lib/render/looks/layout";
 import { pickedLooks } from "@/lib/render/looks/presets";
-import { usePlaybackStore } from "@/store/playback-store";
 import { Fold } from "./fold";
-import { TimeField } from "./time-field";
 import { useProjectStore } from "@/store/project-store";
-import { usePropUiStore } from "@/store/prop-ui-store";
 
-type ImageSlot = "background" | "character" | "cover";
+type ImageSlot = "background" | "cover";
 type StageTool = "move" | "cells";
 
 const STAGE_W = 288;
-const STAGE_H: Record<AspectRatio, number> = { "16:9": 162, "9:16": 512, "1:1": 288 };
+/** Stage height for the frame's shape, at most a tall phone's worth. */
+const stageHeight = (aspect: AspectRatio): number =>
+  Math.min(512, Math.round((STAGE_W * CANVAS_SIZE[aspect].height) / CANVAS_SIZE[aspect].width));
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -84,9 +82,9 @@ function LockToggle({
 }
 
 /**
- * Right column: background and character layers. The mini stage shows the
- * frame split 4x4; in move mode drag the character or the background, in
- * cell mode click or drag over cells to mark where lyrics must not go.
+ * Right column: the background (and the album cover). The mini stage shows
+ * the frame split 4x4; in move mode drag the background, in cell mode click or
+ * drag over cells to mark where lyrics must not go for the whole video.
  */
 export function IllustrationPanel() {
   const images = useProjectStore((s) => s.images);
@@ -97,32 +95,21 @@ export function IllustrationPanel() {
   const albumPicked = useProjectStore((s) => pickedLooks(s.style).includes("album_jacket"));
   const [error, setError] = useState<string | null>(null);
   const [tool, setTool] = useState<StageTool>("move");
-  /** The cue whose return place the stage is editing, or null for the character's own place. */
-  const cueSel = usePropUiStore((s) => s.cue);
-  const setCueSel = usePropUiStore((s) => s.selectCue);
-  const cues = ill.charCues ?? [];
-  const editCue = cueSel !== null && cueSel < cues.length ? cueSel : null;
   const cells = sanitizeCells(ill.noTextCells);
   const urlsRef = useRef<Record<ImageSlot, string | null>>({
     background: null,
-    character: null,
     cover: null,
   });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{
-    target: "character" | "background" | "cue";
+    target: "background";
     startX: number;
     startY: number;
     from: IllustrationSettings;
   } | null>(null);
   // Cell painting: the value the first clicked cell flipped to, applied to every cell dragged over
   const paintRef = useRef<boolean | null>(null);
-  const stageH = STAGE_H[aspectRatio];
-
-  // Picking an exit to edit puts the stage in move mode, where its return place is dragged
-  useEffect(() => {
-    if (editCue !== null) setTool("move");
-  }, [editCue]);
+  const stageH = stageHeight(aspectRatio);
 
   // Revoke picked images with the panel
   useEffect(
@@ -136,7 +123,7 @@ export function IllustrationPanel() {
     [],
   );
 
-  // Mini stage: background framing, 4x4 grid, cells taken by the character, and the character
+  // Mini stage: background framing, 4x4 grid and the no-lyric cells
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -160,31 +147,15 @@ export function IllustrationPanel() {
         );
         drawImageRect(ctx, loaded.background, src, dest);
       }
-      const cue = editCue !== null ? (ill.charCues[editCue] ?? null) : null;
-      const cueIll = cue ? { ...ill, charX: cue.x, charY: cue.y } : null;
-      const cueRect = cueIll ? characterRect(cueIll, loaded.character, W, H) : null;
-      const charRect = characterRect(ill, loaded.character, W, H);
-      // Editing a return place: its cells (which win over the user's then) in violet, the user's dimmed
-      if (cue) {
-        blockedCells(cueRect, W, H).forEach((b, c) => {
-          if (!b || !ill.avoidCharacter) return;
-          const r = cellRect(W, H, c);
-          ctx.fillStyle = "rgba(139, 92, 246, 0.3)";
-          ctx.fillRect(r.x, r.y, r.w, r.h);
-        });
-      }
-      if (!cue)
-        sanitizeCells(ill.noTextCells).forEach((b, c) => {
-          if (!b) return;
-          const r = cellRect(W, H, c);
-          ctx.fillStyle = ill.avoidCharacter ? "rgba(239, 68, 68, 0.32)" : "rgba(239, 68, 68, 0.1)";
-          ctx.fillRect(r.x, r.y, r.w, r.h);
-          if (ill.avoidCharacter) {
-            ctx.strokeStyle = "rgba(248, 113, 113, 0.9)";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
-          }
-        });
+      sanitizeCells(ill.noTextCells).forEach((b, c) => {
+        if (!b) return;
+        const r = cellRect(W, H, c);
+        ctx.fillStyle = "rgba(239, 68, 68, 0.32)";
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.strokeStyle = "rgba(248, 113, 113, 0.9)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
+      });
       ctx.strokeStyle = "rgba(255,255,255,0.35)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
@@ -197,40 +168,15 @@ export function IllustrationPanel() {
         ctx.stroke();
       }
       ctx.setLineDash([]);
-      if (loaded.character && charRect) {
-        drawCharacter(ctx, loaded.character, charRect, {
-          bounce: 0,
-          tilt: 0,
-          flip: ill.charFlip,
-          alpha: cue ? 0.3 : 1,
-        });
-        if (!cue) {
-          ctx.strokeStyle = ill.charLocked ? "rgba(245,158,11,0.9)" : "rgba(129,140,248,0.95)";
-          ctx.strokeRect(charRect.x, charRect.y, charRect.w, charRect.h);
-        }
-      }
-      if (loaded.character && cueRect) {
-        drawCharacter(ctx, loaded.character, cueRect, { bounce: 0, tilt: 0, flip: ill.charFlip });
-        ctx.strokeStyle = "rgba(167,139,250,0.95)";
-        ctx.setLineDash([6, 4]);
-        ctx.strokeRect(cueRect.x, cueRect.y, cueRect.w, cueRect.h);
-        ctx.setLineDash([]);
-      }
       // Decoding is async; redraw until the picked images are ready
-      const pending =
-        (images.background !== null && !loaded.background) ||
-        (images.character !== null && !loaded.character);
+      const pending = images.background !== null && !loaded.background;
       if (pending) timer = setTimeout(draw, 120);
     };
     draw();
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [images, ill, stageH, editCue]);
-
-  /** Marks the cells the character covers now, at the stage's own frame size. */
-  const cellsFromCharacter = (character: LoadedImage | null) =>
-    blockedCells(characterRect(ill, character, STAGE_W, stageH), STAGE_W, stageH);
+  }, [images, ill, stageH]);
 
   const release = (slot: ImageSlot) => {
     const url = urlsRef.current[slot];
@@ -249,15 +195,6 @@ export function IllustrationPanel() {
       urlsRef.current[slot] = objectUrl;
       const asset: ImageAsset = { fileName: file.name, objectUrl };
       setImage(slot, asset);
-      // A first character fills the empty grid once; after that the cells are the user's
-      if (slot === "character" && !cells.some(Boolean)) {
-        const marked = cellsFromCharacter({
-          source: probe,
-          width: probe.naturalWidth,
-          height: probe.naturalHeight,
-        });
-        if (marked.some(Boolean)) setIllustration({ noTextCells: marked });
-      }
     };
     probe.onerror = () => {
       URL.revokeObjectURL(objectUrl);
@@ -305,21 +242,9 @@ export function IllustrationPanel() {
       return;
     }
     const p = toCanvas(e);
-    const loaded = resolveIllustrationImages(images);
-    if (editCue !== null) {
-      // Anywhere on the stage drags the return place
-      canvas.setPointerCapture(e.pointerId);
-      dragRef.current = { target: "cue", startX: p.x, startY: p.y, from: ill };
-      return;
-    }
-    const r = characterRect(ill, loaded.character, canvas.width, canvas.height);
-    const onChar = r && p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
-    let target: "character" | "background" | null = null;
-    if (onChar && !ill.charLocked) target = "character";
-    else if (loaded.background && !ill.bgLocked) target = "background";
-    if (!target) return;
+    if (!resolveIllustrationImages(images).background || ill.bgLocked) return;
     canvas.setPointerCapture(e.pointerId);
-    dragRef.current = { target, startX: p.x, startY: p.y, from: ill };
+    dragRef.current = { target: "background", startX: p.x, startY: p.y, from: ill };
   };
 
   const onPointerMove = (e: PointerEvent<HTMLCanvasElement>) => {
@@ -333,20 +258,7 @@ export function IllustrationPanel() {
     const p = toCanvas(e);
     const dx = (p.x - drag.startX) / canvas.width;
     const dy = (p.y - drag.startY) / canvas.height;
-    if (drag.target === "cue" && editCue !== null) {
-      const from = drag.from.charCues[editCue];
-      if (!from) return;
-      setIllustration({
-        charCues: cues.map((c, i) =>
-          i === editCue ? { ...c, x: clamp(from.x + dx, -0.2, 1.2), y: clamp(from.y + dy, 0.15, 1.4) } : c,
-        ),
-      });
-    } else if (drag.target === "character") {
-      setIllustration({
-        charX: clamp(drag.from.charX + dx, -0.2, 1.2),
-        charY: clamp(drag.from.charY + dy, 0.15, 1.4),
-      });
-    } else {
+    {
       // Dragging right shows more of the picture's left side, like moving paper under a frame
       setIllustration({
         bgX: clamp(drag.from.bgX - dx * 2, -1, 1),
@@ -438,40 +350,20 @@ export function IllustrationPanel() {
           aria-label={
             tool === "cells"
               ? "일러스트 배치 미리보기. 칸을 눌러 가사 금지 칸을 켜고 끕니다."
-              : "일러스트 배치 미리보기. 캐릭터나 배경을 끌어서 옮깁니다."
+              : "배경 배치 미리보기. 배경을 끌어서 옮깁니다."
           }
           className={`mx-auto block w-full max-w-[288px] touch-none rounded border border-zinc-800 ${
             tool === "cells" ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
           }`}
           style={{ aspectRatio: `${STAGE_W} / ${stageH}` }}
         />
-        {editCue !== null ? (
-          <p className="text-[11px] leading-snug text-violet-300">
-            {editCue + 1}번 재등장 위치를 끌어서 옮기세요. 보라 칸은 돌아온 뒤 가사가 피해 갈 칸입니다(직접
-            지정한 빨간 칸보다 우선).{" "}
-            <button type="button" onClick={() => setCueSel(null)} className="text-indigo-400 hover:underline">
-              편집 끝내기
-            </button>
-          </p>
-        ) : tool === "cells" ? (
+        {tool === "cells" ? (
           <>
             <p className="text-[11px] leading-snug text-zinc-500">
               칸을 누르거나 끌어서 빨간 칸으로 지정하세요. 가사는 빨간 칸을 피해 가고, 맨 아래 가운데 두 칸 중
               하나가 빨간색이면 하단 자막은 위로 올라갑니다.
             </p>
             <div className="flex gap-3 text-[11px]">
-              <button
-                type="button"
-                disabled={!resolveIllustrationImages(images).character}
-                onClick={() =>
-                  setIllustration({
-                    noTextCells: cellsFromCharacter(resolveIllustrationImages(images).character),
-                  })
-                }
-                className="text-indigo-400 hover:underline disabled:opacity-40"
-              >
-                캐릭터 위치로 채우기
-              </button>
               <button
                 type="button"
                 onClick={() => setIllustration({ noTextCells: Array<boolean>(CELLS).fill(false) })}
@@ -483,8 +375,8 @@ export function IllustrationPanel() {
           </>
         ) : (
           <p className="text-[11px] leading-snug text-zinc-500">
-            캐릭터나 배경을 끌어서 옮기세요. 가사가 들어가면 안 되는 곳은 &quot;가사 금지 칸&quot;에서
-            지정합니다.
+            배경을 끌어서 옮기세요. 가사가 들어가면 안 되는 곳은 &quot;가사 금지 칸&quot;에서 지정합니다.
+            일러스트마다 따로 정하는 빨간 칸은 일러스트 칸에서 지정합니다.
           </p>
         )}
       </div>
@@ -547,293 +439,5 @@ export function IllustrationPanel() {
         </Fold>
       )}
     </section>
-  );
-}
-
-/**
- * Character settings and its exits and returns, shown in the illustration
- * section when the character is picked in its list or its timeline lane. The
- * return place is dragged on the 배경 · 배치 stage.
- */
-export function CharacterEditor() {
-  const ill = useProjectStore((s) => s.style.illustration);
-  const aspectRatio = useProjectStore((s) => s.style.aspectRatio);
-  const setIllustration = useProjectStore((s) => s.setIllustration);
-  const cueSel = usePropUiStore((s) => s.cue);
-  const setCueSel = usePropUiStore((s) => s.selectCue);
-  const cues = ill.charCues ?? [];
-  const editCue = cueSel !== null && cueSel < cues.length ? cueSel : null;
-  const pct = (v: number) => `${Math.round(v * 100)}%`;
-
-  /** Saves cues in time order and keeps the edited one selected. */
-  const saveCues = (next: CharacterCue[], keep: CharacterCue | null) => {
-    const sorted = sortCues(next);
-    setIllustration({ charCues: sorted });
-    setCueSel(keep ? sorted.indexOf(keep) : null);
-  };
-
-  const addCue = () => {
-    const t = Math.round(usePlaybackStore.getState().currentTime * 100) / 100;
-    // It comes back where it is at that moment, so the user only has to drag it somewhere new
-    const at = characterAt(ill, t);
-    const cue: CharacterCue = { hideAt: t, showAt: t + 3, effect: "fade", fade: 0.6, x: at.x, y: at.y };
-    saveCues([...cues, cue], cue);
-  };
-
-  const updateCue = (i: number, patch: Partial<CharacterCue>) => {
-    const old = cues[i];
-    const cue = { ...old, ...patch };
-    // Leaving after the return time pushes the return out by the same gap
-    if (patch.hideAt !== undefined && cue.showAt < cue.hideAt)
-      cue.showAt = cue.hideAt + (old.showAt - old.hideAt);
-    if (patch.showAt !== undefined && cue.showAt < cue.hideAt) cue.showAt = cue.hideAt;
-    saveCues(
-      cues.map((c, k) => (k === i ? cue : c)),
-      cue,
-    );
-  };
-
-  const removeCue = (i: number) =>
-    saveCues(
-      cues.filter((_, k) => k !== i),
-      null,
-    );
-
-  return (
-    <div className="space-y-3">
-      <Fold
-        title="기본 설정"
-        right={
-          <>
-            <LockToggle
-              locked={ill.charLocked}
-              onChange={(v) => setIllustration({ charLocked: v })}
-              label="캐릭터"
-            />
-          </>
-        }
-      >
-        <CharacterPicker stageH={STAGE_H[aspectRatio]} />
-        <Row label="크기">
-          <Slider
-            value={ill.characterScale}
-            min={0.2}
-            max={1.2}
-            step={0.02}
-            disabled={ill.charLocked}
-            label="캐릭터 크기"
-            format={pct}
-            onChange={(v) => setIllustration({ characterScale: v })}
-          />
-        </Row>
-        <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-zinc-200">
-          <label className="inline-flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={ill.showCharacter}
-              onChange={(e) => setIllustration({ showCharacter: e.target.checked })}
-              className="accent-indigo-500"
-            />
-            표시
-          </label>
-          <label className="inline-flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={ill.charFlip}
-              disabled={ill.charLocked}
-              onChange={(e) => setIllustration({ charFlip: e.target.checked })}
-              className="accent-indigo-500"
-            />
-            좌우 반전
-          </label>
-          <label className="inline-flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={ill.beatBounce}
-              disabled={ill.charLocked}
-              onChange={(e) => setIllustration({ beatBounce: e.target.checked })}
-              className="accent-indigo-500"
-            />
-            비트에 맞춰 튀기
-          </label>
-        </div>
-        <label className="flex items-center gap-1.5 text-xs text-zinc-200">
-          <input
-            type="checkbox"
-            checked={ill.avoidCharacter}
-            onChange={(e) => setIllustration({ avoidCharacter: e.target.checked })}
-            className="accent-indigo-500"
-          />
-          빨간 칸을 피해 가사 · 자막 놓기 (4x4)
-        </label>
-        <Row label="흔들림">
-          <Slider
-            value={ill.charShake ?? 0.5}
-            min={0}
-            max={1}
-            step={0.05}
-            disabled={ill.charLocked}
-            label="캐릭터 흔들림"
-            format={pct}
-            onChange={(v) => setIllustration({ charShake: v })}
-          />
-        </Row>
-        <p className="text-[11px] leading-snug text-zinc-500">
-          0%면 가만히 있고, 50%가 테마 기본값, 그 위로는 좌우로 더 크게 흔들립니다.
-        </p>
-      </Fold>
-
-      <Fold
-        title="퇴장 · 재등장"
-        right={
-          <>
-            <button
-              type="button"
-              onClick={addCue}
-              className="rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-200 hover:border-indigo-500"
-            >
-              + 지금 사라지기
-            </button>
-          </>
-        }
-      >
-        <p className="text-[11px] leading-snug text-zinc-500">
-          사라져 있는 동안은 가사 금지 칸이 잠시 꺼지고, 다시 나타나면 그 자리가 가사 금지 칸이 됩니다(직접
-          지정한 칸보다 우선).
-        </p>
-        {cues.map((cue, i) => (
-          <div
-            key={i}
-            className={`space-y-1.5 rounded-md border px-2 py-1.5 ${
-              editCue === i ? "border-violet-500/70 bg-violet-500/5" : "border-zinc-800"
-            }`}
-          >
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-zinc-300">{i + 1}번</span>
-              <span className="flex gap-2">
-                <button
-                  type="button"
-                  aria-pressed={editCue === i}
-                  onClick={() => {
-                    setCueSel(editCue === i ? null : i);
-                  }}
-                  className="text-indigo-400 hover:underline"
-                >
-                  {editCue === i ? "위치 편집 끝" : "재등장 위치 옮기기"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeCue(i)}
-                  className="text-indigo-400 hover:underline"
-                >
-                  빼기
-                </button>
-              </span>
-            </div>
-            <TimeField label="사라짐" value={cue.hideAt} onCommit={(v) => updateCue(i, { hideAt: v })} />
-            <TimeField label="재등장" value={cue.showAt} onCommit={(v) => updateCue(i, { showAt: v })} />
-            <label className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-              <span className="w-12 shrink-0">효과</span>
-              <select
-                value={cue.effect}
-                onChange={(e) => updateCue(i, { effect: e.target.value as CharacterCue["effect"] })}
-                aria-label={`${i + 1}번 사라짐 효과`}
-                className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 text-zinc-100 focus:border-indigo-500 focus:outline-none"
-              >
-                {CUE_EFFECTS.map(([id, text]) => (
-                  <option key={id} value={id}>
-                    {text}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Row label="전환 길이">
-              <Slider
-                value={cue.fade}
-                min={MIN_CUE_FADE}
-                max={MAX_CUE_FADE}
-                step={0.1}
-                label={`${i + 1}번 전환 길이`}
-                disabled={cue.effect === "cut"}
-                format={(v) => `${v.toFixed(1)}s`}
-                onChange={(v) => updateCue(i, { fade: v })}
-              />
-            </Row>
-          </div>
-        ))}
-      </Fold>
-    </div>
-  );
-}
-
-/** Picks or swaps the character PNG; the first one marks the no-lyric cells it covers. */
-export function CharacterPicker({ stageH }: { stageH: number }) {
-  const asset = useProjectStore((s) => s.images.character);
-  const setImage = useProjectStore((s) => s.setImage);
-  const setIllustration = useProjectStore((s) => s.setIllustration);
-  const [error, setError] = useState<string | null>(null);
-
-  const release = () => {
-    if (!asset) return;
-    forgetImage(asset.objectUrl);
-    URL.revokeObjectURL(asset.objectUrl);
-  };
-
-  const handleFile = (file: File) => {
-    setError(null);
-    const objectUrl = URL.createObjectURL(file);
-    const probe = new Image();
-    probe.onload = () => {
-      release();
-      setImage("character", { fileName: file.name, objectUrl });
-      // A first character fills the empty grid once; after that the cells are the user's
-      const ill = useProjectStore.getState().style.illustration;
-      if (!sanitizeCells(ill.noTextCells).some(Boolean)) {
-        const img = { source: probe, width: probe.naturalWidth, height: probe.naturalHeight };
-        const marked = blockedCells(characterRect(ill, img, STAGE_W, stageH), STAGE_W, stageH);
-        if (marked.some(Boolean)) setIllustration({ noTextCells: marked });
-      }
-    };
-    probe.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      setError("이 파일은 열 수 없는 이미지 형식입니다.");
-    };
-    probe.src = objectUrl;
-  };
-
-  return (
-    <div className="space-y-1">
-      <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-zinc-800 px-2 py-2 text-xs text-zinc-400 hover:border-indigo-500 hover:text-zinc-200">
-        <input
-          type="file"
-          accept="image/*"
-          className="sr-only"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFile(file);
-            e.target.value = "";
-          }}
-        />
-        {asset ? "캐릭터 PNG 바꾸기" : "캐릭터 PNG 선택"}
-      </label>
-      {asset ? (
-        <p className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
-          <span className="truncate">{asset.fileName}</span>
-          <button
-            type="button"
-            onClick={() => {
-              release();
-              setImage("character", null);
-            }}
-            className="shrink-0 text-indigo-400 hover:underline"
-          >
-            빼기
-          </button>
-        </p>
-      ) : (
-        <p className="text-[11px] text-zinc-500">배경이 투명한 PNG를 권장합니다</p>
-      )}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
   );
 }

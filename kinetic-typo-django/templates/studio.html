@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ mode_label }} · Kinetic Typo Studio{% endblock %}
+{% block fonts %}
+    <!-- Typography fonts drawn on the canvas -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Dela+Gothic+One&family=JetBrains+Mono:wght@500;700&family=Nanum+Gothic:wght@700;800&family=Nanum+Myeongjo:wght@700;800&family=Noto+Sans+JP:wght@400;700;900&family=Noto+Sans+KR:wght@400;500;600;700;900&family=Shippori+Mincho:wght@700;800&display=swap"
+    />
+{% endblock %}
+{% block head %}
+    <script type="module" src="{{ static('js/studio.js') }}?v={{ v }}"></script>
+{% endblock %}
+{% block content %}
+    <!-- The editor reads its mode (beginner, basic, pro) from data-mode -->
+    <div id="root" data-mode="{{ mode }}"></div>
+    <noscript>이 편집기는 JavaScript가 켜져 있어야 동작합니다. <a href="{{ url('landing') }}">처음으로</a></noscript>
+{% endblock %}

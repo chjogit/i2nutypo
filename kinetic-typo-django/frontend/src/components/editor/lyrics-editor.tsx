@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import type { LanguageCode } from "@/types/project";
 import { toEditableLyrics } from "@/lib/lyrics/parse";
@@ -33,7 +32,13 @@ const PLACEHOLDER = [
  * automatic sync controls live in the same card. The beginner page drops the
  * heading (its step card has one) and shows the font picker with the subtitle step.
  */
-export function LyricsEditor({ heading = true, fontPicker = true }: { heading?: boolean; fontPicker?: boolean }) {
+export function LyricsEditor({
+  heading = true,
+  fontPicker = true,
+}: {
+  heading?: boolean;
+  fontPicker?: boolean;
+}) {
   const lines = useProjectStore((s) => s.lines);
   const collapsed = useProjectStore((s) => s.lyricsCollapsed);
   const commitLyricsInput = useProjectStore((s) => s.commitLyricsInput);

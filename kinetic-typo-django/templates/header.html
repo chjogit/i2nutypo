@@ -1,0 +1,33 @@
+{#- Top bar of every page built on base.html: back to the first page, which step this is, and the step switcher. -#}
+<header class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-zinc-800 px-4 py-3 md:px-6">
+  <a
+    href="{{ url('landing') }}"
+    class="rounded-md border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:border-indigo-500 hover:text-zinc-100"
+    >← 처음으로</a
+  >
+  <div class="min-w-0 flex-1">
+    <h1 class="text-base font-semibold text-zinc-100">
+      Kinetic Typo Studio
+      {% if mode_label %}
+      <span class="ml-2 rounded-full bg-indigo-600/20 px-2 py-0.5 align-middle text-xs font-semibold text-indigo-200"
+        >{{ mode_label }}</span
+      >
+      {% endif %}
+    </h1>
+    <p class="text-xs text-zinc-500">
+      {% if mode_hint %}{{ mode_hint }} {% endif %}모든 파일은 이 브라우저 안에서만 처리됩니다.
+    </p>
+  </div>
+  {% if modes %}
+  <nav aria-label="단계 바꾸기" class="flex rounded-md border border-zinc-800 text-xs">
+    {% for m in modes %}
+    <a
+      href="{{ url(m.id) }}"
+      {% if m.id == mode %}aria-current="page"{% endif %}
+      class="px-3 py-1 {{ 'bg-indigo-600 text-white' if m.id == mode else 'text-zinc-400 hover:text-zinc-100' }}"
+      >{{ m.label }}</a
+    >
+    {% endfor %}
+  </nav>
+  {% endif %}
+</header>

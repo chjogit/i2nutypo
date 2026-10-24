@@ -2,7 +2,7 @@ import type { FinishSettings } from "./finish";
 
 export type LanguageCode = "ko-KR" | "ja-JP" | "en-US";
 
-export type AspectRatio = "16:9" | "9:16" | "1:1";
+export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:3" | "3:4" | "4:5" | "21:9";
 
 export type DisplayMode = "sentence" | "word";
 
@@ -60,6 +60,12 @@ export interface LineStyle {
   width?: number;
   /** Text box height multiplier, 0.5..2: row spacing (column length, so the wrap, for vertical lyrics). */
   height?: number;
+  /** 1: kept as it is when the automatic composition rolls the lines again. */
+  lock?: number;
+  /** 1: a white flash and a jolt when the line starts (written as "!" at the end of the line). */
+  flash?: number;
+  /** The line's own lyric motion (1-based number in MOTIONS); none: the theme picks one. */
+  motion?: number;
 }
 
 export interface LyricLine {
@@ -165,7 +171,7 @@ export interface IllustrationSettings {
   noTextCells: boolean[];
 }
 
-/** How the character leaves and comes back; "cut" switches at once with no effect. */
+/** How a picture leaves or comes on; "cut" switches at once with no effect. */
 export type CueEffect = "cut" | "fade" | "wipeDown" | "wipeSide" | "iris";
 
 export interface CharacterCue {
@@ -220,11 +226,32 @@ export interface PropClip {
   rot: number;
   /** 0..1. */
   opacity: number;
-  /** Fade in / out at the clip ends, in seconds. */
-  fade: number;
+  /** How it comes on at the clip start, and how long that takes in seconds. */
+  enter: CueEffect;
+  enterSec: number;
+  /** How it goes away at the clip end, and how long that takes. */
+  exit: CueEffect;
+  exitSec: number;
+  /** Sway and tilt, 0..1. */
+  shake: number;
+  /** Bounce on the beat, 0..1. */
+  beat: number;
+  /** The 4x4 cells (as noTextCells) the lyrics keep out of while this clip is on screen. */
+  cells: boolean[];
   /** Drawn over the lyrics instead of behind them. */
   front: boolean;
   flip: boolean;
+}
+
+/** A stretch of the song drawn with its own themes instead of the ones picked for the whole video. */
+export interface ThemeClip {
+  id: string;
+  /** Seconds on the song timeline. */
+  start: number;
+  end: number;
+  lookPreset: Exclude<LookPresetId, "classic">;
+  mixLooks: Exclude<LookPresetId, "classic">[];
+  lyricLook: Exclude<LookPresetId, "classic"> | null;
 }
 
 /**
@@ -283,6 +310,21 @@ export interface StyleSettings {
   detail: DetailSettings;
   /** Final color grade and filters over the whole frame; missing means none. */
   finish?: FinishSettings;
+  /** Themes for stretches of the song (theme timeline); outside them the picks above apply. */
+  themeClips: ThemeClip[];
+  /** Theme and illustration clips snap to the lyric lines' starts and ends while dragged. */
+  snapToLyrics: boolean;
+  /** Motion held for this many frames at 24 fps (1 = smooth, 2 or 3 = limited animation). */
+  frameStep: 1 | 2 | 3;
+  /** Keeps the middle of the frame free for a character: lyrics go left and right in turn (top and bottom in portrait). */
+  centerClear: boolean;
+  /**
+   * Lyric motions each theme uses (ids from lib/render/looks/motions), five of
+   * its eight picked per song; a theme missing here uses its first five.
+   */
+  motionPicks: Partial<Record<Exclude<LookPresetId, "classic">, string[]>>;
+  /** The song the motion picks were made for ("file name|seconds"); another song picks again. */
+  motionSong: string;
   activePresetId: string;
   collabRelay: boolean;
   fixedMotif: MotifId;

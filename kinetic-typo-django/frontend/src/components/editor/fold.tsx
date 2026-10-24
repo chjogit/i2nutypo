@@ -29,7 +29,10 @@ export function Fold({
           aria-controls={id}
           className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-semibold text-zinc-300 hover:text-zinc-100"
         >
-          <span aria-hidden className={`text-[10px] text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`}>
+          <span
+            aria-hidden
+            className={`text-[10px] text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`}
+          >
             ▾
           </span>
           <span className="truncate">{title}</span>

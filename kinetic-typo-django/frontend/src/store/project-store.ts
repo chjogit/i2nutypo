@@ -15,6 +15,7 @@ import type {
   StyleSettings,
   SubtitleSettings,
   SyncSettings,
+  ThemeClip,
 } from "@/types/project";
 import { defaultFxToggles, sanitizeFxToggles } from "@/lib/fx/toggles";
 import {
@@ -26,6 +27,9 @@ import {
 } from "@/lib/lyrics/parse";
 import { normalizeMultilineJapaneseBlocks, splitLyricTriplet } from "@/lib/lyrics/triplet";
 import { SAMPLE_LYRICS } from "@/lib/lyrics/samples";
+import { pickMotions, sanitizeMotionPicks } from "@/lib/render/looks/motions";
+import { freshSeed, mulberry32, textSeed } from "@/lib/random";
+import { composeLines, composeStyle, rerollMotion } from "@/lib/compose/auto-compose";
 import { linesToLrc } from "@/lib/sync/align";
 import {
   DEFAULT_ILLUSTRATION,
@@ -43,7 +47,8 @@ import {
 import { DEFAULT_DETAIL, sanitizeDetail } from "@/lib/render/detail";
 import { findLyricFont } from "@/lib/fonts/catalog";
 import { sanitizeCues } from "@/lib/render/looks/cues";
-import { fitClip, freeAt, makeClip, MIN_CLIP, sortClips } from "@/lib/props/clips";
+import { fitClip, freeAt, makeClip, MIN_CLIP, newId, sortClips } from "@/lib/props/clips";
+import { sanitizeThemeClips } from "@/lib/render/theme-clips";
 import { sanitizeCells } from "@/lib/render/looks/layout";
 
 /** A saved 0..1 setting, or the fallback when missing or broken. */
@@ -51,6 +56,8 @@ const sanitizeUnit = (v: unknown, fallback: number): number =>
   typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback;
 
 export const DEFAULT_DURATION = 32;
+
+const DEFAULT_STYLE_THEME = "album_jacket" as const;
 
 export const DEFAULT_STYLE: StyleSettings = {
   styleMode: "custom",
@@ -78,6 +85,12 @@ export const DEFAULT_STYLE: StyleSettings = {
   particles: true,
   letterbox: false,
   nextPreview: true,
+  themeClips: [],
+  snapToLyrics: true,
+  frameStep: 1,
+  centerClear: false,
+  motionPicks: {},
+  motionSong: "",
 };
 
 export const DEFAULT_SYNC: SyncSettings = {
@@ -114,6 +127,12 @@ interface ProjectActions {
   /** Edits one line's text or times from the timeline. */
   updateLine: (index: number, patch: Partial<TimedLyric>) => void;
   removeLine: (index: number) => void;
+  /** Rolls themes, colors, elements, strengths and unlocked lines' motions from a seed. */
+  autoCompose: (seed: number) => void;
+  /** Puts back an earlier composition (its style and lyrics). */
+  restoreComposition: (snap: { style: StyleSettings; lyricsText: string }) => void;
+  /** Gives one line another of the lyric theme's motions. */
+  rerollLine: (index: number) => void;
   autoDistribute: () => void;
   loadSampleLyrics: () => void;
   setAudio: (audio: AudioSource) => void;
@@ -143,6 +162,10 @@ interface ProjectActions {
   addPropClip: (id: string, at: number) => string | null;
   updatePropClip: (id: string, clipId: string, patch: Partial<PropClip>) => void;
   removePropClip: (id: string, clipId: string) => void;
+  /** Adds a theme clip at `at` with the whole video's current themes, when that time is free; returns its id. */
+  addThemeClip: (at: number) => string | null;
+  updateThemeClip: (id: string, patch: Partial<ThemeClip>) => void;
+  removeThemeClip: (id: string) => void;
   /** Switches one element on/off or changes its strength; the theme defaults to the background theme. */
   setLookElement: (id: string, patch: Partial<LookElementState>, preset?: LookPresetId) => void;
   setDetail: (patch: Partial<StyleSettings["detail"]>) => void;
@@ -152,6 +175,8 @@ interface ProjectActions {
   applyLineTimes: (startTimes: readonly number[]) => void;
   setFx: (key: FxToggleKey, on: boolean) => void;
   setFxGroup: (keys: readonly FxToggleKey[], on: boolean) => void;
+  /** Replaces the lyrics and settings with a saved project file's; media stay. */
+  importProject: (saved: unknown) => void;
 }
 
 export type ProjectStore = Project & ProjectActions;
@@ -180,6 +205,77 @@ const fromTimed = (s: Pick<Project, "duration" | "sync">, timed: TimedLyric[]) =
   const sync = { ...s.sync, introGateSec: Math.min(s.sync.introGateSec, first) };
   return { lyricsText, sync, lines: reparse({ lyricsText, duration: s.duration, sync }) };
 };
+
+/**
+ * A saved project (local storage or a project file) laid over the current
+ * one, with every field checked. Audio, images and illustrations are never in
+ * it, so they stay as they are.
+ */
+function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore {
+  const p = (persisted ?? {}) as Partial<Project>;
+  const merged: ProjectStore = {
+    ...current,
+    lyricsText: typeof p.lyricsText === "string" ? p.lyricsText : current.lyricsText,
+    lyricsCollapsed: p.lyricsCollapsed === true,
+    style: {
+      ...current.style,
+      ...p.style,
+      illustration: {
+        ...current.style.illustration,
+        ...p.style?.illustration,
+        noTextCells: sanitizeCells(p.style?.illustration?.noTextCells),
+        charCues: sanitizeCues(p.style?.illustration?.charCues),
+        charShake: sanitizeUnit(p.style?.illustration?.charShake, 0.5),
+      },
+      // Saves from the retired classic look move to the album jacket theme with their effects
+      lookElements:
+        p.style?.lookPreset === "classic"
+          ? classicToAlbumElements(p.style, p.fx, sanitizeLookElements(p.style.lookElements))
+          : sanitizeLookElements(p.style?.lookElements),
+      lyricFont: findLyricFont(String(p.style?.lyricFont ?? "")) ? String(p.style?.lyricFont) : "",
+      coverTitle: typeof p.style?.coverTitle === "string" ? p.style.coverTitle : "",
+      coverCredit: typeof p.style?.coverCredit === "string" ? p.style.coverCredit : "",
+      detail: sanitizeDetail(p.style?.detail),
+      styleMode: "custom",
+      lookPreset: isLookPresetId(p.style?.lookPreset) ? p.style.lookPreset : current.style.lookPreset,
+      mixLooks: sanitizeMixLooks(p.style?.mixLooks),
+      lyricLook: isThemedPresetId(p.style?.lyricLook) ? p.style.lyricLook : null,
+      themeClips: sanitizeThemeClips(p.style?.themeClips),
+      snapToLyrics: p.style?.snapToLyrics !== false,
+      frameStep: p.style?.frameStep === 2 || p.style?.frameStep === 3 ? p.style.frameStep : 1,
+      centerClear: p.style?.centerClear === true,
+      motionPicks: sanitizeMotionPicks(p.style?.motionPicks),
+      motionSong: typeof p.style?.motionSong === "string" ? p.style.motionSong : "",
+    },
+    sync: { ...current.sync, ...p.sync },
+    subtitles: {
+      ...current.subtitles,
+      ...p.subtitles,
+      position: p.subtitles?.position === "top" ? "top" : "bottom",
+      display: p.subtitles?.display === "kinetic" ? "kinetic" : "bottomOnly",
+    },
+    fx: sanitizeFxToggles(p.fx),
+  };
+  // A beginner works with one of the three beginner themes and nothing mixed in
+  if (!FEATURES_NOW.themeMix) {
+    const st = merged.style;
+    const base = (BEGINNER_THEMES as readonly LookPresetId[]).includes(st.lookPreset)
+      ? st.lookPreset
+      : DEFAULT_STYLE.lookPreset;
+    merged.style = { ...st, lookPreset: base, mixLooks: [], lyricLook: null, themeClips: [] };
+  }
+  return { ...merged, lines: reparse(merged) };
+}
+
+/** What a project file and local storage keep: everything but the page-session media. */
+export const savedPart = (s: ProjectStore) => ({
+  lyricsText: s.lyricsText,
+  lyricsCollapsed: s.lyricsCollapsed,
+  style: s.style,
+  fx: s.fx,
+  sync: s.sync,
+  subtitles: s.subtitles,
+});
 
 export const useProjectStore = create<ProjectStore>()(
   persist(
@@ -235,6 +331,27 @@ export const useProjectStore = create<ProjectStore>()(
           return fromTimed(s, timed);
         }),
 
+      autoCompose: (seed) =>
+        set((s) => {
+          const style = { ...s.style, ...composeStyle(s.style, seed) };
+          if (s.lines.length === 0) return { style };
+          return { style, ...fromTimed(s, composeLines(s.lines.map(toTimed), style, seed)) };
+        }),
+
+      restoreComposition: ({ style, lyricsText }) =>
+        set((s) => ({ style, lyricsText, lines: reparse({ ...s, lyricsText }) })),
+
+      rerollLine: (index) =>
+        set((s) => {
+          const line = s.lines[index];
+          if (!line) return {};
+          const motion = rerollMotion(line, s.style, mulberry32(freshSeed()));
+          const timed = s.lines.map((l, i) =>
+            i === index ? { ...toTimed(l), lineStyle: { ...l.lineStyle, motion } } : toTimed(l),
+          );
+          return fromTimed(s, timed);
+        }),
+
       removeLine: (index) =>
         set((s) => {
           if (!s.lines[index]) return {};
@@ -258,7 +375,13 @@ export const useProjectStore = create<ProjectStore>()(
         set((s) => {
           const duration =
             audio.kind === "upload" ? Math.max(6, Number(audio.duration.toFixed(1))) : DEFAULT_DURATION;
-          return { audio, duration, lines: reparse({ ...s, duration }) };
+          // Another song gets its own mix of lyric motions; the same song keeps the user's picks
+          const song = audio.kind === "upload" ? `${audio.fileName}|${duration}` : "";
+          const style =
+            song && song !== s.style.motionSong
+              ? { ...s.style, motionSong: song, motionPicks: pickMotions(textSeed(song)) }
+              : s.style;
+          return { audio, duration, style, lines: reparse({ ...s, duration }) };
         }),
 
       setStyle: (patch) => set((s) => ({ style: { ...s.style, ...patch } })),
@@ -336,7 +459,11 @@ export const useProjectStore = create<ProjectStore>()(
           props: s.props.map((p) =>
             p.id !== id
               ? p
-              : { ...p, onTimeline: on, clips: on && p.clips.length === 0 ? [makeClip(at, s.duration)] : p.clips },
+              : {
+                  ...p,
+                  onTimeline: on,
+                  clips: on && p.clips.length === 0 ? [makeClip(at, s.duration)] : p.clips,
+                },
           ),
         })),
 
@@ -368,9 +495,51 @@ export const useProjectStore = create<ProjectStore>()(
           }),
         })),
 
+      addThemeClip: (at) => {
+        let added: string | null = null;
+        set((s) => {
+          const clips = s.style.themeClips ?? [];
+          if (!freeAt(clips, at)) return {};
+          const start = Math.round(Math.min(Math.max(0, at), Math.max(0, s.duration - MIN_CLIP)) * 100) / 100;
+          const made: ThemeClip = {
+            id: newId("theme"),
+            start,
+            end: Math.min(s.duration, start + 8),
+            lookPreset: s.style.lookPreset === "classic" ? DEFAULT_STYLE_THEME : s.style.lookPreset,
+            mixLooks: s.style.mixLooks,
+            lyricLook: s.style.lyricLook,
+          };
+          const clip = fitClip(made, made, clips, s.duration);
+          if (clip.end - clip.start < MIN_CLIP - 1e-6) return {};
+          added = clip.id;
+          return { style: { ...s.style, themeClips: sortClips([...clips, clip]) } };
+        });
+        return added;
+      },
+
+      updateThemeClip: (id, patch) =>
+        set((s) => {
+          const clips = s.style.themeClips ?? [];
+          const cur = clips.find((c) => c.id === id);
+          if (!cur) return {};
+          const next = { ...cur, ...patch };
+          const timed = patch.start !== undefined || patch.end !== undefined;
+          const clip = timed ? fitClip(next, cur, clips, s.duration) : next;
+          return {
+            style: { ...s.style, themeClips: sortClips(clips.map((c) => (c.id === id ? clip : c))) },
+          };
+        }),
+
+      removeThemeClip: (id) =>
+        set((s) => ({
+          style: { ...s.style, themeClips: (s.style.themeClips ?? []).filter((c) => c.id !== id) },
+        })),
+
       removePropClip: (id, clipId) =>
         set((s) => ({
-          props: s.props.map((p) => (p.id === id ? { ...p, clips: p.clips.filter((c) => c.id !== clipId) } : p)),
+          props: s.props.map((p) =>
+            p.id === id ? { ...p, clips: p.clips.filter((c) => c.id !== clipId) } : p,
+          ),
         })),
 
       setDetail: (patch) => set((s) => ({ style: { ...s.style, detail: { ...s.style.detail, ...patch } } })),
@@ -402,6 +571,8 @@ export const useProjectStore = create<ProjectStore>()(
 
       setFx: (key, on) => set((s) => ({ fx: { ...s.fx, [key]: on } })),
 
+      importProject: (saved) => set((s) => restoreProject(saved, s)),
+
       setFxGroup: (keys, on) =>
         set((s) => {
           const fx: FxToggles = { ...s.fx };
@@ -415,63 +586,8 @@ export const useProjectStore = create<ProjectStore>()(
       skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       // Audio and images are object URLs that die with the page, so they are never persisted.
-      partialize: (s) => ({
-        lyricsText: s.lyricsText,
-        lyricsCollapsed: s.lyricsCollapsed,
-        style: s.style,
-        fx: s.fx,
-        sync: s.sync,
-        subtitles: s.subtitles,
-      }),
-      merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<Project>;
-        const merged: ProjectStore = {
-          ...current,
-          lyricsText: typeof p.lyricsText === "string" ? p.lyricsText : current.lyricsText,
-          lyricsCollapsed: p.lyricsCollapsed === true,
-          style: {
-            ...current.style,
-            ...p.style,
-            illustration: {
-              ...current.style.illustration,
-              ...p.style?.illustration,
-              noTextCells: sanitizeCells(p.style?.illustration?.noTextCells),
-              charCues: sanitizeCues(p.style?.illustration?.charCues),
-              charShake: sanitizeUnit(p.style?.illustration?.charShake, 0.5),
-            },
-            // Saves from the retired classic look move to the album jacket theme with their effects
-            lookElements:
-              p.style?.lookPreset === "classic"
-                ? classicToAlbumElements(p.style, p.fx, sanitizeLookElements(p.style.lookElements))
-                : sanitizeLookElements(p.style?.lookElements),
-            lyricFont: findLyricFont(String(p.style?.lyricFont ?? "")) ? String(p.style?.lyricFont) : "",
-            coverTitle: typeof p.style?.coverTitle === "string" ? p.style.coverTitle : "",
-            coverCredit: typeof p.style?.coverCredit === "string" ? p.style.coverCredit : "",
-            detail: sanitizeDetail(p.style?.detail),
-            styleMode: "custom",
-            lookPreset: isLookPresetId(p.style?.lookPreset) ? p.style.lookPreset : current.style.lookPreset,
-            mixLooks: sanitizeMixLooks(p.style?.mixLooks),
-            lyricLook: isThemedPresetId(p.style?.lyricLook) ? p.style.lyricLook : null,
-          },
-          sync: { ...current.sync, ...p.sync },
-          subtitles: {
-            ...current.subtitles,
-            ...p.subtitles,
-            position: p.subtitles?.position === "top" ? "top" : "bottom",
-            display: p.subtitles?.display === "kinetic" ? "kinetic" : "bottomOnly",
-          },
-          fx: sanitizeFxToggles(p.fx),
-        };
-        // A beginner works with one of the three beginner themes and nothing mixed in
-        if (!FEATURES_NOW.themeMix) {
-          const st = merged.style;
-          const base = (BEGINNER_THEMES as readonly LookPresetId[]).includes(st.lookPreset)
-            ? st.lookPreset
-            : DEFAULT_STYLE.lookPreset;
-          merged.style = { ...st, lookPreset: base, mixLooks: [], lyricLook: null };
-        }
-        return { ...merged, lines: reparse(merged) };
-      },
+      partialize: savedPart,
+      merge: restoreProject,
     },
   ),
 );

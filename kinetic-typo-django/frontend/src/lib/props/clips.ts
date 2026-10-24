@@ -1,4 +1,5 @@
-import type { PropAsset, PropClip } from "@/types/project";
+import type { CueEffect, PropAsset, PropClip } from "@/types/project";
+import { CELLS } from "@/lib/render/looks/layout";
 
 /** Shortest clip, in seconds. */
 export const MIN_CLIP = 0.2;
@@ -24,14 +25,27 @@ export function makeClip(at: number, duration: number): PropClip {
     scale: 0.3,
     rot: 0,
     opacity: 1,
-    // No fade by default, so a new clip shows at once where it was added
-    fade: 0,
+    // No effect by default, so a new clip shows at once where it was added
+    enter: "cut",
+    enterSec: 0.5,
+    exit: "cut",
+    exitSec: 0.5,
+    shake: 0,
+    beat: 0,
+    cells: Array<boolean>(CELLS).fill(false),
     front: false,
     flip: false,
   };
 }
 
-export const sortClips = (clips: readonly PropClip[]): PropClip[] =>
+/** Anything laid on a timeline lane: illustration clips and theme clips. */
+export interface Span {
+  id: string;
+  start: number;
+  end: number;
+}
+
+export const sortClips = <T extends Span>(clips: readonly T[]): T[] =>
   [...clips].sort((a, b) => a.start - b.start);
 
 /**
@@ -39,12 +53,7 @@ export const sortClips = (clips: readonly PropClip[]): PropClip[] =>
  * neighbors in the lane (found from where it was, `cur`). A move (both ends
  * changed) keeps the length; dragging one end stops at the neighbor.
  */
-export function fitClip(
-  next: PropClip,
-  cur: PropClip,
-  others: readonly PropClip[],
-  duration: number,
-): PropClip {
+export function fitClip<T extends Span>(next: T, cur: T, others: readonly T[], duration: number): T {
   let lo = 0;
   let hi = duration;
   for (const o of others) {
@@ -72,7 +81,7 @@ export function fitClip(
 }
 
 /** True when no clip in the lane covers `at`. */
-export function freeAt(clips: readonly PropClip[], at: number): boolean {
+export function freeAt(clips: readonly Span[], at: number): boolean {
   return !clips.some((c) => at >= c.start && at < c.end);
 }
 
@@ -81,9 +90,38 @@ export function clipAt(asset: PropAsset, timeSec: number): PropClip | null {
   return asset.clips.find((c) => timeSec >= c.start && timeSec < c.end) ?? null;
 }
 
-/** Opacity at timeSec: the clip's own, faded in and out at its ends. */
-export function clipAlpha(clip: PropClip, timeSec: number): number {
-  const f = Math.min(clip.fade, (clip.end - clip.start) / 2);
-  const edge = f > 0 ? Math.min(1, (timeSec - clip.start) / f, (clip.end - timeSec) / f) : 1;
-  return clip.opacity * clamp(edge, 0, 1);
+/** How much of a clip shows at timeSec (1 fully, 0 gone) and the effect of the transition under way. */
+export function clipPresence(clip: PropClip, timeSec: number): { reveal: number; effect: CueEffect } {
+  const half = (clip.end - clip.start) / 2;
+  const inLen = clip.enter === "cut" ? 0 : Math.min(clip.enterSec, half);
+  const outLen = clip.exit === "cut" ? 0 : Math.min(clip.exitSec, half);
+  if (timeSec < clip.start || timeSec >= clip.end) return { reveal: 0, effect: clip.exit };
+  if (inLen > 0 && timeSec < clip.start + inLen)
+    return { reveal: clamp((timeSec - clip.start) / inLen, 0, 1), effect: clip.enter };
+  if (outLen > 0 && timeSec > clip.end - outLen)
+    return { reveal: clamp((clip.end - timeSec) / outLen, 0, 1), effect: clip.exit };
+  return { reveal: 1, effect: clip.enter };
+}
+
+/**
+ * Where the nearest lyric line start or end lies within `reach` seconds of t,
+ * for snapping clip edges to the subtitles; t itself when none is that close.
+ */
+export function snapToLines(
+  t: number,
+  lines: ReadonlyArray<{ startTime: number; endTime: number }>,
+  reach: number,
+): number {
+  let best = t;
+  let dist = reach;
+  for (const l of lines) {
+    for (const edge of [l.startTime, l.endTime]) {
+      const d = Math.abs(edge - t);
+      if (d < dist) {
+        dist = d;
+        best = edge;
+      }
+    }
+  }
+  return best;
 }

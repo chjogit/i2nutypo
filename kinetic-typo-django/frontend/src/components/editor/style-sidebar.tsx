@@ -1,5 +1,11 @@
-import { useState } from "react";
-import type { DetailSettings, LookElementState, LookPresetId, StyleSettings } from "@/types/project";
+import { useEffect, useState } from "react";
+import type {
+  DetailSettings,
+  LookElementState,
+  LookPresetId,
+  StyleSettings,
+  ThemeClip,
+} from "@/types/project";
 import { DEFAULT_DETAIL } from "@/lib/render/detail";
 import {
   elementInEffect,
@@ -17,6 +23,13 @@ import {
   type ThemedPresetId,
 } from "@/lib/render/looks/presets";
 import { useProjectStore } from "@/store/project-store";
+import { usePropUiStore } from "@/store/prop-ui-store";
+import { formatLrcTime } from "@/lib/lyrics/parse";
+import { setClipBase, toggleClipTheme } from "@/lib/render/theme-clips";
+import { activeMotions, motionLabel, MOTIONS_PER_SONG, THEME_MOTIONS } from "@/lib/render/looks/motions";
+import { freshSeed, mulberry32, pickSome } from "@/lib/random";
+import { FEATURES_NOW } from "@/lib/mode/mode";
+import { AutoComposeBox } from "./auto-compose-box";
 import { Fold } from "./fold";
 import { FinishPanel } from "./finish-panel";
 
@@ -84,6 +97,11 @@ function Segmented<T extends string>({
  */
 export function StyleSidebar() {
   const [tab, setTab] = useState<Tab>("theme");
+  // Picking a theme clip in the timeline opens the theme tab, where it is edited
+  const themeClip = usePropUiStore((s) => s.themeClip);
+  useEffect(() => {
+    if (themeClip) setTab("theme");
+  }, [themeClip]);
   return (
     <section className="px-4 py-4">
       <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-400">영상 스타일</h2>
@@ -108,11 +126,9 @@ export function StyleSidebar() {
  * All themes in a panel that folds away; a click picks or unpicks one. Picked
  * ones show their order, 1 being the background. Folded, it lists the picks.
  */
-function ThemeGrid() {
-  const style = useProjectStore((s) => s.style);
-  const toggleTheme = useProjectStore((s) => s.toggleTheme);
+function ThemeGrid({ target }: { target: ThemeTarget }) {
   const [open, setOpen] = useState(true);
-  const picked = pickedLooks(style);
+  const picked = target.picked;
   const full = picked.length > MAX_MIX_LOOKS;
   return (
     <div className="rounded-md border border-zinc-800">
@@ -140,7 +156,9 @@ function ThemeGrid() {
       {open && (
         <div id="theme-grid" className="space-y-1.5 border-t border-zinc-800 p-2">
           <p className="text-[11px] leading-snug text-zinc-500">
-            최대 3개까지 고르세요. 1번이 배경을 그립니다. 모두 해제하면 기본 테마(앨범 자켓)로 돌아갑니다.
+            {target.clip
+              ? "이 구간에 쓸 테마를 최대 3개까지 고르세요. 1번이 배경을 그립니다."
+              : "최대 3개까지 고르세요. 1번이 배경을 그립니다. 모두 해제하면 기본 테마(앨범 자켓)로 돌아갑니다. 타임라인의 테마 줄에서 구간마다 다른 테마를 쓸 수 있습니다."}
           </p>
           {/* As many columns as the sidebar width fits */}
           <div className="grid max-h-[50vh] grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-1.5 overflow-y-auto pr-0.5">
@@ -152,7 +170,7 @@ function ThemeGrid() {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => toggleTheme(p.id)}
+                  onClick={() => target.toggle(p.id)}
                   aria-pressed={on}
                   disabled={blocked}
                   title={p.description}
@@ -317,17 +335,14 @@ function ElementRow({
 }
 
 /** A picked theme: its roles (background, lyrics, colors) and every element it has. */
-function ThemeBlock({ id, count }: { id: ThemedPresetId; count: number }) {
+function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; target: ThemeTarget }) {
   const style = useProjectStore((s) => s.style);
   const setLookElement = useProjectStore((s) => s.setLookElement);
   const setStyle = useProjectStore((s) => s.setStyle);
-  const setBaseLook = useProjectStore((s) => s.setBaseLook);
-  const setLyricLook = useProjectStore((s) => s.setLyricLook);
   const applyPalette = useProjectStore((s) => s.applyPalette);
-  const toggleTheme = useProjectStore((s) => s.toggleTheme);
   const p = getLookPreset(id);
-  const isBase = style.lookPreset === id;
-  const isLyric = lyricLookOf(style) === id;
+  const isBase = target.style.lookPreset === id;
+  const isLyric = lyricLookOf(target.style) === id;
 
   const reset = () => {
     const prefix = lookElementKey(id, "");
@@ -358,7 +373,11 @@ function ThemeBlock({ id, count }: { id: ThemedPresetId; count: number }) {
             기본값
           </button>
           {count > 1 && (
-            <button type="button" onClick={() => toggleTheme(id)} className="text-indigo-400 hover:underline">
+            <button
+              type="button"
+              onClick={() => target.toggle(id)}
+              className="text-indigo-400 hover:underline"
+            >
               빼기
             </button>
           )}
@@ -366,16 +385,17 @@ function ThemeBlock({ id, count }: { id: ThemedPresetId; count: number }) {
       }
     >
       <div className="flex flex-wrap gap-1">
-        {roleButton(isBase ? "배경 테마" : "배경으로", isBase, () => setBaseLook(id))}
-        {roleButton(isLyric ? "가사 테마" : "가사로", isLyric, () => setLyricLook(isBase ? null : id))}
-        {roleButton("이 색 쓰기", false, () => applyPalette(id))}
+        {roleButton(isBase ? "배경 테마" : "배경으로", isBase, () => target.setBase(id))}
+        {roleButton(isLyric ? "가사 테마" : "가사로", isLyric, () => target.setLyric(isBase ? null : id))}
+        {!target.clip && roleButton("이 색 쓰기", false, () => applyPalette(id))}
       </div>
+      <MotionChips id={id} isLyric={isLyric} />
       {LOOK_ELEMENTS[id].map((def) => (
         <ElementRow
           key={def.id}
           def={def}
           state={getLookElement(style.lookElements, id, def.id)}
-          active={elementInEffect(style, id, def)}
+          active={elementInEffect(target.style, id, def)}
           onChange={(patch) => setLookElement(def.id, patch, id)}
         />
       ))}
@@ -383,14 +403,141 @@ function ThemeBlock({ id, count }: { id: ThemedPresetId; count: number }) {
   );
 }
 
+/**
+ * The theme's eight lyric motions as chips: the lit ones are used (five per
+ * song, picked again when another song is loaded), and a click turns one on
+ * or off.
+ */
+function MotionChips({ id, isLyric }: { id: ThemedPresetId; isLyric: boolean }) {
+  const style = useProjectStore((s) => s.style);
+  const setStyle = useProjectStore((s) => s.setStyle);
+  const on = activeMotions(style, id);
+  const save = (list: string[]) =>
+    setStyle({
+      motionPicks: { ...style.motionPicks, [id]: THEME_MOTIONS[id].filter((m) => list.includes(m)) },
+    });
+  return (
+    <div className="space-y-1 rounded-md border border-zinc-800/70 px-2 py-1.5">
+      <div className="flex items-center gap-2 text-[11px]">
+        <span className="flex-1 font-semibold text-zinc-300">
+          가사 움직임 {on.length}/{THEME_MOTIONS[id].length}
+          {!isLyric && <span className="ml-1 font-normal text-zinc-500">(가사 테마일 때 적용)</span>}
+        </span>
+        <button
+          type="button"
+          onClick={() => save(pickSome(THEME_MOTIONS[id], MOTIONS_PER_SONG, mulberry32(freshSeed())))}
+          className="text-indigo-400 hover:underline"
+        >
+          🎲 섞기
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {THEME_MOTIONS[id].map((m) => {
+          const lit = on.includes(m);
+          return (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={lit}
+              onClick={() => save(lit ? on.filter((x) => x !== m) : [...on, m])}
+              className={`rounded-full border px-2 py-0.5 text-[11px] ${lit ? ON : OFF}`}
+            >
+              {motionLabel(m)}
+            </button>
+          );
+        })}
+      </div>
+      {on.length === 0 && <p className="text-[11px] text-zinc-500">모두 끄면 테마 기본 움직임만 씁니다.</p>}
+    </div>
+  );
+}
+
+/**
+ * What the theme tab edits: the whole video's themes, or those of the theme
+ * clip picked in the timeline's theme lane.
+ */
+interface ThemeTarget {
+  clip: ThemeClip | null;
+  /** The picks as a style, for roles and which elements take effect. */
+  style: StyleSettings;
+  picked: LookPresetId[];
+  toggle: (id: LookPresetId) => void;
+  setBase: (id: ThemedPresetId) => void;
+  setLyric: (id: ThemedPresetId | null) => void;
+}
+
+function useThemeTarget(): ThemeTarget {
+  const style = useProjectStore((s) => s.style);
+  const toggleTheme = useProjectStore((s) => s.toggleTheme);
+  const setBaseLook = useProjectStore((s) => s.setBaseLook);
+  const setLyricLook = useProjectStore((s) => s.setLyricLook);
+  const updateThemeClip = useProjectStore((s) => s.updateThemeClip);
+  const clipId = usePropUiStore((s) => s.themeClip);
+  const clip = style.themeClips.find((c) => c.id === clipId) ?? null;
+  if (!clip)
+    return {
+      clip: null,
+      style,
+      picked: pickedLooks(style),
+      toggle: toggleTheme,
+      setBase: setBaseLook,
+      setLyric: setLyricLook,
+    };
+  const clipStyle = {
+    ...style,
+    lookPreset: clip.lookPreset,
+    mixLooks: clip.mixLooks,
+    lyricLook: clip.lyricLook,
+  };
+  return {
+    clip,
+    style: clipStyle,
+    picked: pickedLooks(clipStyle),
+    toggle: (id) => {
+      if (isThemedPresetId(id)) updateThemeClip(clip.id, toggleClipTheme(clip, id));
+    },
+    setBase: (id) => updateThemeClip(clip.id, setClipBase(clip, id)),
+    setLyric: (id) => updateThemeClip(clip.id, { lyricLook: id }),
+  };
+}
+
+/** Shown while a theme clip is being edited: its time, and ways out. */
+function ThemeClipBanner({ clip }: { clip: ThemeClip }) {
+  const selectThemeClip = usePropUiStore((s) => s.selectThemeClip);
+  const removeThemeClip = useProjectStore((s) => s.removeThemeClip);
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-amber-500/50 bg-amber-500/5 px-2.5 py-1.5 text-[11px]">
+      <span className="min-w-0 flex-1 font-semibold text-amber-200">
+        🎨 테마 구간 {formatLrcTime(clip.start)} ~ {formatLrcTime(clip.end)} 편집 중
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          removeThemeClip(clip.id);
+          selectThemeClip(null);
+        }}
+        className="text-indigo-400 hover:underline"
+      >
+        구간 삭제
+      </button>
+      <button type="button" onClick={() => selectThemeClip(null)} className="text-indigo-400 hover:underline">
+        전체 테마로
+      </button>
+    </div>
+  );
+}
+
 function ThemeTab() {
   const style = useProjectStore((s) => s.style);
   const setStyle = useProjectStore((s) => s.setStyle);
-  const picked = pickedLooks(style);
+  const target = useThemeTarget();
+  const picked = target.picked;
 
   return (
     <div className="space-y-3">
-      <ThemeGrid />
+      {target.clip && <ThemeClipBanner clip={target.clip} />}
+      {!target.clip && FEATURES_NOW.themeMix && <AutoComposeBox />}
+      <ThemeGrid target={target} />
       {picked.some((id) => isThemedPresetId(id) && LOOK_ELEMENTS[id].some((d) => d.move)) && (
         <p className="text-[11px] leading-snug text-zinc-500">
           ⌖ 표시가 있는 요소(레코드, 커버, 원, 낙관 등)는 눌러서 위치를 옮기고 돌릴 수 있습니다.
@@ -398,7 +545,7 @@ function ThemeTab() {
       )}
 
       {picked.map((id: LookPresetId) =>
-        isThemedPresetId(id) ? <ThemeBlock key={id} id={id} count={picked.length} /> : null,
+        isThemedPresetId(id) ? <ThemeBlock key={id} id={id} count={picked.length} target={target} /> : null,
       )}
 
       {picked.includes("album_jacket") && (
@@ -460,6 +607,9 @@ const signedPct = (v: number) => `${v > 0 ? "+" : ""}${Math.round(v * 100)}%`;
 function DetailTab() {
   const detail = useProjectStore((s) => s.style.detail);
   const setDetail = useProjectStore((s) => s.setDetail);
+  const frameStep = useProjectStore((s) => s.style.frameStep);
+  const centerClear = useProjectStore((s) => s.style.centerClear);
+  const setStyle = useProjectStore((s) => s.setStyle);
 
   const slider = (
     key: keyof DetailSettings,
@@ -493,6 +643,48 @@ function DetailTab() {
           글리치는 슬라이스, RGB 분리, 화면 밀림에 걸립니다. 흔들림은 카메라 기울기, 창 흔들림, 캐릭터
           흔들림에 걸리고,
           {` ${Math.round(DEFAULT_DETAIL.shake * 100)}%`}보다 올리면 비트마다 화면 전체가 흔들립니다.
+        </p>
+      </Fold>
+
+      <Fold title="움직임 느낌 · 배치" className="space-y-2">
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <span className="w-24 shrink-0">움직임 끊기</span>
+          <div role="radiogroup" aria-label="움직임 끊기" className="flex rounded-md border border-zinc-800">
+            {(
+              [
+                [1, "부드럽게"],
+                [2, "2프레임"],
+                [3, "3프레임"],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={frameStep === v}
+                onClick={() => setStyle({ frameStep: v })}
+                className={`px-2 py-1 ${frameStep === v ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-[11px] leading-snug text-zinc-500">
+          2·3프레임은 움직임을 24fps 기준 두세 장씩 멈췄다 넘겨 손그림 애니메이션 같은 느낌을 냅니다.
+        </p>
+        <label className="flex items-center gap-2 text-xs text-zinc-200">
+          <input
+            type="checkbox"
+            checked={centerClear}
+            onChange={(e) => setStyle({ centerClear: e.target.checked })}
+            className="accent-indigo-500"
+          />
+          가운데 비우기
+        </label>
+        <p className="text-[11px] leading-snug text-zinc-500">
+          화면 가운데를 캐릭터 자리로 비우고, 가사를 줄마다 왼쪽·오른쪽(세로 화면은 위·아래)으로 번갈아
+          놓습니다.
         </p>
       </Fold>
 

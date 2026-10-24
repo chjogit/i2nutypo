@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PropClip } from "@/types/project";
-import { clipAlpha, fitClip, freeAt, makeClip } from "../clips";
+import { clipPresence, fitClip, freeAt, makeClip, snapToLines } from "../clips";
 
 const clip = (id: string, start: number, end: number): PropClip => ({
   ...makeClip(start, 100),
@@ -39,10 +39,28 @@ describe("prop clips", () => {
     expect(freeAt(lane, 11)).toBe(false);
   });
 
-  it("fades in and out at the ends", () => {
-    const c = { ...clip("c", 10, 14), fade: 1, opacity: 0.8 };
-    expect(clipAlpha(c, 10.5)).toBeCloseTo(0.4);
-    expect(clipAlpha(c, 12)).toBeCloseTo(0.8);
-    expect(clipAlpha(c, 13.75)).toBeCloseTo(0.2);
+  it("comes on and goes away with separate effects and lengths", () => {
+    const c = {
+      ...clip("c", 10, 14),
+      enter: "fade" as const,
+      enterSec: 1,
+      exit: "iris" as const,
+      exitSec: 0.5,
+    };
+    expect(clipPresence(c, 10.5)).toEqual({ reveal: 0.5, effect: "fade" });
+    expect(clipPresence(c, 12).reveal).toBe(1);
+    expect(clipPresence(c, 13.75)).toEqual({ reveal: 0.5, effect: "iris" });
+    expect(clipPresence({ ...c, exit: "cut" }, 13.9).reveal).toBe(1);
+    expect(clipPresence(c, 14).reveal).toBe(0);
+  });
+
+  it("snaps to the nearest lyric edge within reach", () => {
+    const lines = [
+      { startTime: 6, endTime: 9.5 },
+      { startTime: 9.5, endTime: 61 },
+    ];
+    expect(snapToLines(60.8, lines, 0.4)).toBe(61);
+    expect(snapToLines(30, lines, 0.4)).toBe(30);
+    expect(snapToLines(9.3, lines, 0.4)).toBe(9.5);
   });
 });

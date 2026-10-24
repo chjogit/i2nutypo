@@ -14,7 +14,7 @@ export function cellRect(W: number, H: number, cell: number): Rect {
     h: H / GRID,
   };
 }
-/** Where the character sits on screen, or null when it is not drawn. */
+/** Where the character sits on screen, or null when it is not drawn (kept for themes that lay out around it). */
 export function characterRect(
   ill: IllustrationSettings,
   img: Pick<LoadedImage, "width" | "height"> | null,
@@ -103,4 +103,22 @@ export function pickColumn(blocked: readonly boolean[], preferred: readonly numb
     }
   }
   return best;
+}
+
+/** Cells taken in any of the lists. */
+export function mergeCells(...lists: ReadonlyArray<readonly boolean[]>): boolean[] {
+  return Array.from({ length: CELLS }, (_, c) => lists.some((l) => l[c] === true));
+}
+
+/**
+ * Cells to keep free so a character can stand in the middle: the two middle
+ * columns (rows in portrait), and in turn the right or left side (bottom or
+ * top), so the lyrics move from one side to the other line by line.
+ */
+export function centerCells(lineIndex: number, landscape: boolean): boolean[] {
+  const away = lineIndex % 2 === 0 ? GRID - 1 : 0;
+  return Array.from({ length: CELLS }, (_, c) => {
+    const k = landscape ? c % GRID : Math.floor(c / GRID);
+    return k === 1 || k === 2 || k === away;
+  });
 }

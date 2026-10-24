@@ -36,12 +36,13 @@ MIDDLEWARE = [
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Pages are Jinja2 templates in studio/jinja2/
+# Pages are Jinja2 templates in templates/: base.html + header.html frame the
+# editor pages, intro.html (the first page) stands on its own
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.jinja2.Jinja2",
-        "DIRS": [],
-        "APP_DIRS": True,
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": False,
         "OPTIONS": {"environment": "config.jinja2.environment"},
     },
 ]

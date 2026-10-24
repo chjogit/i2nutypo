@@ -21,8 +21,10 @@ import { CELLS, GRID } from "@/lib/render/looks/layout";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { FEATURES_NOW } from "@/lib/mode/mode";
-import { CharacterLane } from "./character-lane";
-import { PROP_LANE_HEIGHT, PropLanes } from "./prop-lanes";
+import { PROP_LANE_HEIGHT, PropLanes, ThemeLane } from "./prop-lanes";
+import { usePropUiStore } from "@/store/prop-ui-store";
+import { motionForLine } from "@/lib/render/looks/motions";
+import { themeAt } from "@/lib/render/theme-clips";
 
 type DragKind = "move" | "start" | "end";
 
@@ -213,12 +215,11 @@ export function Timeline() {
   const lines = useProjectStore((s) => s.lines);
   const duration = useProjectStore((s) => s.duration);
   const updateLine = useProjectStore((s) => s.updateLine);
+  const rerollLine = useProjectStore((s) => s.rerollLine);
   const removeLine = useProjectStore((s) => s.removeLine);
   const fontScale = useProjectStore((s) => s.style.fontScale);
-  const characterLane = useProjectStore(
-    (s) => s.images.character !== null && s.style.illustration.showCharacter,
-  );
   const propLanes = useProjectStore((s) => s.props.filter((p) => p.onTimeline).length);
+  const snapToLyrics = useProjectStore((s) => s.style.snapToLyrics);
   const setStyle = useProjectStore((s) => s.setStyle);
   const isPlaying = usePlaybackStore((s) => s.isPlaying);
   const play = usePlaybackStore((s) => s.play);
@@ -287,7 +288,7 @@ export function Timeline() {
     maxHeight,
     height ??
       (sel !== null ? DEFAULT_EDIT_HEIGHT : DEFAULT_HEIGHT) +
-        (FEATURES_NOW.characters ? propLanes + (characterLane ? 1 : 0) : 0) * PROP_LANE_HEIGHT,
+        ((FEATURES_NOW.characters ? propLanes : 0) + (FEATURES_NOW.themeMix ? 1 : 0)) * PROP_LANE_HEIGHT,
   );
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -341,6 +342,21 @@ export function Timeline() {
       e.stopPropagation();
       if (!e.repeat) togglePlay();
     };
+    // Delete removes the picked illustration or theme clip (not lyric lines, which stay put)
+    const onDelete = (e: KeyboardEvent) => {
+      if ((e.key !== "Delete" && e.key !== "Backspace") || isTextEntry(e.target)) return;
+      const ui = usePropUiStore.getState();
+      const project = useProjectStore.getState();
+      if (ui.selected) {
+        project.removePropClip(ui.selected.propId, ui.selected.clipId);
+        ui.select(null);
+      } else if (ui.themeClip) {
+        project.removeThemeClip(ui.themeClip);
+        ui.selectThemeClip(null);
+      } else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onDelete);
     // Buttons and checkboxes act on key up, so that is swallowed too
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.code !== "Space" || isTextEntry(e.target)) return;
@@ -352,6 +368,7 @@ export function Timeline() {
     return () => {
       window.removeEventListener("keydown", onKeyDown, true);
       window.removeEventListener("keyup", onKeyUp, true);
+      window.removeEventListener("keydown", onDelete);
     };
     // togglePlay only reads stores through getState
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -508,7 +525,24 @@ export function Timeline() {
         <span className="hidden text-zinc-500 sm:inline">
           빈 곳 클릭: 이동 · 구간 끌기: 옮기기 · 양 끝 끌기: 시작/끝 조정 · Space: 재생
         </span>
-        <label className="ml-auto flex items-center gap-2 text-zinc-400" title="모든 줄의 글자 크기">
+        {(FEATURES_NOW.themeMix || FEATURES_NOW.characters) && (
+          <label
+            className="ml-auto flex items-center gap-1.5 text-zinc-400"
+            title="테마·일러스트 구간을 끌 때 끝이 자막 줄의 시작·끝에 붙습니다"
+          >
+            <input
+              type="checkbox"
+              checked={snapToLyrics}
+              onChange={(e) => setStyle({ snapToLyrics: e.target.checked })}
+              className="accent-indigo-500"
+            />
+            자막에 붙이기
+          </label>
+        )}
+        <label
+          className={`${FEATURES_NOW.themeMix || FEATURES_NOW.characters ? "" : "ml-auto "}flex items-center gap-2 text-zinc-400`}
+          title="모든 줄의 글자 크기"
+        >
           전체 글자 크기
           <input
             type="range"
@@ -620,9 +654,14 @@ export function Timeline() {
                     title={`${formatLrcTime(start)} ~ ${formatLrcTime(end)}`}
                   >
                     <span className="truncate text-xs font-semibold text-zinc-100">
+                      {line.lineStyle.lock ? (
+                        <span title="잠근 줄 (자동 구성이 바꾸지 않음)" className="mr-1">
+                          🔒
+                        </span>
+                      ) : null}
                       {(line.offsetX !== 0 ||
                         line.offsetY !== 0 ||
-                        Object.keys(line.lineStyle).length > 0) && (
+                        Object.keys(line.lineStyle).some((k) => !MOTION_KEYS.includes(k))) && (
                         <span title="따로 조정한 줄" className="mr-1 text-indigo-200">
                           ⌖
                         </span>
@@ -649,10 +688,10 @@ export function Timeline() {
                 );
               })}
             </div>
-            {FEATURES_NOW.characters && (
+            {(FEATURES_NOW.themeMix || FEATURES_NOW.characters) && (
               <div className="shrink-0 border-t border-zinc-800/80">
-                <CharacterLane pps={pps} timeAt={timeAt} />
-                <PropLanes pps={pps} timeAt={timeAt} />
+                {FEATURES_NOW.themeMix && <ThemeLane pps={pps} timeAt={timeAt} />}
+                {FEATURES_NOW.characters && <PropLanes pps={pps} timeAt={timeAt} />}
               </div>
             )}
             {/* Playhead */}
@@ -787,6 +826,11 @@ export function Timeline() {
                   value={selLine.lineStyle}
                   onChange={(lineStyle) => updateLine(sel, { lineStyle })}
                 />
+                <LineMotionRow
+                  line={selLine}
+                  onReroll={() => rerollLine(sel)}
+                  onChange={(lineStyle) => updateLine(sel, { lineStyle })}
+                />
               </div>
             </div>
           </div>
@@ -894,6 +938,76 @@ function PositionRow({
     </div>
   );
 }
+
+/**
+ * The selected line's lyric motion: the one it uses now, another roll, back to
+ * the theme's choice, a lock that keeps it through automatic composition, and
+ * the start flash (" !" in the lyrics).
+ */
+function LineMotionRow({
+  line,
+  onReroll,
+  onChange,
+}: {
+  line: LyricLine;
+  onReroll: () => void;
+  onChange: (next: LineStyle) => void;
+}) {
+  const style = useProjectStore((s) => s.style);
+  const motion = motionForLine(themeAt(style, line.startTime), line);
+  const own = (line.lineStyle.motion ?? 0) > 0;
+  const toggle = (key: "lock" | "flash", on: boolean) => {
+    const next: LineStyle = { ...line.lineStyle };
+    if (on) next[key] = 1;
+    else delete next[key];
+    onChange(next);
+  };
+  const clearMotion = () => {
+    const next: LineStyle = { ...line.lineStyle };
+    delete next.motion;
+    onChange(next);
+  };
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-zinc-400">
+      <span>
+        움직임: <span className="font-semibold text-zinc-200">{motion?.label ?? "테마 기본"}</span>
+        {!own && motion && <span className="ml-1 text-zinc-600">(테마가 고름)</span>}
+      </span>
+      <button type="button" onClick={onReroll} className={SMALL_BTN}>
+        🎲 다시 뽑기
+      </button>
+      {own && (
+        <button type="button" onClick={clearMotion} className={SMALL_BTN}>
+          테마에 맡기기
+        </button>
+      )}
+      <label className="flex items-center gap-1" title="자동 구성을 다시 해도 이 줄은 그대로 둡니다">
+        <input
+          type="checkbox"
+          checked={Boolean(line.lineStyle.lock)}
+          onChange={(e) => toggle("lock", e.target.checked)}
+          className="accent-indigo-500"
+        />
+        🔒 잠금
+      </label>
+      <label
+        className="flex items-center gap-1"
+        title="줄이 시작할 때 화면이 번쩍이며 흔들립니다 (가사 끝에 ' !' 와 같음)"
+      >
+        <input
+          type="checkbox"
+          checked={Boolean(line.lineStyle.flash)}
+          onChange={(e) => toggle("flash", e.target.checked)}
+          className="accent-indigo-500"
+        />
+        ⚡ 번쩍
+      </label>
+    </div>
+  );
+}
+
+/** Line settings shown by their own marks, not the "adjusted line" one. */
+const MOTION_KEYS = ["motion", "lock", "flash"];
 
 const LINE_STYLE_CONTROLS: ReadonlyArray<{
   key: keyof LineStyle;

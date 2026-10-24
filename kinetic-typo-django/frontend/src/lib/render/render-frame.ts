@@ -18,12 +18,13 @@ import { manualRows, MIN_FIT_SCALE, widthAround, wrapText } from "./wrap";
 import { DEFAULT_DETAIL, frameShake, glitchGain, lyricOffset, shakeGain } from "./detail";
 import { effectiveFx, effectiveStyle, lineForOffsets } from "./style-mode";
 import type { IllustrationImages } from "./looks/illustration";
-import { characterAt } from "./looks/cues";
-import { blockedCells, CELLS, characterRect, GRID, sanitizeCells } from "./looks/layout";
-import type { PropLayer } from "./looks/props";
-import { renderLookFrame } from "./looks/render-look";
+import { centerCells, CELLS, GRID, mergeCells, sanitizeCells } from "./looks/layout";
+import { propCellsAt, type PropLayer } from "./looks/props";
+import { themeAt } from "./theme-clips";
+import { renderLookFrame, type FrameLayer } from "./looks/render-look";
 import { applyFinish } from "./finish/gl-finish";
 import { sanitizeFinish } from "./finish/settings";
+import { hashSigned } from "./looks/noise";
 
 export interface FrameInput {
   ctx: Ctx2D;
@@ -40,8 +41,12 @@ export interface FrameInput {
   energy: number;
   /** Advance particle positions this frame (off for still or exported frames). */
   animateParticles: boolean;
-  /** Text-only layer: no background, motifs, flashes or subtitle box. */
-  transparentBg?: boolean;
+  /**
+   * Draws one layer only: "front" is the lyrics, the illustrations in front of
+   * them and the subtitles on a clear canvas (no background, motifs, flashes or
+   * subtitle box); "back" is everything behind the lyrics. Missing is the whole frame.
+   */
+  layer?: FrameLayer;
   /** Decoded illustration layers for the look presets; missing means none loaded. */
   images?: IllustrationImages;
   /** Props on the timeline with decoded pictures. */
@@ -112,10 +117,37 @@ export function findOnScreenLines(
   return { line: overlaps[0], next: null, overlaps: overlaps.slice(1) };
 }
 
+/**
+ * Time a frame is drawn at: held for `step` frames at 24 fps for the limited
+ * ("on twos", "on threes") animation look, unchanged at 1.
+ */
+export function steppedTime(t: number, step: 1 | 2 | 3 | undefined): number {
+  if (!step || step <= 1) return t;
+  const hold = step / 24;
+  return Math.floor(t / hold + 1e-6) * hold;
+}
+
+const FLASH_SEC = 0.25;
+
+/** 1 → 0 over the first moments of a line marked with " !" (lineStyle.flash), else 0. */
+export function flashAmount(line: LyricLine, timeSec: number): number {
+  if (!line.lineStyle.flash) return 0;
+  const e = timeSec - line.startTime;
+  return e < 0 || e >= FLASH_SEC ? 0 : 1 - e / FLASH_SEC;
+}
+
+/** The frame shake plus a short jolt while a line flashes. */
+function withJolt(s: { x: number; y: number }, flash: number, timeSec: number, W: number, H: number) {
+  if (flash <= 0) return s;
+  const amp = Math.min(W, H) * 0.035 * flash;
+  const f = Math.floor(timeSec * 60);
+  return { x: s.x + hashSigned(f, 31) * amp, y: s.y + hashSigned(f, 32) * amp };
+}
+
 /** Draws one frame, then the final color grade and filters over it (not on the text-only layer). */
 export function renderFrame(input: FrameInput): void {
   drawFrame(input);
-  if (!input.transparentBg && input.style.finish)
+  if (input.layer !== "front" && input.style.finish)
     applyFinish(input.ctx, sanitizeFinish(input.style.finish), input.timeSec);
 }
 
@@ -124,36 +156,31 @@ function drawFrame(input: FrameInput): void {
   const { ctx, W, H, timeSec, lines, subtitles, introGateSec, particles, energy } = input;
   if (input.bounds) input.bounds.lyrics = null;
   const fx = effectiveFx(input.style, input.fx);
-  const transparentBg = input.transparentBg ?? false;
+  const layer = input.layer ?? "full";
+  const transparentBg = layer === "front";
   const isInIntroGate = timeSec < introGateSec;
   const active = isInIntroGate ? null : findOnScreenLines(lines, timeSec);
   const activeLine = active?.line ?? null;
   const overlaps = active?.overlaps ?? [];
-  const style = effectiveStyle(input.style, activeLine);
+  const style = effectiveStyle(themeAt(input.style, timeSec), activeLine);
   const detail = style.detail ?? DEFAULT_DETAIL;
-  const shake = transparentBg ? { x: 0, y: 0 } : frameShake(detail, energy, timeSec, W, H);
+  const flash = activeLine ? flashAmount(activeLine, timeSec) : 0;
+  const shake = withJolt(frameShake(detail, energy, timeSec, W, H), flash, timeSec, W, H);
   const lyricShift = lyricOffset(detail, lineForOffsets(style, activeLine), W, H);
   const subtitleShift = { x: detail.subtitleX * W, y: detail.subtitleY * H };
 
   if (style.lookPreset !== "classic") {
     const images = input.images ?? NO_IMAGES;
-    // Cues move the character and hide it for a while; the rest of the frame sees it where it is now
-    const cue = characterAt(style.illustration, timeSec);
-    const ill =
-      cue.cells === "user" ? style.illustration : { ...style.illustration, charX: cue.x, charY: cue.y };
-    const charRect = characterRect(ill, images.character, W, H);
     const lineElapsed = activeLine ? timeSec - activeLine.startTime : 0;
     const lineDur = activeLine ? Math.max(0.01, activeLine.endTime - activeLine.startTime) : 1;
     const hasSubtitle =
       activeLine !== null && [activeLine, ...overlaps].some((l) => hasSubtitleText(subtitles, l));
-    // Gone: no cells. Back somewhere new: the cells it covers there win over the user's
-    let blocked: readonly boolean[] = !ill.avoidCharacter
-      ? NO_BLOCKS
-      : cue.cells === "off"
-        ? NO_BLOCKS
-        : cue.cells === "moved"
-          ? blockedCells(charRect, W, H)
-          : sanitizeCells(ill.noTextCells);
+    // The whole video's red cells, those of the illustrations on screen, and the cleared middle
+    let blocked = mergeCells(
+      sanitizeCells(style.illustration.noTextCells),
+      ...propCellsAt(input.props ?? [], timeSec),
+      style.centerClear && activeLine ? centerCells(lines.indexOf(activeLine), W >= H) : NO_BLOCKS,
+    );
     // Subtitles sit at the bottom unless moved to the top, which keeps the lyrics out of the top row
     const subtitleTop = hasSubtitle && subtitles.position === "top";
     if (subtitleTop) blocked = blocked.map((b, c) => b || c < GRID);
@@ -171,12 +198,11 @@ function drawFrame(input: FrameInput): void {
         lineElapsed,
         lineProgress: Math.min(1, Math.max(0, lineElapsed / lineDur)),
         songEnd: lines.reduce((end, l) => Math.max(end, l.endTime), 0),
-        style: ill === style.illustration ? style : { ...style, illustration: ill },
+        style,
         subtitles,
         energy,
         images,
-        charRect,
-        charReveal: { reveal: cue.reveal, effect: cue.effect },
+        charRect: null,
         props: input.props,
         blocked,
         subtitleVisible: hasSubtitle && !subtitleTop,
@@ -188,8 +214,14 @@ function drawFrame(input: FrameInput): void {
         subtitleShift,
         textBounds: input.bounds,
       },
-      transparentBg,
+      layer,
     );
+    if (flash > 0 && layer !== "front") {
+      ctx.save();
+      ctx.fillStyle = `rgba(255,255,255,${(flash * 0.85).toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
     return;
   }
 

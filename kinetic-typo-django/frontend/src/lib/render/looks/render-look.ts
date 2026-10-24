@@ -25,6 +25,7 @@ import { neonSign } from "./neon-sign";
 import { drawOverlapLines } from "./overlap-layer";
 import { albumJacket } from "./album-jacket";
 import { drawProps } from "./props";
+import { motionForLine } from "./motions";
 
 const RENDERERS: Record<Exclude<LookPresetId, "classic">, LookRenderer> = {
   album_jacket: albumJacket,
@@ -63,12 +64,21 @@ function lyricFrame(f: LookFrame, base: LookRenderer): { r: LookRenderer; f: Loo
   return { r: RENDERERS[id], f: { ...f, preset: id } };
 }
 
-/** Draws one frame in a look preset. With transparentBg only the lyric text is drawn. */
+/**
+ * Which part of the frame to draw: everything, only what sits behind the
+ * lyrics ("back": background, illustrations behind, screen effects), or only
+ * the lyrics with the illustrations in front of them and the subtitles on a
+ * clear canvas ("front", for compositing).
+ */
+export type FrameLayer = "full" | "back" | "front";
+
+/** Draws one frame in a look preset, or one of its layers. */
 export function renderLookFrame(
   preset: Exclude<LookPresetId, "classic">,
   f: LookFrame,
-  transparentBg: boolean,
+  layer: FrameLayer,
 ): void {
+  const transparentBg = layer === "front";
   const r = RENDERERS[preset];
   const mixes = mixFrames(f);
   const lyr = lyricFrame(f, r);
@@ -76,7 +86,11 @@ export function renderLookFrame(
   ctx.save();
   if (transparentBg) {
     ctx.clearRect(0, 0, f.W, f.H);
+    ctx.save();
+    ctx.translate(f.frameShake.x, f.frameShake.y);
     if (showsKineticLyrics(f.subtitles)) drawLyrics(lyr.r, lyr.f);
+    drawProps(f, true);
+    ctx.restore();
   } else {
     // Fill first so the beat shake never uncovers the previous frame at the edges
     ctx.fillStyle = f.style.bgColor;
@@ -86,14 +100,16 @@ export function renderLookFrame(
     r.scene(f);
     for (const m of mixes) m.r.decor?.(m.f);
     drawProps(f, false);
-    // In the bottom-only display the line is shown in the subtitles alone
-    if (showsKineticLyrics(f.subtitles)) drawLyrics(lyr.r, lyr.f);
-    drawProps(f, true);
+    if (layer === "full") {
+      // In the bottom-only display the line is shown in the subtitles alone
+      if (showsKineticLyrics(f.subtitles)) drawLyrics(lyr.r, lyr.f);
+      drawProps(f, true);
+    }
     ctx.restore();
     r.overlay(f);
     for (const m of mixes) m.r.overlay(m.f);
   }
-  if (f.line) {
+  if (f.line && layer !== "back") {
     ctx.save();
     ctx.translate(f.subtitleShift.x, f.subtitleShift.y);
     drawBottomSubtitles({
@@ -124,9 +140,32 @@ function drawLyrics(r: LookRenderer, f: LookFrame): void {
   f.ctx.save();
   f.ctx.translate(f.lyricShift.x, f.lyricShift.y);
   // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
-  const box = f.textBounds || hasOverlaps ? recordTextBounds(f.ctx, () => r.lyrics(f)) : null;
-  if (!f.textBounds && !hasOverlaps) r.lyrics(f);
+  const draw = withMotion(f, () => r.lyrics(f));
+  const box = f.textBounds || hasOverlaps ? recordTextBounds(f.ctx, draw) : null;
+  if (!f.textBounds && !hasOverlaps) draw();
   if (f.textBounds) f.textBounds.lyrics = box;
   f.ctx.restore();
   if (hasOverlaps) drawOverlapLines(r, f, box);
+}
+
+/** The line's lyric motion (see motions.ts) wrapped around the theme's own lyrics. */
+function withMotion(f: LookFrame, draw: () => void): () => void {
+  const line = f.line;
+  const motion = line ? motionForLine(f.style, line) : null;
+  if (!line || !motion) return draw;
+  return () =>
+    motion.apply(
+      {
+        ctx: f.ctx,
+        W: f.W,
+        H: f.H,
+        elapsed: f.lineElapsed,
+        dur: Math.max(0.01, line.endTime - line.startTime),
+        energy: f.energy,
+        cx: f.W / 2,
+        cy: f.H / 2,
+        seed: line.index,
+      },
+      draw,
+    );
 }

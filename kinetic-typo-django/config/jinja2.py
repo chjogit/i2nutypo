@@ -4,7 +4,7 @@ from jinja2 import Environment
 
 
 def environment(**options):
-    """Jinja2 for the pages Django renders: the landing page and the studio page."""
+    """Jinja2 for the pages Django renders from templates/: the first page (intro.html) and the editor pages."""
     env = Environment(**options)
     env.globals.update(static=static, url=reverse)
     return env
