@@ -197,7 +197,12 @@ function drawFrame(input: FrameInput): void {
   const flash = activeLine ? flashAmount(activeLine, timeSec) : 0;
   const shake = withJolt(frameShake(detail, energy, timeSec, W, H), flash, timeSec, W, H);
   const hop = hopClock(lines, timeSec);
-  const roam = lyricRoamOffset(style.lyricRoam, hop, activeLine, W, H);
+  // Roaming would carry the lyrics onto red cells, so it stops while any cell is kept clear
+  const keepsCells =
+    sanitizeCells(style.illustration.noTextCells).some(Boolean) ||
+    propCellsAt(input.props ?? [], timeSec).some((cells) => cells.some(Boolean)) ||
+    style.centerClear === true;
+  const roam = keepsCells ? { x: 0, y: 0 } : lyricRoamOffset(style.lyricRoam, hop, activeLine, W, H);
   const baseShift = lyricOffset(detail, lineForOffsets(style, activeLine), W, H);
   const lyricShift = { x: baseShift.x + roam.x, y: baseShift.y + roam.y };
   const subtitleShift = { x: detail.subtitleX * W, y: detail.subtitleY * H };

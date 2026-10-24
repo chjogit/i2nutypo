@@ -9,7 +9,7 @@ import {
   type Rect,
 } from "./illustration";
 import { clipReveal, revealAlpha } from "./cues";
-import { freeSpan, pickCell } from "./layout";
+import { blockedCells, freeSpan, pickCell } from "./layout";
 import { hash01 } from "./noise";
 import type { PropLayer } from "./props";
 import { getLookElement, lookElementAmount } from "./presets";
@@ -141,7 +141,7 @@ export function drawCharacterLayer(
 }
 
 /**
- * Draws a movable element moved and turned by the user (its x, y and rot),
+ * Draws a movable element moved, turned and sized by the user (its x, y, rot and size),
  * turning around pivot, the element's own center in frame pixels. On top of
  * that it floats, moves to a new place each line, or is drawn on again, as
  * the theme element motion setting says.
@@ -152,11 +152,12 @@ export function withMoved(f: LookFrame, id: string, pivot: { x: number; y: numbe
   const dx = (st.x ?? 0) * f.W + pose.dx;
   const dy = (st.y ?? 0) * f.H + pose.dy;
   const rot = (((st.rot ?? 0) + pose.rot) * Math.PI) / 180;
+  const size = st.size ?? 1;
   if (f.textBounds?.elements) {
     const p = f.ctx.getTransform().transformPoint({ x: pivot.x + dx, y: pivot.y + dy });
     f.textBounds.elements.push({ preset: f.preset, id, x: p.x, y: p.y });
   }
-  if (dx === 0 && dy === 0 && rot === 0 && pose.reveal >= 1) {
+  if (dx === 0 && dy === 0 && rot === 0 && size === 1 && pose.reveal >= 1) {
     draw();
     return;
   }
@@ -164,6 +165,7 @@ export function withMoved(f: LookFrame, id: string, pivot: { x: number; y: numbe
   ctx.save();
   ctx.translate(pivot.x + dx, pivot.y + dy);
   ctx.rotate(rot);
+  ctx.scale(size, size);
   ctx.translate(-pivot.x, -pivot.y);
   if (pose.reveal < 1) {
     ctx.globalAlpha *= Math.min(1, 0.15 + pose.reveal * 1.5);
@@ -177,6 +179,17 @@ export function withMoved(f: LookFrame, id: string, pivot: { x: number; y: numbe
 export function lyricRegion(f: LookFrame, preferred: readonly number[]): { cell: number; rect: Rect } {
   const cell = pickCell(f.blocked, preferred);
   return { cell, rect: freeSpan(f.blocked, cell, f.W, f.H) };
+}
+
+/**
+ * A theme's own lyric area when it stays clear of the cells the lyrics must
+ * avoid (red cells, illustrations, the cleared middle); otherwise the free
+ * area lyricRegion finds from `preferred`.
+ */
+export function keepOffBlocked(f: LookFrame, rect: Rect, preferred: readonly number[]): Rect {
+  const under = blockedCells(rect, f.W, f.H);
+  if (!under.some((on, c) => on && f.blocked[c])) return rect;
+  return lyricRegion(f, preferred).rect;
 }
 
 /** Film grain from hashed specks; changes every frame at 24fps. */

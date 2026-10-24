@@ -157,15 +157,34 @@ function lyrics(f: LookFrame): void {
   ctx.font = `900 ${size}px ${style.mainFont}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  const rows: Array<Array<{ text: string; w: number; e: number; accent: boolean }>> = [[]];
+  const rows: Array<Array<{ text: string; w: number; e: number; accent: boolean; joined?: boolean }>> = [[]];
   let rowW = 0;
   const measure = (t: string) => ctx.measureText(t).width;
   // Shrink so the widest word or spaced phrase fits whole
   size *= fitScale(line.cleanText, maxW, measure);
   ctx.font = `900 ${size}px ${style.mainFont}`;
   for (const w of line.words) {
+    const whole = measure(w.text);
+    if (w.chars && whole <= maxW) {
+      // Timed character by character: one item per character, kept together on a row
+      if ((w.breakBefore || rowW + whole > maxW) && rows[rows.length - 1].length) {
+        rows.push([]);
+        rowW = 0;
+      }
+      Array.from(w.text).forEach((text, k) =>
+        rows[rows.length - 1].push({
+          text,
+          w: measure(text),
+          e: f.lineElapsed - (w.chars?.[k] ?? w.startOffset),
+          accent: w.isAccent,
+          joined: k > 0,
+        }),
+      );
+      rowW += whole + size * 0.2;
+      continue;
+    }
     // Cut between characters only if a word still does not fit
-    const pieces = measure(w.text) > maxW ? wrapText(w.text, maxW, measure) : [w.text];
+    const pieces = whole > maxW ? wrapText(w.text, maxW, measure) : [w.text];
     pieces.forEach((text, k) => {
       const width = measure(text);
       const forced = k > 0 || (k === 0 && w.breakBefore);
@@ -195,7 +214,8 @@ function lyrics(f: LookFrame): void {
 
   for (const row of rows) {
     let x = x0;
-    for (const it of row) {
+    row.forEach((it, i) => {
+      if (i > 0 && !it.joined) x += size * 0.2;
       if (it.e >= 0) {
         const t = easeOutExpo(Math.min(1, it.e / 0.35));
         const jitter =
@@ -206,8 +226,8 @@ function lyrics(f: LookFrame): void {
         ctx.shadowBlur = size * 0.5 * amt(f, "glow");
         ctx.fillText(it.text, x + (1 - t) * size * 0.6 + jitter, y);
       }
-      x += it.w + size * 0.2;
-    }
+      x += it.w;
+    });
     y += rowH;
   }
   ctx.restore();

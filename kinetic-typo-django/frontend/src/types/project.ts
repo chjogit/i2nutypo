@@ -41,6 +41,11 @@ export interface LyricWord {
   /** Seconds from the start of the line. */
   startOffset: number;
   endOffset: number;
+  /**
+   * Set when the line is timed character by character (the detail timeline):
+   * seconds from the start of the line at which each character of text appears.
+   */
+  chars?: number[];
   effect: WordEffect;
   isAccent: boolean;
 }
@@ -91,6 +96,11 @@ export interface LyricLine {
    * automatic sync, which moves it along with that line.
    */
   overlap: boolean;
+  /**
+   * When each word (or each character) appears, as a share of the line's
+   * length, set on the detail timeline. Missing: the words are spread evenly.
+   */
+  timing?: number[];
   firstWord: string;
   tokens: string[];
   words: LyricWord[];
@@ -196,6 +206,8 @@ export interface LookElementState {
   y?: number;
   /** Turn in degrees around the element's center (movable elements only). */
   rot?: number;
+  /** Size multiplier around the element's center, 0.3..3 (movable elements only); missing is 1. */
+  size?: number;
 }
 
 /** A local image picked by the user; only an object URL is kept. */
@@ -357,6 +369,11 @@ export interface StyleSettings {
    * leaves the theme's colors as they are.
    */
   autoContrast: AutoContrast;
+  /**
+   * How strongly autoContrast works, 0..1 (shown as %): the contrast the
+   * lyrics are brought up to, and the outline's weight. 0.5 is the usual 3:1.
+   */
+  autoContrastAmount: number;
   /** Timeline clips also snap to the analysed beats while dragged. */
   snapToBeats: boolean;
   activePresetId: string;

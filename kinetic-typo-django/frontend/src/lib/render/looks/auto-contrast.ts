@@ -12,6 +12,9 @@ import type { Ctx2D } from "../motifs";
 /** Contrast ratio the lyrics are brought up to; 3:1 is the usual bar for large text. */
 export const READABLE = 3;
 
+/** The contrast to reach at a strength 0..1: none at 0, the usual 3:1 at 0.5, 5:1 at 1. */
+export const readableAt = (amount: number): number => 1 + 4 * Math.min(1, Math.max(0, amount));
+
 const lin = (c: number) => {
   const s = c / 255;
   return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
@@ -126,12 +129,24 @@ export function poorSpots(
 
 /**
  * Draws the lyrics (`draw` on the given context, returning where its text
- * went) so they stay readable over what is already on ctx. With "off", or
+ * went) so they stay readable over what is already on ctx, as strongly as
+ * amount (0..1) says. With "off" or a strength of 0, or
  * where there is no DOM canvas (tests), it simply draws on ctx.
  */
-export function drawReadable(ctx: Ctx2D, mode: AutoContrast, draw: (c: Ctx2D) => Box | null): Box | null {
+export function drawReadable(
+  ctx: Ctx2D,
+  mode: AutoContrast,
+  draw: (c: Ctx2D) => Box | null,
+  amount = 0.5,
+): Box | null {
   const canvas = (ctx as CanvasRenderingContext2D).canvas as HTMLCanvasElement | undefined;
-  if (mode === "off" || typeof document === "undefined" || !canvas || !("getContext" in canvas))
+  if (
+    mode === "off" ||
+    amount <= 0 ||
+    typeof document === "undefined" ||
+    !canvas ||
+    !("getContext" in canvas)
+  )
     return draw(ctx);
   const W = canvas.width;
   const H = canvas.height;
@@ -160,8 +175,9 @@ export function drawReadable(ctx: Ctx2D, mode: AutoContrast, draw: (c: Ctx2D) =>
   };
   const textPx = clip.x1 > clip.x0 && clip.y1 > clip.y0 ? sample(layer, clip) : null;
   const bgPx = textPx ? sample(canvas, clip) : null;
-  const spots = textPx && bgPx ? poorSpots(textPx, bgPx) : null;
-  const fix = spots ? contrastFix(spots.text, spots.bg) : null;
+  const target = readableAt(amount);
+  const spots = textPx && bgPx ? poorSpots(textPx, bgPx, target) : null;
+  const fix = spots ? contrastFix(spots.text, spots.bg, target) : null;
   if (!fix) return draw(ctx);
   const end = fix.toward === "white" ? "255,255,255" : "0,0,0";
   lc.save();
@@ -192,7 +208,7 @@ export function drawReadable(ctx: Ctx2D, mode: AutoContrast, draw: (c: Ctx2D) =>
       ec.fillStyle = fix.toward === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.85)";
       ec.fillRect(0, 0, W, H);
       ec.globalCompositeOperation = "source-over";
-      const r = Math.max(1.5, H * 0.0028);
+      const r = Math.max(1.5, H * 0.0028 * (0.5 + amount));
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;

@@ -25,6 +25,7 @@ import { FEATURES_NOW } from "@/lib/mode/mode";
 import { PROP_LANE_HEIGHT, PropLanes, ThemeLane } from "./prop-lanes";
 import { AdjustLane, BeatMarks, SfxLane, TransitionLane } from "./fx-lanes";
 import { Tip } from "@/components/ui/tip";
+import { LineTimingRow } from "./line-timing";
 import { openMenu } from "@/components/ui/context-menu";
 import { isTextEntry } from "@/lib/ui/text-entry";
 import { useLayoutStore } from "@/store/layout-store";
@@ -950,6 +951,7 @@ export function Timeline() {
                         닫기
                       </button>
                     </div>
+                    <LineTimingRow line={selLine} onChange={(timing) => updateLine(sel, { timing })} />
                     <PositionRow
                       offsetX={selLine.offsetX}
                       offsetY={selLine.offsetY}

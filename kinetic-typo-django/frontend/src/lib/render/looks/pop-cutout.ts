@@ -72,7 +72,15 @@ function lyrics(f: LookFrame): void {
   const outline = amt(f, "outline");
 
   // Each word gets its own size; the block is centered in the free area
-  type Item = { text: string; size: number; w: number; accent: boolean; e: number; seed: number };
+  type Item = {
+    text: string;
+    size: number;
+    w: number;
+    accent: boolean;
+    e: number;
+    seed: number;
+    joined?: boolean;
+  };
   const layout = (gap: number): Item[][] => {
     const rows: Item[][] = [[]];
     let rowW = 0;
@@ -84,8 +92,29 @@ function lyrics(f: LookFrame): void {
       ctx.font = `400 ${size}px ${style.mainFont}`;
       size *= fitScale(word.text, maxW, measure);
       ctx.font = `400 ${size}px ${style.mainFont}`;
+      const whole = measure(word.text);
+      if (word.chars && whole <= maxW) {
+        // Timed character by character: one item per character, kept together on a row
+        if ((word.breakBefore || rowW + whole > maxW) && rows[rows.length - 1].length > 0) {
+          rows.push([]);
+          rowW = 0;
+        }
+        Array.from(word.text).forEach((text, k) =>
+          rows[rows.length - 1].push({
+            text,
+            size,
+            w: measure(text),
+            accent: word.isAccent,
+            e: f.lineElapsed - (word.chars?.[k] ?? word.startOffset),
+            seed,
+            joined: k > 0,
+          }),
+        );
+        rowW += whole + gap;
+        return;
+      }
       // Cut between characters only if it still does not fit
-      const pieces = measure(word.text) > maxW ? wrapText(word.text, maxW, measure) : [word.text];
+      const pieces = whole > maxW ? wrapText(word.text, maxW, measure) : [word.text];
       pieces.forEach((text, k) => {
         const w = measure(text);
         const forced = k > 0 || (k === 0 && word.breakBefore);
@@ -121,7 +150,9 @@ function lyrics(f: LookFrame): void {
   }
   const total = height(rows);
   let y = Math.max(topLimit, Math.min(area.y + area.h / 2 - total / 2, bottomLimit - total));
-  const widths = rows.map((row) => row.reduce((acc, it) => acc + it.w + gap, 0) - gap);
+  const widths = rows.map((row) =>
+    row.reduce((acc, it, i) => acc + it.w + (i > 0 && !it.joined ? gap : 0), 0),
+  );
   // Pulled back on screen when the lyric shift would push it off
   const cx = clampCenter(f, area.x + area.w / 2, Math.max(...widths));
   ctx.save();
@@ -132,7 +163,8 @@ function lyrics(f: LookFrame): void {
     const rowH = Math.max(...row.map((it) => it.size)) * boxHeight(f);
     let x = cx - widths[r] / 2;
     y += rowH;
-    for (const it of row) {
+    row.forEach((it, i) => {
+      if (i > 0 && !it.joined) x += gap;
       if (it.e >= 0) {
         const t = Math.min(1, it.e / 0.28);
         // pop 0 fades in plainly; pop 1 overshoots with a tilt
@@ -152,8 +184,8 @@ function lyrics(f: LookFrame): void {
         ctx.fillText(it.text, -it.w / 2, it.size * 0.35);
         ctx.restore();
       }
-      x += it.w + gap;
-    }
+      x += it.w;
+    });
     y += rowH * 0.12;
   });
 

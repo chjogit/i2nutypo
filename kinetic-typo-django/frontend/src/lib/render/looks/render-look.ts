@@ -175,15 +175,20 @@ function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): void {
   f.ctx.save();
   f.ctx.translate(f.lyricShift.x, f.lyricShift.y);
   const mode = overPicture ? (f.style.autoContrast ?? "color") : "off";
-  const box = drawReadable(f.ctx, mode, (c) => {
-    const g = c === f.ctx ? f : { ...f, ctx: c };
-    // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
-    const draw = withMotion(g, () => r.lyrics(g));
-    // The readability check needs the box of the copy it draws on its own layer
-    if (f.textBounds || hasOverlaps || c !== f.ctx) return recordTextBounds(g.ctx, draw);
-    draw();
-    return null;
-  });
+  const box = drawReadable(
+    f.ctx,
+    mode,
+    (c) => {
+      const g = c === f.ctx ? f : { ...f, ctx: c };
+      // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
+      const draw = withMotion(g, () => r.lyrics(g));
+      // The readability check needs the box of the copy it draws on its own layer
+      if (f.textBounds || hasOverlaps || c !== f.ctx) return recordTextBounds(g.ctx, draw);
+      draw();
+      return null;
+    },
+    f.style.autoContrastAmount ?? 0.5,
+  );
   if (f.textBounds) f.textBounds.lyrics = box;
   f.ctx.restore();
   if (hasOverlaps) drawOverlapLines(r, f, box);

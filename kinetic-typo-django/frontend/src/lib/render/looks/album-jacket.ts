@@ -1,6 +1,7 @@
 import { easeOutBack } from "../easing";
 import { fitScale } from "../wrap";
 import {
+  keepOffBlocked,
   amt,
   backgroundSource,
   boxHeight,
@@ -19,7 +20,7 @@ import {
 import { drawImageRect, type LoadedImage, type Rect } from "./illustration";
 import { drawParticles } from "./kit";
 import { hash01, withAlpha } from "./noise";
-import { rowWidth, wrapWords } from "./words";
+import { gapAfter, rowWidth, wrapWords } from "./words";
 
 // A. Album jacket: one cover picture carries the whole video. The cover, blurred and tinted, fills
 // the frame; a record with the cover as its label spins on one side (the square sleeve can sit
@@ -256,8 +257,13 @@ function lyrics(f: LookFrame): void {
   const { ctx, H, style } = f;
   const col = layout(f).column;
   const top = titleBottom(f, col) + minSide(f) * 0.03;
-  const area = { x: col.x, y: top, w: col.w, h: col.y + col.h - top };
   const portrait = isPortrait(f);
+  // The column beside the record, unless red cells, an illustration or the cleared middle cover it
+  const area = keepOffBlocked(
+    f,
+    { x: col.x, y: top, w: col.w, h: col.y + col.h - top },
+    portrait ? [9, 10, 13, 14, 5, 6, 8, 11, 1, 2] : [6, 7, 10, 11, 2, 3, 14, 15, 5, 9, 1, 13],
+  );
   const exit = lineExit(f, 0.08);
   const maxW = fitWidth(f, area.w);
   const ghost = amt(f, "ghost");
@@ -309,7 +315,7 @@ function lyrics(f: LookFrame): void {
         ctx.fillStyle = withAlpha(style.secondaryColor, exit * underline);
         ctx.fillRect(x, y + size * 0.15, it.w * Math.min(1, it.e / 0.3), Math.max(2, size * 0.06));
       }
-      x += it.w + wrap.gap;
+      x += it.w + gapAfter(row, it, wrap.gap);
     });
   });
 

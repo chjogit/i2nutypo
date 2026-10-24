@@ -50,6 +50,7 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
     offsetX: number;
     offsetY: number;
     lineStyle: LineStyle;
+    timing?: number[];
     content: string;
     pronText: string;
     transText: string;
@@ -127,7 +128,11 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
     timed.map((d) => ({ startTime: d.startTime, endTime: d.endTime, overlap: d.overlap })),
     duration,
   );
-  const screens = timed.flatMap((d, i) => cutScreens({ ...d, endTime: ends[i] }));
+  const screens = timed.flatMap((d, i) => {
+    const cut = cutScreens({ ...d, endTime: ends[i] });
+    // Detail timing belongs to the whole line, so a line cut into screens is spread evenly
+    return cut.length > 1 ? cut.map((c) => ({ ...c, timing: undefined })) : cut;
+  });
   return screens.map((d, i): LyricLine => {
     const endTime = d.endTime;
     const isBigLine = !d.overlap && i % 3 === 1;
@@ -142,6 +147,8 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
     const plain = splitManualBreaks(d.content).join("\n").replace(/\*/g, "");
     const perWord = ((endTime - d.startTime) * WORD_ACTIVE_SPAN) / Math.max(1, tokens.length);
     const firstWord = tokens.length > 0 ? tokens[0].replace(/\*/g, "") : plain.slice(0, 4);
+    const texts = tokens.map((w) => w.replace(/\*/g, ""));
+    const times = placeTiming(d.timing, texts, endTime - d.startTime);
 
     return {
       index: d.index,
@@ -155,6 +162,7 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
       offsetY: d.offsetY,
       lineStyle: d.lineStyle,
       overlap: d.overlap,
+      timing: times ? d.timing : undefined,
       firstWord,
       tokens,
       collabPartId: COLLAB_PARTS[(d.index + 1) % COLLAB_PARTS.length].partId,
@@ -163,17 +171,52 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
       words: tokens.map((w, wIdx) => {
         const sem = detectWordSemanticEffect(w);
         return {
-          text: w.replace(/\*/g, ""),
+          text: texts[wIdx],
           isFirstWord: wIdx === 0,
           breakBefore: rowStarts.has(wIdx),
-          startOffset: wIdx * perWord,
-          endOffset: (wIdx + 1) * perWord,
+          startOffset: times ? times.starts[wIdx] : wIdx * perWord,
+          endOffset: times ? times.ends[wIdx] : (wIdx + 1) * perWord,
+          ...(times?.chars ? { chars: times.chars[wIdx] } : {}),
           effect: sem.effect,
           isAccent: sem.isAccent || (wIdx === tokens.length - 1 && isBigLine),
         };
       }),
     };
   });
+}
+
+/** How many characters a word has on the detail timeline. */
+export const charCount = (text: string): number => Array.from(text).length;
+
+/**
+ * Word times in seconds from a line's detail timing: one share of the line per
+ * word, or one per character (the word then starts with its first character).
+ * Null when there is no timing, or when it no longer matches the text because
+ * the line was rewritten. A word ends when the next one starts; the last one
+ * keeps the usual length of a word.
+ */
+export function placeTiming(
+  timing: readonly number[] | undefined,
+  words: readonly string[],
+  span: number,
+): { starts: number[]; ends: number[]; chars?: number[][] } | null {
+  if (!timing || words.length === 0) return null;
+  const counts = words.map(charCount);
+  const total = counts.reduce((a, b) => a + b, 0);
+  const sec = timing.map((v) => round2(v * span));
+  let starts: number[];
+  let chars: number[][] | undefined;
+  if (timing.length === words.length) starts = sec;
+  else if (timing.length === total) {
+    let at = 0;
+    chars = counts.map((n) => sec.slice(at, (at += n)));
+    starts = chars.map((c) => c[0] ?? 0);
+  } else return null;
+  const last = (span * WORD_ACTIVE_SPAN) / words.length;
+  const ends = starts.map((s, i) =>
+    i + 1 < starts.length ? Math.max(s, starts[i + 1]) : Math.min(span, s + last),
+  );
+  return { starts, ends, chars };
 }
 
 /**
@@ -303,6 +346,8 @@ export interface TimedLyric {
   lineStyle: LineStyle;
   /** Sung over the line before it ("&" in the text). */
   overlap: boolean;
+  /** Detail timing of the words or characters (LyricLine.timing). */
+  timing?: number[];
 }
 
 /** "main | pronunciation | meaning", with the "&" mark on an overlapping line. */

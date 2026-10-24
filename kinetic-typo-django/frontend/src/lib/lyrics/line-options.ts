@@ -17,6 +17,22 @@ export interface LineOptions {
   offsetX: number;
   offsetY: number;
   lineStyle: LineStyle;
+  /** When each word or character appears, as a share of the line's length (";t=0,0.2,0.45"). */
+  timing?: number[];
+}
+
+/** A timing list kept between 0 and 1 and never going back in time, or undefined when empty. */
+export function sanitizeTiming(list: readonly unknown[] | undefined): number[] | undefined {
+  if (!list || list.length === 0) return undefined;
+  let last = 0;
+  const out: number[] = [];
+  for (const v of list) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return undefined;
+    last = Math.max(last, clamp(n, 0, 1));
+    out.push(last);
+  }
+  return out;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -39,6 +55,10 @@ export function parseLineOptions(raw: string | undefined): LineOptions {
   if (!raw) return out;
   for (const pair of raw.split(";")) {
     const [key, value] = pair.split("=").map((s) => s.trim());
+    if (key === "t" && value) {
+      out.timing = sanitizeTiming(value.split(","));
+      continue;
+    }
     const n = Number(value);
     if (!key || value === undefined || !Number.isFinite(n)) continue;
     if (key === "x") out.offsetX = clamp(n, -MAX_LINE_OFFSET, MAX_LINE_OFFSET);
@@ -52,7 +72,7 @@ export function parseLineOptions(raw: string | undefined): LineOptions {
 }
 
 /** The ";key=value" tail for a line, or "" when it has nothing of its own. */
-export function formatLineOptions({ offsetX, offsetY, lineStyle }: LineOptions): string {
+export function formatLineOptions({ offsetX, offsetY, lineStyle, timing }: LineOptions): string {
   const parts: string[] = [];
   if (Math.abs(offsetX) >= 0.005) parts.push(`x=${offsetX.toFixed(2)}`);
   if (Math.abs(offsetY) >= 0.005) parts.push(`y=${offsetY.toFixed(2)}`);
@@ -60,5 +80,6 @@ export function formatLineOptions({ offsetX, offsetY, lineStyle }: LineOptions):
     const v = lineStyle[k];
     if (v !== undefined) parts.push(`${k}=${v.toFixed(2)}`);
   }
+  if (timing && timing.length > 0) parts.push(`t=${timing.map((v) => Number(v.toFixed(3))).join(",")}`);
   return parts.map((p) => `;${p}`).join("");
 }

@@ -117,6 +117,7 @@ export const DEFAULT_STYLE: StyleSettings = {
   exitMotion: true,
   lyricRoam: 0,
   autoContrast: "color",
+  autoContrastAmount: 0.5,
   snapToBeats: false,
 };
 
@@ -260,6 +261,7 @@ const toTimed = (l: LyricLine): TimedLyric => ({
   offsetY: l.offsetY,
   lineStyle: l.lineStyle,
   overlap: l.overlap,
+  timing: l.timing,
 });
 
 /** Rewrites the lyrics from edited lines; a line moved into the intro lowers the intro gate. */
@@ -320,6 +322,7 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
         p.style?.autoContrast === "off" || p.style?.autoContrast === "outline"
           ? p.style.autoContrast
           : "color",
+      autoContrastAmount: sanitizeUnit(p.style?.autoContrastAmount, 0.5),
       snapToBeats: p.style?.snapToBeats === true,
     },
     sfx: sanitizeSfx(p.sfx),

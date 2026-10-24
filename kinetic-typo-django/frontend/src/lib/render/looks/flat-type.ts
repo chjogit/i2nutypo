@@ -15,7 +15,7 @@ import {
   type LookRenderer,
 } from "./frame";
 import { hash01, hashSigned, withAlpha } from "./noise";
-import { wrapWords } from "./words";
+import { gapAfter, wrapWords } from "./words";
 import { fitScale } from "../wrap";
 
 // I. Flat type: a solid color field that flips on each line, one giant word stamped behind everything,
@@ -233,7 +233,7 @@ function lyrics(f: LookFrame): void {
         ctx.fillText(it.text, -it.w / 2, size * 0.36);
         ctx.restore();
       }
-      x += it.w + wrap.gap;
+      x += it.w + gapAfter(row, it, wrap.gap);
     }
   }
   ctx.restore();

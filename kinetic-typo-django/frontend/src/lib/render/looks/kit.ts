@@ -19,7 +19,7 @@ import { drawVerticalColumn, lineGlyphs, splitColumns } from "./glyphs";
 import { drawImageRect, type Rect } from "./illustration";
 import { GRID, pickColumn } from "./layout";
 import { hash01, hashSigned, withAlpha } from "./noise";
-import { rowWidth, wrapWords } from "./words";
+import { gapAfter, rowWidth, wrapWords } from "./words";
 
 // Shared parts for the themes that are built from common pieces: a filtered
 // backdrop, drifting particles, paper and light effects, and two lyric layouts.
@@ -368,7 +368,7 @@ export function drawWordLyrics(f: LookFrame, o: WordLyricsOptions): void {
         ctx.restore();
       }
       ctx.filter = "none";
-      x += it.w + wrap.gap;
+      x += it.w + gapAfter(row, it, wrap.gap);
     }
   }
   ctx.restore();

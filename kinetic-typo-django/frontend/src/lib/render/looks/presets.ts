@@ -608,18 +608,23 @@ export function lookElementAmount(
 }
 
 /** Keeps only well-formed entries from saved data. */
+/** How far a movable element can be shrunk or grown. */
+export const MIN_ELEMENT_SIZE = 0.3;
+export const MAX_ELEMENT_SIZE = 3;
+
 export function sanitizeLookElements(saved: unknown): Record<string, LookElementState> {
   const out: Record<string, LookElementState> = {};
   if (!saved || typeof saved !== "object") return out;
   for (const [k, v] of Object.entries(saved as Record<string, unknown>)) {
     if (!v || typeof v !== "object") continue;
-    const { on, amount, x, y, rot } = v as Record<string, unknown>;
+    const { on, amount, x, y, rot, size } = v as Record<string, unknown>;
     if (typeof on === "boolean" && typeof amount === "number" && Number.isFinite(amount)) {
       const st: LookElementState = { on, amount: Math.min(1, Math.max(0, amount)) };
       const fin = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
       if (fin(x)) st.x = Math.min(0.6, Math.max(-0.6, x));
       if (fin(y)) st.y = Math.min(0.6, Math.max(-0.6, y));
       if (fin(rot)) st.rot = Math.min(180, Math.max(-180, rot));
+      if (fin(size)) st.size = Math.min(MAX_ELEMENT_SIZE, Math.max(MIN_ELEMENT_SIZE, size));
       out[k] = st;
     }
   }

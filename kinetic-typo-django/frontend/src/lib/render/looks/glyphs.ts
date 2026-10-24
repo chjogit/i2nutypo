@@ -22,7 +22,15 @@ export function lineGlyphs(line: LyricLine, lineElapsed: number): Glyph[] {
     const wElapsed = lineElapsed - w.startOffset;
     if (wordIndex > 0 && w.breakBefore) out.push({ ch: "\n", wElapsed, isAccent: false, wordIndex });
     else if (spaced && wordIndex > 0) out.push({ ch: " ", wElapsed, isAccent: false, wordIndex });
-    for (const ch of Array.from(w.text)) out.push({ ch, wElapsed, isAccent: w.isAccent, wordIndex });
+    // A line timed character by character gives each glyph its own start
+    Array.from(w.text).forEach((ch, k) =>
+      out.push({
+        ch,
+        wElapsed: lineElapsed - (w.chars?.[k] ?? w.startOffset),
+        isAccent: w.isAccent,
+        wordIndex,
+      }),
+    );
   });
   return out;
 }

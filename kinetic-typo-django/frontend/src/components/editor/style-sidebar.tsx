@@ -16,7 +16,9 @@ import {
   LOOK_PRESETS,
   lookElementKey,
   lyricLookOf,
+  MAX_ELEMENT_SIZE,
   MAX_MIX_LOOKS,
+  MIN_ELEMENT_SIZE,
   pickedLooks,
   type ElementRole,
   type LookElementDef,
@@ -207,8 +209,10 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
 }
 
 const MOVE_SLIDERS: Array<{
-  key: "x" | "y" | "rot";
+  key: "x" | "y" | "rot" | "size";
   label: string;
+  /** The value of an element left as the theme placed it. */
+  base?: number;
   min: number;
   max: number;
   step: number;
@@ -231,6 +235,15 @@ const MOVE_SLIDERS: Array<{
     format: (v) => `${v > 0 ? "+" : ""}${Math.round(v * 100)}%`,
   },
   { key: "rot", label: "회전", min: -180, max: 180, step: 1, format: (v) => `${Math.round(v)}°` },
+  {
+    key: "size",
+    label: "크기",
+    min: MIN_ELEMENT_SIZE,
+    max: MAX_ELEMENT_SIZE,
+    step: 0.05,
+    base: 1,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
 ];
 
 /** Position and turn of a movable element; a double click on a slider puts it back. */
@@ -253,18 +266,20 @@ function MoveControls({
             min={m.min}
             max={m.max}
             step={m.step}
-            value={state[m.key] ?? 0}
+            value={state[m.key] ?? m.base ?? 0}
             onChange={(e) => onChange({ [m.key]: Number(e.target.value) })}
-            onDoubleClick={() => onChange({ [m.key]: 0 })}
+            onDoubleClick={() => onChange({ [m.key]: m.base ?? 0 })}
             aria-label={`${label} ${m.label}`}
             className="min-w-0 flex-1 accent-indigo-500"
           />
-          <span className="w-10 text-right font-mono text-zinc-300">{m.format(state[m.key] ?? 0)}</span>
+          <span className="w-10 text-right font-mono text-zinc-300">
+            {m.format(state[m.key] ?? m.base ?? 0)}
+          </span>
         </label>
       ))}
       <button
         type="button"
-        onClick={() => onChange({ x: 0, y: 0, rot: 0 })}
+        onClick={() => onChange({ x: 0, y: 0, rot: 0, size: 1 })}
         className="text-[11px] text-indigo-400 hover:underline"
       >
         원래 자리로
@@ -286,7 +301,8 @@ function ElementRow({
   onChange: (patch: Partial<LookElementState>) => void;
 }) {
   const [moving, setMoving] = useState(false);
-  const moved = (state.x ?? 0) !== 0 || (state.y ?? 0) !== 0 || (state.rot ?? 0) !== 0;
+  const moved =
+    (state.x ?? 0) !== 0 || (state.y ?? 0) !== 0 || (state.rot ?? 0) !== 0 || (state.size ?? 1) !== 1;
   return (
     <div className="space-y-1">
       <div className={`flex items-center gap-2 text-xs ${active ? "" : "opacity-50"}`}>
@@ -324,8 +340,8 @@ function ElementRow({
             type="button"
             onClick={() => setMoving((v) => !v)}
             aria-expanded={moving}
-            aria-label={`${def.label} 위치 · 회전`}
-            title="위치 · 회전"
+            aria-label={`${def.label} 위치 · 회전 · 크기`}
+            title="위치 · 회전 · 크기"
             className={`w-6 shrink-0 rounded border text-[11px] ${
               moving || moved
                 ? "border-indigo-500 text-indigo-200"
@@ -654,7 +670,7 @@ function ElementMotionFold() {
   const set = (patch: Partial<typeof em>) => setStyle({ elementMotion: { ...em, ...patch } });
   const row = (label: string, value: number, onChange: (v: number) => void, tip?: string) => (
     <label className="flex items-center gap-2 text-xs text-zinc-400">
-      <span className="inline-flex w-24 shrink-0 items-center gap-1">
+      <span className="inline-flex w-28 shrink-0 items-center gap-1">
         {label}
         {tip && <Tip>{tip}</Tip>}
       </span>
@@ -673,8 +689,15 @@ function ElementMotionFold() {
   );
   return (
     <Fold
-      className="space-y-2 border-t border-zinc-800/70 pt-3"
-      title="✎ 요소 움직임 · 가사 배치"
+      className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3"
+      title={
+        <>
+          ✎ 요소 움직임 · 가사 배치
+          <span className="ml-1 font-normal text-indigo-300">
+            {ELEMENT_MOTIONS.find(([mode]) => mode === em.mode)?.[1] ?? ""}
+          </span>
+        </>
+      }
       defaultOpen={false}
     >
       <div className="flex flex-wrap gap-1">
@@ -728,13 +751,17 @@ function ThemeTab() {
     <div className="space-y-3">
       {target.clip && <ThemeClipBanner clip={target.clip} />}
       {!target.clip && FEATURES_NOW.themeMix && <AutoComposeBox />}
+      {/* Element motion is one setting for the whole video, so it stays here even while a theme clip is picked */}
+      <ElementMotionFold />
       <ThemeGrid target={target} />
       <ThemeColorsFold target={target} />
-      {!target.clip && <ElementMotionFold />}
       {picked.some((id) => isThemedPresetId(id) && LOOK_ELEMENTS[id].some((d) => d.move)) && (
         <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
           ⌖ 요소는 옮기고 돌릴 수 있음
-          <Tip>⌖ 표시가 있는 요소(레코드, 커버, 원, 낙관 등)는 눌러서 위치를 옮기고 돌릴 수 있습니다.</Tip>
+          <Tip>
+            ⌖ 표시가 있는 요소(레코드, 커버, 원, 낙관 등)는 눌러서 위치·회전·크기를 바꿀 수 있습니다.
+            미리보기에서도 ⌖를 끌어 옮기고, 옆의 ⤡를 끌거나 ⌖ 위에서 휠을 돌려 크기를 바꿉니다.
+          </Tip>
         </p>
       )}
 

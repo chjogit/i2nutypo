@@ -9,6 +9,8 @@ export interface PlacedWord {
   accent: boolean;
   index: number;
   w: number;
+  /** A character of the same word as the item before it: no space between them. */
+  joined?: boolean;
 }
 
 /**
@@ -30,6 +32,22 @@ export function wrapWords(
   let rowW = 0;
   const measure = (t: string) => ctx.measureText(t).width;
   line.words.forEach((word, index) => {
+    const whole = measure(word.text);
+    if (word.chars && whole <= maxW) {
+      // Timed character by character: each character is its own item, kept on one row
+      const row = rows[rows.length - 1];
+      if (row.length > 0 && (word.breakBefore || rowW + gap + whole > maxW)) {
+        rows.push([]);
+        rowW = 0;
+      }
+      const cur = rows[rows.length - 1];
+      rowW += (cur.length > 0 ? gap : 0) + whole;
+      Array.from(word.text).forEach((text, k) => {
+        const e = lineElapsed - (word.chars?.[k] ?? word.startOffset);
+        cur.push({ text, e, accent: word.isAccent, index, w: measure(text), joined: k > 0 });
+      });
+      return;
+    }
     // Last resort for a word wider than a row even after fitScale
     const pieces = measure(word.text) > maxW ? wrapText(word.text, maxW, measure) : [word.text];
     pieces.forEach((text, k) => {
@@ -49,7 +67,11 @@ export function wrapWords(
 }
 
 export const rowWidth = (row: readonly PlacedWord[], gap: number): number =>
-  row.reduce((acc, it) => acc + it.w, 0) + gap * Math.max(0, row.length - 1);
+  row.reduce((acc, it, i) => acc + it.w + (i > 0 && !it.joined ? gap : 0), 0);
+
+/** Space to leave after an item in its row: the word gap, or none before the next character of the same word. */
+export const gapAfter = (row: readonly PlacedWord[], it: PlacedWord, gap: number): number =>
+  row[row.indexOf(it) + 1]?.joined ? 0 : gap;
 
 /**
  * Splits the first `count` characters of a text across the rows wrapText made

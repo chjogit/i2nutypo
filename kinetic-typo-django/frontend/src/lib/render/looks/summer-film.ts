@@ -17,7 +17,7 @@ import {
 } from "./frame";
 import { drawImageRect, type Rect } from "./illustration";
 import { hash01, hashSigned, withAlpha } from "./noise";
-import { rowWidth, wrapWords } from "./words";
+import { gapAfter, rowWidth, wrapWords } from "./words";
 import { fitScale } from "../wrap";
 
 // H. Summer film: cyan sky, drifting clouds, sunlight flare, a tilted instant-photo frame, film strips and a white flash on each line.
@@ -214,7 +214,7 @@ function lyrics(f: LookFrame): void {
         ctx.fillStyle = it.accent ? style.secondaryColor : style.textColor;
         ctx.fillText(it.text, x, y - size * 0.15 + lift);
       }
-      x += it.w + wrap.gap;
+      x += it.w + gapAfter(row, it, wrap.gap);
     }
   }
   ctx.restore();
