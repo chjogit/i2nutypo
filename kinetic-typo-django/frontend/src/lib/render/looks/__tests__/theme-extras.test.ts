@@ -40,7 +40,7 @@ function fakeCtx(): { ctx: Ctx2D; draws: () => number } {
   return { ctx, draws: () => draws };
 }
 
-const lines = parseLyrics("[00:01.00] 君が いない 夜を\n[00:03.00] 光の 中で\n[00:05.00] 우리의 여름", {
+const lines = parseLyrics("[00:01.00] 君が いない 夜を\n[00:03.00] 光の **中で** !\n[00:05.00] 우리의 여름", {
   duration: 12,
   introGateSec: 0,
 });

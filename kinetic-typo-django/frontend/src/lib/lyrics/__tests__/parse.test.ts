@@ -37,10 +37,23 @@ describe("parseLyrics", () => {
     expect(line.words[1].endOffset).toBeCloseTo(4 * 0.82);
   });
 
-  it("marks starred and semantic words", () => {
+  it("accents only the words the lyrics mark", () => {
     expect(detectWordSemanticEffect("*네가*")).toEqual({ effect: "impact", isAccent: true });
-    expect(detectWordSemanticEffect("멀리서")).toEqual({ effect: "stretch", isAccent: true });
+    expect(detectWordSemanticEffect("**네가**")).toEqual({ effect: "impact", isAccent: true });
+    expect(detectWordSemanticEffect("가자!")).toEqual({ effect: "impact", isAccent: true });
+    // A meaning still picks the motion, but unmarked it keeps the plain color
+    expect(detectWordSemanticEffect("멀리서")).toEqual({ effect: "stretch", isAccent: false });
+    expect(detectWordSemanticEffect("**멀리서**")).toEqual({ effect: "stretch", isAccent: true });
     expect(detectWordSemanticEffect("그래")).toEqual({ effect: "normal", isAccent: false });
+  });
+
+  it("leaves unmarked lines without accents and stresses the end of a ' !' line", () => {
+    const [plain, , flashed] = parseLyrics(
+      "[00:01.00] 터질 듯한 밤 영원히\n[00:03.00] 하나 둘 셋\n[00:05.00] 끝까지 가자 !",
+      opts,
+    );
+    expect(plain.words.some((w) => w.isAccent)).toBe(false);
+    expect(flashed.words.map((w) => w.isAccent)).toEqual([false, true]);
   });
 });
 

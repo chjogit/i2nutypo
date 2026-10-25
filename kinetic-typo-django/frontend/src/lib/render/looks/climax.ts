@@ -5,8 +5,7 @@ import { drawParticles } from "./kit";
 import { hash01, withAlpha } from "./noise";
 import type { ThemedPresetId } from "./presets";
 
-// Accent hits: when a big line starts (every third line, or one written with
-// "!" at the end), each theme lands a short hit of its own, a burst of light,
+// Accent hits: when a line written with " !" at the end starts, each theme lands a short hit of its own, a burst of light,
 // a slash of ink, a storm of petals, so the song's peaks look like peaks.
 
 const HIT_SEC = 1.3;
@@ -14,7 +13,7 @@ const HIT_SEC = 1.3;
 /** 0..1 hit envelope at the start of an accented line, 0 elsewhere. */
 export function climaxHit(f: LookFrame): number {
   const line = f.line;
-  if (!line || !(line.isBigLine || (line.lineStyle.flash ?? 0) > 0)) return 0;
+  if (!line || !((line.lineStyle.flash ?? 0) > 0)) return 0;
   const t = f.lineElapsed;
   if (t < 0 || t > HIT_SEC) return 0;
   return t < 0.08 ? t / 0.08 : 1 - easeOutExpo((t - 0.08) / (HIT_SEC - 0.08)) * 0.999;

@@ -67,20 +67,26 @@ const SEMANTIC_RULES: ReadonlyArray<{ effect: WordEffect; pattern: RegExp }> = [
   },
 ];
 
+/** A word ending in "!" is one the writer marked. */
+const ACCENT_END = /[!！]$/;
+
 const IMPACT_PATTERN =
   /터질|터져|폭발|클라이맥스|강렬|밤|Goodbye|GoodNight|Back|爆発|弾け|ドラマ|夜|drama|done|explode|climax/i;
 
-/** Picks a motion effect from the word's meaning; *starred* words get the impact pop. */
+/**
+ * Picks a motion effect from the word's meaning. Only words the lyrics mark,
+ * *starred* (or **double-starred**) or ending in "!", are accents: the themes
+ * color and mark those alone, so the writer chooses what stands out.
+ */
 export function detectWordSemanticEffect(rawWord: string): {
   effect: WordEffect;
   isAccent: boolean;
 } {
   const clean = rawWord.replace(/\*/g, "");
+  const isAccent = rawWord.includes("*") || ACCENT_END.test(clean);
   for (const rule of SEMANTIC_RULES) {
-    if (rule.pattern.test(clean)) return { effect: rule.effect, isAccent: true };
+    if (rule.pattern.test(clean)) return { effect: rule.effect, isAccent };
   }
-  if (rawWord.includes("*") || IMPACT_PATTERN.test(clean)) {
-    return { effect: "impact", isAccent: true };
-  }
+  if (isAccent || IMPACT_PATTERN.test(clean)) return { effect: "impact", isAccent };
   return { effect: "normal", isAccent: false };
 }

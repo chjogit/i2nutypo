@@ -101,10 +101,11 @@ function scene(f: LookFrame): void {
 
   drawCharacterLayer(f, { bounce: f.energy * 0.3, tilt: Math.sin(f.timeSec * 0.6) * 0.01, alpha: 0.95 });
 
-  // Ink blot behind the big lines, centered on where the line is set
+  // Ink blot behind lines the lyrics mark (" !" or an accent word), centered on where the line is set
   const line = f.line;
   const ink = amt(f, "ink");
-  if (line && line.isBigLine && ink > 0) {
+  const marked = line && ((line.lineStyle.flash ?? 0) > 0 || line.words.some((w) => w.isAccent));
+  if (line && marked && ink > 0) {
     const grow = Math.min(1, f.lineElapsed / 0.8);
     const { x, y } = lyricAnchor(f, true);
     ctx.fillStyle = withAlpha(style.accentColor, ink * lineExit(f, 0.12));

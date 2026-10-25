@@ -178,7 +178,8 @@ export function parseLyrics(text: string, { duration, introGateSec }: ParseLyric
           endOffset: times ? times.ends[wIdx] : (wIdx + 1) * perWord,
           ...(times?.chars ? { chars: times.chars[wIdx] } : {}),
           effect: sem.effect,
-          isAccent: sem.isAccent || (wIdx === tokens.length - 1 && isBigLine),
+          // A line marked with " !" stresses its last word
+          isAccent: sem.isAccent || (wIdx === tokens.length - 1 && (d.lineStyle?.flash ?? 0) > 0),
         };
       }),
     };
