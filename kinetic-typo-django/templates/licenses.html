@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{#- Open-source notices. Bundled packages and fonts come from the build's lists in static/; files fetched at run time from views.RUNTIME_DOWNLOADS. -#}
+{% block title %}오픈소스 · Kinetic Typo Studio{% endblock %}
+{% block fonts %}
+    <link rel="stylesheet" href="{{ static('fonts/noto-sans-kr/noto-sans-kr.css') }}" />
+{% endblock %}
+{% block content %}
+<main class="mx-auto max-w-4xl space-y-10 px-4 py-8 text-sm md:px-6">
+  <section class="space-y-2">
+    <h2 class="text-lg font-semibold text-zinc-100">오픈소스와 라이선스</h2>
+    <p class="text-zinc-400">
+      이 앱이 쓰는 라이브러리, 글꼴, 모델, 소재와 각각의 라이선스입니다. 모두 상업적 사용을 허락하는 라이선스이고,
+      음원과 그림은 이 브라우저 안에서만 처리되어 서버로 보내지지 않습니다.
+      전체 라이선스 원문은
+      <a class="text-indigo-300 underline" href="{{ static('licenses/THIRD_PARTY_NOTICES.txt') }}?v={{ v }}">THIRD_PARTY_NOTICES.txt</a>에 있습니다.
+    </p>
+  </section>
+
+  <section class="space-y-3">
+    <h3 class="text-base font-semibold text-zinc-100">내가 넣는 음원·가사·그림</h3>
+    <p class="text-zinc-400">
+      올리는 음원, 가사, 이미지, 영상의 권리는 각 권리자에게 있습니다. 직접 만들었거나 사용 허락을 받은 소재만 쓰고,
+      만든 영상을 공개할 때는 음원과 가사의 저작권(작사·작곡·음반)을 확인하세요. 이 앱은 소재를 서버에 저장하거나
+      다른 사람에게 보내지 않습니다.
+    </p>
+  </section>
+
+  <section class="space-y-3">
+    <h3 class="text-base font-semibold text-zinc-100">기능을 쓸 때 내려받는 파일</h3>
+    <p class="text-zinc-400">앱에 들어 있지 않고, 해당 기능을 처음 쓸 때 브라우저가 원래 배포처에서 직접 받아 캐시합니다.</p>
+    <div class="overflow-x-auto rounded-lg border border-zinc-800">
+      <table class="w-full text-left">
+        <thead class="bg-zinc-900 text-xs text-zinc-400">
+          <tr><th class="px-3 py-2">이름</th><th class="px-3 py-2">쓰임</th><th class="px-3 py-2">라이선스</th><th class="px-3 py-2">받는 곳</th></tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-800">
+          {% for d in downloads %}
+          <tr>
+            <td class="px-3 py-2"><a class="text-indigo-300 underline" href="{{ d.source }}" rel="noopener">{{ d.name }}</a></td>
+            <td class="px-3 py-2 text-zinc-400">{{ d.use }}</td>
+            <td class="px-3 py-2">{{ d.license }}</td>
+            <td class="px-3 py-2 text-zinc-400">{{ d.from }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-zinc-500">
+      FFmpeg은 GPL-2.0-or-later입니다. 이 앱은 FFmpeg을 함께 배포하지 않고, ProRes로 내보낼 때만 브라우저가 공개 CDN에서
+      받습니다. 소스는 위 링크(ffmpeg.wasm v0.12.10)와 <a class="underline" href="https://ffmpeg.org/download.html" rel="noopener">ffmpeg.org</a>에서
+      받을 수 있습니다. Mixkit 영상은 상업·뮤직비디오에 출처 표기 없이 쓸 수 있지만, 영상 파일 자체를 그대로 팔거나 다시 배포할 수는 없습니다.
+    </p>
+  </section>
+
+  <section class="space-y-3">
+    <h3 class="text-base font-semibold text-zinc-100">앱에 들어 있는 라이브러리</h3>
+    {% if packages %}
+    <div class="overflow-x-auto rounded-lg border border-zinc-800">
+      <table class="w-full text-left">
+        <thead class="bg-zinc-900 text-xs text-zinc-400">
+          <tr><th class="px-3 py-2">패키지</th><th class="px-3 py-2">버전</th><th class="px-3 py-2">라이선스</th></tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-800">
+          {% for p in packages %}
+          <tr>
+            <td class="px-3 py-2"><a class="text-indigo-300 underline" href="https://www.npmjs.com/package/{{ p.name }}/v/{{ p.version }}" rel="noopener">{{ p.name }}</a></td>
+            <td class="px-3 py-2 text-zinc-400">{{ p.version }}</td>
+            <td class="px-3 py-2">{{ p.license }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-zinc-500">
+      mediabunny(MPL-2.0)는 고치지 않고 그대로 묶었으며, 소스는 npm 패키지 페이지에서 받을 수 있습니다.
+    </p>
+    {% else %}
+    <p class="text-zinc-400">목록을 읽지 못했습니다. THIRD_PARTY_NOTICES.txt를 보세요.</p>
+    {% endif %}
+  </section>
+
+  <section class="space-y-3">
+    <h3 class="text-base font-semibold text-zinc-100">글꼴</h3>
+    <p class="text-zinc-400">
+      모두 이 사이트에서 직접 내보냅니다(Fontsource 패키지에서 가져옴). 영상에 상업적으로 써도 되고, 글꼴 파일만 따로 팔 수는 없습니다.
+    </p>
+    {% if fonts %}
+    <ul class="grid gap-x-6 gap-y-1 sm:grid-cols-2 md:grid-cols-3">
+      {% for f in fonts %}
+      <li><a class="text-indigo-300 underline" href="{{ static('fonts/' ~ f.slug ~ '/LICENSE') }}">{{ f.family }}</a> <span class="text-zinc-500">{{ f.license }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <section class="space-y-2">
+    <h3 class="text-base font-semibold text-zinc-100">이 앱의 라이선스</h3>
+    <p class="text-zinc-400">
+      Kinetic Typo Studio 자체 코드는 Copyright © 2026 i2nu, All rights reserved입니다. 위의 제3자 구성 요소는 각자의 라이선스를 따릅니다.
+      이 앱으로 만든 영상은 만든 사람의 것입니다(넣은 소재의 권리는 별도).
+    </p>
+  </section>
+</main>
+{% endblock %}

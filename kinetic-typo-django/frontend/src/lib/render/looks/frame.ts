@@ -31,6 +31,8 @@ export interface LookFrame {
   lineProgress: number;
   /** End of the last lyric line, used for song-progress decorations. */
   songEnd: number;
+  /** Start of the first lyric line (Infinity without lines); missing in older callers. */
+  songStart?: number;
   style: StyleSettings;
   subtitles: SubtitleSettings;
   energy: number;
@@ -61,6 +63,10 @@ export interface LookFrame {
   mixed?: boolean;
   /** Which lyric line the song is on, for elements that move or redraw as the lines change. */
   hop?: HopClock;
+  /** Between lines: when the last line ended (or -1 before the first) and when the next one starts. */
+  gap?: { from: number; to: number } | null;
+  /** Drawn once right before the character (theme extras that belong behind it); see render-look. */
+  beforeCharacter?: () => void;
 }
 
 export interface LookRenderer {
@@ -115,6 +121,7 @@ export function drawCharacterLayer(
   f: LookFrame,
   opts: { bounce: number; tilt: number; alpha?: number },
 ): void {
+  f.beforeCharacter?.();
   const img = f.images.character;
   if (!img || !f.charRect) return;
   const reveal = f.charReveal?.reveal ?? 1;

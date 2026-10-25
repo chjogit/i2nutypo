@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{#- Docs: the user guide and the project overview, each rendered from docs/*.md into templates/docs/ (docs/build.py). -#}
+{% block title %}Docs · Kinetic Typo Studio{% endblock %}
+{% block fonts %}
+    <link rel="stylesheet" href="{{ static('fonts/noto-sans-kr/noto-sans-kr.css') }}" />
+    <link rel="stylesheet" href="{{ static('fonts/black-han-sans/black-han-sans.css') }}" />
+{% endblock %}
+{% block content %}
+<div class="mx-auto flex max-w-6xl gap-10 px-4 py-8 md:px-6">
+  <nav aria-label="목차" class="sticky top-6 hidden max-h-[calc(100vh-3rem)] w-56 shrink-0 self-start overflow-y-auto text-sm lg:block">
+    {% for s in sections %}
+    <p class="mb-2 {{ 'mt-6' if not loop.first }} text-xs font-semibold tracking-wide text-zinc-400"><a href="#{{ s.id }}" class="hover:text-zinc-100">{{ s.title }}</a></p>
+    <ul class="space-y-1.5 border-l border-zinc-800">
+      {% for hid, text in s.headings %}
+      <li><a href="#{{ hid }}" class="-ml-px block border-l border-transparent pl-3 text-zinc-500 hover:border-indigo-400 hover:text-zinc-100">{{ text|safe }}</a></li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+    <p class="mt-6 text-xs"><a href="{{ url('licenses') }}" class="text-zinc-500 underline hover:text-zinc-200">오픈소스·라이선스</a></p>
+  </nav>
+
+  <main class="min-w-0 flex-1 space-y-16">
+    <div class="flex flex-wrap gap-2 lg:hidden">
+      {% for s in sections %}
+      <a href="#{{ s.id }}" class="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 hover:border-indigo-500">{{ s.title }}</a>
+      {% endfor %}
+      <a href="{{ url('licenses') }}" class="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 hover:border-indigo-500">오픈소스·라이선스</a>
+    </div>
+    {% for s in sections %}
+    <section id="{{ s.id }}" class="scroll-mt-6">
+      <h2 class="mb-6 font-['Black_Han_Sans'] text-3xl text-zinc-100">{{ s.title }}</h2>
+      <article class="doc">
+        {% include "docs/_" ~ s.id ~ ".html" %}
+      </article>
+    </section>
+    {% endfor %}
+    <p class="text-center">
+      <a href="{{ url('landing') }}" class="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">영상 만들러 가기</a>
+    </p>
+  </main>
+</div>
+{% endblock %}

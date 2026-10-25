@@ -8,8 +8,6 @@ import {
   type PretrainedModelOptions,
   type Tensor,
 } from "@huggingface/transformers";
-import { runSeparation } from "@/lib/separation/run-separation";
-import type { SeparateRequest, SeparateResponse } from "@/lib/separation/protocol";
 import type { TranscriptChunk } from "@/lib/sync/align";
 import { LyricBias } from "@/lib/sync/lyric-bias";
 import { isSilent, placeWindowChunks, planVoicedWindows, planWindows } from "@/lib/sync/windows";
@@ -22,11 +20,10 @@ import {
 
 // Runs Whisper in the browser, one worker per job (terminated afterwards to
 // free memory). Model files are downloaded once from the Hugging Face hub and
-// cached by the browser; the audio itself never leaves the device. The same
-// worker also separates the vocals from the song before recognition
-// (lib/separation), sharing the ONNX runtime.
+// cached by the browser; the audio itself never leaves the device. Vocal
+// separation runs in its own worker (separation.worker.ts).
 
-const post = (msg: WhisperResponse | SeparateResponse) => self.postMessage(msg);
+const post = (msg: WhisperResponse) => self.postMessage(msg);
 
 // pipeline()'s generic overloads are too large for the type checker; pin the one task used here
 const createAsrPipeline = pipeline as unknown as (
@@ -167,16 +164,8 @@ async function transcribe(
   return { chunks, text };
 }
 
-self.onmessage = async (event: MessageEvent<WhisperRequest | SeparateRequest>) => {
+self.onmessage = async (event: MessageEvent<WhisperRequest>) => {
   const req = event.data;
-  if (req.type === "separate") {
-    try {
-      await runSeparation(req, post);
-    } catch (err) {
-      post({ type: "error", message: err instanceof Error ? err.message : String(err) });
-    }
-    return;
-  }
   if (req.type !== "transcribe") return;
   try {
     post({ type: "status", status: "loading-model" });

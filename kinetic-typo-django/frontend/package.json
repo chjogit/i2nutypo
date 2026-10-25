@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@audio/neural-separate": "0.7.0",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@huggingface/transformers": "^3.8.1",

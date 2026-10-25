@@ -38,7 +38,8 @@ import { Fold } from "./fold";
 import { Tip } from "@/components/ui/tip";
 import { AutoContrastControl, LyricOrientationControl, NoVibrationToggle } from "./readability-controls";
 import { ELEMENT_MOTIONS } from "@/lib/timeline-fx/defs";
-import type { ElementMotionMode } from "@/types/project";
+import type { BgPattern, ElementMotionMode } from "@/types/project";
+import { BG_PATTERN_LABELS, BG_PATTERNS } from "@/lib/render/looks/generative-bg";
 import { FinishPanel } from "./finish-panel";
 
 const COLOR_FIELDS: Array<{
@@ -388,6 +389,18 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
     </button>
   );
 
+  const setExtras = (on: boolean) =>
+    LOOK_ELEMENTS[id].filter((d) => d.extra).forEach((d) => setLookElement(d.id, { on }, id));
+  const row = (def: LookElementDef) => (
+    <ElementRow
+      key={def.id}
+      def={def}
+      state={getLookElement(style.lookElements, id, def.id)}
+      active={elementInEffect(target.style, id, def)}
+      onChange={(patch) => setLookElement(def.id, patch, id)}
+    />
+  );
+
   return (
     <Fold
       className="space-y-1.5 border-t border-zinc-800/70 pt-3"
@@ -415,21 +428,53 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
         {!target.clip && roleButton("이 색 쓰기", false, () => applyPalette(id))}
       </div>
       <MotionChips id={id} isLyric={isLyric} />
-      {LOOK_ELEMENTS[id].map((def) => (
-        <ElementRow
-          key={def.id}
-          def={def}
-          state={getLookElement(style.lookElements, id, def.id)}
-          active={elementInEffect(target.style, id, def)}
-          onChange={(patch) => setLookElement(def.id, patch, id)}
-        />
-      ))}
+      {LOOK_ELEMENTS[id].filter((def) => !def.extra).map(row)}
+      <Fold
+        defaultOpen={false}
+        className="space-y-1.5 rounded-md border border-zinc-800/70 px-2 py-1.5"
+        title={`추가 연출 ${LOOK_ELEMENTS[id].filter((def) => def.extra).length}`}
+        right={
+          <span className="flex shrink-0 items-center gap-2 text-[11px]">
+            <button type="button" onClick={() => setExtras(true)} className="text-indigo-400 hover:underline">
+              모두 켜기
+            </button>
+            <button
+              type="button"
+              onClick={() => setExtras(false)}
+              className="text-indigo-400 hover:underline"
+            >
+              모두 끄기
+            </button>
+            <Tip>
+              테마마다 더한 배경·장식·가사 연출입니다. 그림이 없을 때의 기본 풍경, 큰 줄(세 줄마다, 끝에 !를
+              붙인 줄) 강조, 가사에 별·비·꽃·달·사랑 같은 말이 나오면 그 그림, 곡 제목을 넣으면 오프닝·엔딩
+              카드가 나옵니다. 생성 배경 무늬는 물결·덩어리·봉우리 같은 도형을 테마 색으로 깔아 줍니다.
+            </Tip>
+          </span>
+        }
+      >
+        {LOOK_ELEMENTS[id].filter((def) => def.extra).map(row)}
+        <label className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
+          <span>생성 배경 무늬 모양</span>
+          <select
+            value={style.bgPattern ?? "auto"}
+            onChange={(e) => setStyle({ bgPattern: e.target.value as BgPattern })}
+            className="rounded-md border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[11px] text-zinc-200"
+          >
+            {(["auto", ...BG_PATTERNS] as const).map((k) => (
+              <option key={k} value={k}>
+                {BG_PATTERN_LABELS[k]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </Fold>
     </Fold>
   );
 }
 
 /**
- * The theme's twelve lyric motions as chips: the lit ones are used (six per
+ * The theme's seventeen lyric motions as chips: the lit ones are used (six per
  * song, picked again when another song is loaded), and a click turns one on
  * or off.
  */
@@ -769,33 +814,33 @@ function ThemeTab() {
         isThemedPresetId(id) ? <ThemeBlock key={id} id={id} count={picked.length} target={target} /> : null,
       )}
 
-      {picked.includes("album_jacket") && (
-        <Fold
-          className="space-y-1.5 border-t border-zinc-800/70 pt-3"
-          title="앨범 자켓 제목 · 크레딧"
-          right={
-            <Tip>
-              앨범 자켓: 오른쪽 일러스트 칸에서 앨범 커버를 따로 올릴 수 있고, 없으면 배경 이미지가 커버로
-              쓰입니다. 제목을 비워 두면 제목 줄은 그리지 않습니다.
-            </Tip>
-          }
-        >
-          <input
-            value={style.coverTitle}
-            onChange={(e) => setStyle({ coverTitle: e.target.value })}
-            placeholder="곡 제목"
-            aria-label="곡 제목"
-            className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
-          />
-          <input
-            value={style.coverCredit}
-            onChange={(e) => setStyle({ coverCredit: e.target.value })}
-            placeholder="크레딧 (예: Vocal 이름 / Mix 이름)"
-            aria-label="크레딧"
-            className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
-          />
-        </Fold>
-      )}
+      <Fold
+        className="space-y-1.5 border-t border-zinc-800/70 pt-3"
+        title="곡 제목 · 크레딧"
+        right={
+          <Tip>
+            앨범 자켓은 제목 줄로, 다른 테마는 첫 가사 전 오프닝과 마지막 가사 뒤 엔딩 카드로 테마마다 다르게
+            보여 줍니다(요소 &quot;오프닝 · 엔딩 제목 카드&quot;로 끄고 켭니다). 비워 두면 그리지 않습니다.
+            앨범 자켓은 오른쪽 일러스트 칸에서 앨범 커버를 따로 올릴 수 있고, 없으면 배경 이미지가 커버로
+            쓰입니다.
+          </Tip>
+        }
+      >
+        <input
+          value={style.coverTitle}
+          onChange={(e) => setStyle({ coverTitle: e.target.value })}
+          placeholder="곡 제목"
+          aria-label="곡 제목"
+          className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
+        />
+        <input
+          value={style.coverCredit}
+          onChange={(e) => setStyle({ coverCredit: e.target.value })}
+          placeholder="크레딧 (예: Vocal 이름 / Mix 이름)"
+          aria-label="크레딧"
+          className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
+        />
+      </Fold>
     </div>
   );
 }

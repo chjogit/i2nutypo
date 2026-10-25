@@ -1,13 +1,14 @@
 import { isUserFont } from "./user-fonts";
 /**
- * Lyric fonts the user can pick, ten each for Korean, Japanese and English. All are on Google
- * Fonts under the SIL Open Font License, so they are free to use in videos, commercial ones
- * included. A font is fetched only when it is picked, not with the page.
+ * Lyric fonts the user can pick, ten each for Korean, Japanese and English. All are free fonts
+ * (SIL Open Font License, Kosugi Maru and Permanent Marker Apache-2.0), so they are free to use in
+ * videos, commercial ones included. They are served from this site (static/fonts/, written by
+ * scripts/vendor-fonts.mjs), and a font is fetched only when it is picked, not with the page.
  */
 export type FontLanguage = "ko" | "ja" | "en";
 
 export interface LyricFont {
-  /** CSS family name, as Google Fonts spells it. */
+  /** CSS family name, as Google Fonts and Fontsource spell it. */
   family: string;
   label: string;
   lang: FontLanguage;
@@ -158,11 +159,10 @@ export function lyricFontStack(family: string): string {
   return `'${font.family}', ${fallback}`;
 }
 
-/** Google Fonts stylesheet URL for one family. */
-export function googleFontUrl(font: LyricFont): string {
-  const name = font.family.replace(/ /g, "+");
-  const axis = font.weights.length > 1 || font.weights[0] !== 400 ? `:wght@${font.weights.join(";")}` : "";
-  return `https://fonts.googleapis.com/css2?family=${name}${axis}&display=swap`;
+/** The stylesheet of one family in static/fonts/, next to static/js/ where this bundle runs. */
+export function fontSheetUrl(font: LyricFont): string {
+  const slug = font.family.toLowerCase().replace(/ /g, "-");
+  return new URL(`../fonts/${slug}/${slug}.css`, import.meta.url).href;
 }
 
 /** Stylesheet loads by family, so each is added once. */
@@ -174,7 +174,7 @@ function addSheet(font: LyricFont): Promise<void> {
     sheet = new Promise<void>((resolve) => {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = googleFontUrl(font);
+      link.href = fontSheetUrl(font);
       link.onload = () => resolve();
       link.onerror = () => resolve();
       document.head.appendChild(link);

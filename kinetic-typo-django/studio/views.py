@@ -1,6 +1,9 @@
 import hashlib
+import json
 import os
+import re
 from functools import lru_cache
+from pathlib import Path
 
 from django.conf import settings
 from django.shortcuts import render
@@ -60,3 +63,103 @@ def studio(request, mode):
         "studio.html",
         {"v": asset_version(), "modes": MODES, "mode": mode, "mode_label": m["label"], "mode_hint": m["hint"]},
     )
+
+
+# Files the app downloads only when a feature is used. Listed by hand: they are not in the
+# bundle, so build.mjs cannot see them.
+RUNTIME_DOWNLOADS = [
+    {
+        "name": "Whisper base · small · large-v3-turbo (ONNX)",
+        "use": "자동 싱크 음성 인식",
+        "license": "MIT (OpenAI Whisper)",
+        "source": "https://huggingface.co/onnx-community/whisper-small",
+        "from": "Hugging Face (onnx-community)",
+    },
+    {
+        "name": "SCNet (int8)",
+        "use": "보컬 분리, 가볍게",
+        "license": "MIT (가중치: starrytong/SCNet)",
+        "source": "https://huggingface.co/audiojs/scnet",
+        "from": "Hugging Face (audiojs), 고정 리비전 + SHA-256 확인",
+    },
+    {
+        "name": "Mel-Band RoFormer (fp16)",
+        "use": "보컬 분리, 정밀하게",
+        "license": "MIT (가중치: KimberleyJSN/melbandroformer)",
+        "source": "https://huggingface.co/audiojs/mel-roformer",
+        "from": "Hugging Face (audiojs), 고정 리비전 + SHA-256 확인",
+    },
+    {
+        "name": "onnxruntime-web WebAssembly 1.22 · 1.30",
+        "use": "모델 실행",
+        "license": "MIT",
+        "source": "https://github.com/microsoft/onnxruntime",
+        "from": "jsDelivr",
+    },
+    {
+        "name": "FFmpeg (@ffmpeg/core 0.12.10)",
+        "use": "MOV ProRes 내보내기",
+        "license": "GPL-2.0-or-later",
+        "source": "https://github.com/ffmpegwasm/ffmpeg.wasm/tree/v0.12.10",
+        "from": "jsDelivr (실패하면 unpkg)",
+    },
+    {
+        "name": "Mixkit 무료 배경 영상",
+        "use": "배경 영상 고르기",
+        "license": "Mixkit Stock Video Free License",
+        "source": "https://mixkit.co/license/#videoFree",
+        "from": "assets.mixkit.co",
+    },
+    {
+        "name": "whisper.cpp ggml 모델 (데스크톱 앱만)",
+        "use": "이 컴퓨터 GPU로 음성 인식",
+        "license": "MIT",
+        "source": "https://huggingface.co/ggerganov/whisper.cpp",
+        "from": "Hugging Face (ggerganov)",
+    },
+]
+
+
+def _static_json(*parts):
+    """A JSON list written into static/ by the frontend build, or [] when it is not there."""
+    try:
+        return json.loads((settings.BASE_DIR / "static" / Path(*parts)).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def licenses(request):
+    """Open-source notices: bundled packages, fonts, files fetched at run time, and the app's own licence."""
+    return render(
+        request,
+        "licenses.html",
+        {
+            "v": asset_version(),
+            "modes": MODES,
+            "packages": _static_json("licenses", "packages.json"),
+            "fonts": _static_json("fonts", "fonts.json"),
+            "downloads": RUNTIME_DOWNLOADS,
+        },
+    )
+
+
+DOC_SECTIONS = [
+    {"id": "guide", "title": "사용법 설명서"},
+    {"id": "about", "title": "프로젝트 소개"},
+]
+
+
+@lru_cache(maxsize=None)
+def doc_headings(name):
+    """The "##" headings of a rendered doc (templates/docs/_<name>.html) as (id, text), for the page's contents."""
+    try:
+        html = (settings.BASE_DIR / "templates" / "docs" / f"_{name}.html").read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return re.findall(r'<h2 id="([^"]+)">(.*?)</h2>', html)
+
+
+def docs(request):
+    """User guide and project overview, rendered from docs/*.md by docs/build.py."""
+    sections = [{**s, "headings": doc_headings(s["id"])} for s in DOC_SECTIONS]
+    return render(request, "docs.html", {"v": asset_version(), "modes": MODES, "sections": sections})

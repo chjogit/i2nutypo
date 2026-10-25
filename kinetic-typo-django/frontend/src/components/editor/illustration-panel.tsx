@@ -8,6 +8,7 @@ import { pickedLooks } from "@/lib/render/looks/presets";
 import { Fold } from "./fold";
 import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
+import { RightsNote } from "@/components/ui/rights-note";
 
 type ImageSlot = "background" | "cover";
 type StageTool = "move" | "cells";
@@ -315,6 +316,7 @@ export function IllustrationPanel() {
   return (
     <section className="space-y-3 px-4 py-4">
       <h2 className="text-xs font-semibold tracking-wide text-zinc-400">배경 · 배치</h2>
+      <RightsNote what="배경·커버 그림" />
 
       <div className="space-y-1.5">
         <div

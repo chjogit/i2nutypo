@@ -1,0 +1,287 @@
+[
+  {
+    "family": "Noto Sans KR",
+    "package": "@fontsource/noto-sans-kr",
+    "version": "5.3.1",
+    "weights": [
+      400,
+      500,
+      600,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Black Han Sans",
+    "package": "@fontsource/black-han-sans",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Do Hyeon",
+    "package": "@fontsource/do-hyeon",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Jua",
+    "package": "@fontsource/jua",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Nanum Gothic",
+    "package": "@fontsource/nanum-gothic",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      800
+    ]
+  },
+  {
+    "family": "Gothic A1",
+    "package": "@fontsource/gothic-a1",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Gowun Dodum",
+    "package": "@fontsource/gowun-dodum",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Nanum Myeongjo",
+    "package": "@fontsource/nanum-myeongjo",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      800
+    ]
+  },
+  {
+    "family": "Gowun Batang",
+    "package": "@fontsource/gowun-batang",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700
+    ]
+  },
+  {
+    "family": "Nanum Pen Script",
+    "package": "@fontsource/nanum-pen-script",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Noto Sans JP",
+    "package": "@fontsource/noto-sans-jp",
+    "version": "5.3.1",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "M PLUS 1",
+    "package": "@fontsource/m-plus-1",
+    "version": "5.3.1",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "M PLUS Rounded 1c",
+    "package": "@fontsource/m-plus-rounded-1c",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Kosugi Maru",
+    "package": "@fontsource/kosugi-maru",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Zen Maru Gothic",
+    "package": "@fontsource/zen-maru-gothic",
+    "version": "5.3.1",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Dela Gothic One",
+    "package": "@fontsource/dela-gothic-one",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "RocknRoll One",
+    "package": "@fontsource/rocknroll-one",
+    "version": "5.3.1",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "DotGothic16",
+    "package": "@fontsource/dotgothic16",
+    "version": "5.3.1",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Shippori Mincho",
+    "package": "@fontsource/shippori-mincho",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      800
+    ]
+  },
+  {
+    "family": "Klee One",
+    "package": "@fontsource/klee-one",
+    "version": "5.3.1",
+    "weights": [
+      400,
+      600
+    ]
+  },
+  {
+    "family": "Montserrat",
+    "package": "@fontsource/montserrat",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Poppins",
+    "package": "@fontsource/poppins",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Inter",
+    "package": "@fontsource/inter",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Anton",
+    "package": "@fontsource/anton",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Bebas Neue",
+    "package": "@fontsource/bebas-neue",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "Oswald",
+    "package": "@fontsource/oswald",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700
+    ]
+  },
+  {
+    "family": "Raleway",
+    "package": "@fontsource/raleway",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Nunito",
+    "package": "@fontsource/nunito",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Playfair Display",
+    "package": "@fontsource/playfair-display",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      700,
+      900
+    ]
+  },
+  {
+    "family": "Permanent Marker",
+    "package": "@fontsource/permanent-marker",
+    "version": "5.3.0",
+    "weights": [
+      400
+    ]
+  },
+  {
+    "family": "JetBrains Mono",
+    "package": "@fontsource/jetbrains-mono",
+    "version": "5.3.0",
+    "weights": [
+      400,
+      500,
+      700
+    ]
+  }
+]

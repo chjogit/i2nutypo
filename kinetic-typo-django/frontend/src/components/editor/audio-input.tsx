@@ -3,6 +3,7 @@ import { closeAudioGraph, ensureAudioGraph } from "@/lib/audio/audio-graph";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { keepSong } from "@/lib/session/shared-song";
+import { RightsNote } from "@/components/ui/rights-note";
 
 /**
  * Picks a local audio file (it stays in the browser; only an object URL is
@@ -133,6 +134,7 @@ export function AudioInput({ heading = true }: { heading?: boolean }) {
         </button>
       )}
       {error && <p className="text-xs text-red-400">{error}</p>}
+      <RightsNote what="음원·가사" />
     </section>
   );
 }

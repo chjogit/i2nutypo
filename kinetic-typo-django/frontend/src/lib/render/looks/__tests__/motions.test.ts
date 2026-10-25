@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { MOTION_BY_ID, MOTIONS_PER_SONG, pickMotions, sanitizeMotionPicks, THEME_MOTIONS } from "../motions";
 
 describe("lyric motions", () => {
-  it("gives every theme twelve known motions", () => {
+  it("gives every theme seventeen known motions", () => {
     for (const list of Object.values(THEME_MOTIONS)) {
-      expect(new Set(list).size).toBe(12);
+      expect(new Set(list).size).toBe(17);
       for (const id of list) expect(MOTION_BY_ID.has(id)).toBe(true);
     }
   });

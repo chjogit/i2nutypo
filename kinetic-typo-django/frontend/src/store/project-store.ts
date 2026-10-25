@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { sanitizeThemeContrast } from "@/lib/render/looks/theme-contrast";
+import { sanitizeBgPattern } from "@/lib/render/looks/generative-bg";
 import { NEUTRAL_BG_FILTER, sanitizeBgFilter } from "@/lib/render/bg-filter";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { BEGINNER_THEMES, FEATURES_NOW, MODE, projectStorageKey } from "@/lib/mode/mode";
@@ -118,6 +119,7 @@ export const DEFAULT_STYLE: StyleSettings = {
   lyricRoam: 0,
   themeContrast: {},
   lyricOrientation: "auto",
+  bgPattern: "auto",
   noVibration: false,
   snapToBeats: false,
 };
@@ -321,6 +323,7 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
         p.style?.lyricOrientation === "horizontal" || p.style?.lyricOrientation === "vertical"
           ? p.style.lyricOrientation
           : "auto",
+      bgPattern: sanitizeBgPattern(p.style?.bgPattern),
       snapToBeats: p.style?.snapToBeats === true,
     },
     beats: sanitizeBeats(p.beats),

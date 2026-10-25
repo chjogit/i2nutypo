@@ -20,6 +20,7 @@ import { drawImageRect, type Rect } from "./illustration";
 import { GRID, pickColumn } from "./layout";
 import { hash01, hashSigned, withAlpha } from "./noise";
 import { gapAfter, rowWidth, wrapWords } from "./words";
+import { drawScenery } from "./scenery";
 
 // Shared parts for the themes that are built from common pieces: a filtered
 // backdrop, drifting particles, paper and light effects, and two lyric layouts.
@@ -40,7 +41,7 @@ export function drawBackdrop(f: LookFrame, filter: string, fallback: (f: LookFra
   ctx.restore();
 }
 
-/** A vertical two-color gradient with a few soft glows, for when no background is loaded. */
+/** A vertical two-color gradient and the theme's built-in scenery, for when no background is loaded. */
 export function gradientFallback(top: string, bottom: string) {
   return (f: LookFrame, r: Rect): void => {
     const { ctx } = f;
@@ -49,6 +50,7 @@ export function gradientFallback(top: string, bottom: string) {
     g.addColorStop(1, bottom);
     ctx.fillStyle = g;
     ctx.fillRect(r.x, r.y, r.w, r.h);
+    drawScenery(f, r);
   };
 }
 

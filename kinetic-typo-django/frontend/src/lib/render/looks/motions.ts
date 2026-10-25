@@ -6,7 +6,7 @@ import { lyricLookOf, type ThemedPresetId } from "./presets";
 
 // Whole-line lyric motions ("techniques") drawn around a theme's own lyrics:
 // how the line comes in, and how it moves while it is sung. Each theme offers
-// eight that suit it, and a song uses five of them (see pickMotions).
+// seventeen that suit it, and a song uses six of them (see pickMotions).
 
 export interface MotionFrame {
   ctx: Ctx2D;
@@ -75,6 +75,74 @@ function clipped(m: MotionFrame, path: (ctx: Ctx2D) => void, draw: () => void): 
   draw();
   ctx.restore();
 }
+
+/** Penner's elastic out: overshoots and rings before settling. */
+const elasticOut = (x: number) => {
+  const t = clamp01(x);
+  if (t === 0 || t === 1) return t;
+  return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1;
+};
+
+type StaggerFrom = "start" | "end" | "center" | "edges" | "random";
+
+/**
+ * When piece i of n starts, as a share 0..1 of the whole stagger: in order
+ * from one end, from the middle out, from both ends in, or shuffled.
+ */
+function staggerAt(i: number, n: number, from: StaggerFrom, seed: number): number {
+  if (n <= 1) return 0;
+  const mid = (n - 1) / 2;
+  switch (from) {
+    case "start":
+      return i / (n - 1);
+    case "end":
+      return 1 - i / (n - 1);
+    case "center":
+      return Math.abs(i - mid) / mid;
+    case "edges":
+      return 1 - Math.abs(i - mid) / mid;
+    case "random":
+      return hash01(i, seed + 977);
+  }
+}
+
+/**
+ * Draws the lyrics in n vertical strips across the frame, each moved by
+ * `piece` (dx, dy, scaleY about the lyric line, alpha) so the line seems to
+ * come in letter by letter without the theme having to split its text.
+ */
+function inStrips(
+  m: MotionFrame,
+  n: number,
+  piece: (i: number) => { dx: number; dy: number; sy: number; a: number },
+  draw: () => void,
+  rows = false,
+): void {
+  const { ctx } = m;
+  const size = (rows ? m.H : m.W) / n;
+  for (let i = 0; i < n; i++) {
+    const { dx, dy, sy, a } = piece(i);
+    if (a <= 0.001 || Math.abs(sy) < 0.01) continue;
+    ctx.save();
+    ctx.beginPath();
+    if (rows) ctx.rect(-m.W, i * size, m.W * 3, size + 0.5);
+    else ctx.rect(i * size, -m.H, size + 0.5, m.H * 3);
+    ctx.clip();
+    ctx.globalAlpha *= clamp01(a);
+    ctx.translate(dx, dy);
+    if (sy !== 1) {
+      ctx.translate(0, m.cy);
+      ctx.scale(1, sy);
+      ctx.translate(0, -m.cy);
+    }
+    draw();
+    ctx.restore();
+  }
+}
+
+/** 0..1 progress of a staggered piece: the pieces start over `spread` seconds, each taking `each`. */
+const staggered = (m: MotionFrame, at: number, spread: number, each: number) =>
+  clamp01((m.elapsed - at * spread) / each);
 
 export const MOTIONS: readonly MotionDef[] = [
   {
@@ -638,6 +706,304 @@ export const MOTIONS: readonly MotionDef[] = [
       m.ctx.restore();
     },
   },
+  {
+    id: "ripple_in",
+    label: "물결치며 맺히기",
+    apply: (m, d) => {
+      // Horizontal strips swaying apart, settling into the line
+      const p = easeOut(inP(m, 0.8));
+      const rows = 12;
+      const rh = m.H / rows;
+      const amp = (1 - p) * minSide(m) * 0.04;
+      m.ctx.save();
+      m.ctx.globalAlpha *= clamp01(p * 2);
+      for (let i = 0; i < rows; i++) {
+        const dx = Math.sin(m.elapsed * 9 + i * 0.9) * amp;
+        clipped(
+          m,
+          (c) => c.rect(-m.W, i * rh, m.W * 3, rh + 0.5),
+          () => moved(m, dx, 0, 1, d),
+        );
+      }
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "flicker_on",
+    label: "깜빡이며 켜지기",
+    apply: (m, d) => {
+      const t = m.elapsed;
+      const on =
+        t > 0.5 || (t > 0.04 && t < 0.09) || (t > 0.16 && t < 0.2) || (t > 0.28 && t < 0.36) || t > 0.42;
+      m.ctx.save();
+      m.ctx.globalAlpha *= on ? 1 : 0.12;
+      d();
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "petal_whirl",
+    label: "꽃잎처럼 돌며 내려앉기",
+    apply: (m, d) => {
+      const p = easeOut(inP(m, 0.9));
+      const dir = m.seed % 2 === 0 ? 1 : -1;
+      const a = (1 - p) * Math.PI * 0.6 * dir;
+      const r = (1 - p) * minSide(m) * 0.3;
+      m.ctx.save();
+      m.ctx.globalAlpha *= clamp01(p * 1.6);
+      moved(m, Math.sin(a) * r, -Math.cos(a) * r * 0.7 + (1 - p) * minSide(m) * 0.05, 1, () =>
+        about(m, 0.8 + 0.2 * p, 0.8 + 0.2 * p, a * 0.4, d),
+      );
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "film_jump",
+    label: "필름이 튀며 자리 잡기",
+    apply: (m, d) => {
+      // A few frame jumps down, then still
+      const t = m.elapsed;
+      const step = Math.floor(t * 16);
+      const jump = t < 0.3 ? (hash01(step, m.seed) - 0.3) * m.H * 0.06 : 0;
+      m.ctx.save();
+      m.ctx.globalAlpha *= t < 0.3 && step % 3 === 1 ? 0.55 : clamp01(t * 8);
+      moved(m, 0, jump, 1, d);
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "heartbeat",
+    label: "두근두근 고동치기",
+    apply: (m, d) => {
+      // Two quick beats a cycle, stronger as it comes in
+      const t = m.elapsed % 0.9;
+      const beat = Math.exp(-((t - 0.05) ** 2) / 0.002) + 0.7 * Math.exp(-((t - 0.25) ** 2) / 0.002);
+      const s = 1 + beat * 0.06 + (1 - easeOut(inP(m, 0.3))) * 0.3;
+      m.ctx.save();
+      m.ctx.globalAlpha *= inP(m, 0.15);
+      about(m, s, s, 0, d);
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "scan_reveal",
+    label: "주사선이 훑으며 그리기",
+    apply: (m, d) => {
+      const p = inP(m, 0.5);
+      if (p >= 1) {
+        d();
+        return;
+      }
+      const y = m.cy - m.H * 0.4 + p * m.H * 0.8;
+      clipped(m, (c) => c.rect(-m.W, -m.H, m.W * 3, y + m.H), d);
+      // The bright scan line
+      m.ctx.save();
+      m.ctx.globalCompositeOperation = "lighter";
+      m.ctx.fillStyle = "rgba(160,255,255,0.35)";
+      m.ctx.fillRect(0, y - 1, m.W, Math.max(2, minSide(m) * 0.004));
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "curtain_open",
+    label: "가운데서 막이 열리듯",
+    apply: (m, d) => {
+      const p = easeOut(inP(m, 0.6));
+      const half = p * m.W * 0.6;
+      clipped(m, (c) => c.rect(m.cx - half, -m.H, half * 2, m.H * 3), d);
+    },
+  },
+  {
+    id: "pendulum",
+    label: "매달려 흔들리다 멈추기",
+    apply: (m, d) => {
+      // Swings from a point above the line, dying out
+      const a = Math.sin(m.elapsed * 7) * Math.exp(-m.elapsed * 3) * 0.35 * (m.seed % 2 === 0 ? 1 : -1);
+      const { ctx } = m;
+      const py = m.cy - m.H * 0.35;
+      ctx.save();
+      ctx.globalAlpha *= inP(m, 0.12);
+      ctx.translate(m.cx, py);
+      ctx.rotate(a);
+      ctx.translate(-m.cx, -py);
+      d();
+      ctx.restore();
+    },
+  },
+  {
+    id: "fold_open",
+    label: "접힌 종이가 펼쳐지듯",
+    apply: (m, d) => {
+      const p = easeOutBack(inP(m, 0.5));
+      const sy = Math.max(0.02, p);
+      m.ctx.save();
+      m.ctx.globalAlpha *= clamp01(inP(m, 0.15) * 2);
+      about(m, 1, sy, 0, d);
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "zoom_blur",
+    label: "줌 잔상과 함께 꽂히기",
+    apply: (m, d) => {
+      const p = easeOut(inP(m, 0.35));
+      const { ctx } = m;
+      if (p < 1) {
+        for (let i = 3; i >= 1; i--) {
+          const s = 1 + (1 - p) * i * 0.25;
+          ctx.save();
+          ctx.globalAlpha *= 0.18 * (1 - p);
+          about(m, s, s, 0, d);
+          ctx.restore();
+        }
+      }
+      ctx.save();
+      ctx.globalAlpha *= clamp01(p * 2);
+      d();
+      ctx.restore();
+    },
+  },
+  {
+    id: "drip_reveal",
+    label: "물감이 흘러내리듯 드러나기",
+    apply: (m, d) => {
+      const cols = 14;
+      const cw = m.W / cols;
+      for (let i = 0; i < cols; i++) {
+        const p = easeOut(clamp01((m.elapsed - hash01(i, m.seed) * 0.25) / 0.5));
+        if (p <= 0) continue;
+        const bottom = m.cy - m.H * 0.4 + p * m.H * 0.9;
+        clipped(m, (c) => c.rect(i * cw, -m.H, cw + 0.5, bottom + m.H), d);
+      }
+    },
+  },
+  {
+    id: "tide",
+    label: "파도처럼 밀려왔다 빠지기",
+    apply: (m, d) => {
+      const p = easeOut(inP(m, 0.7));
+      const sway = Math.sin(m.elapsed * 1.6) * minSide(m) * 0.012;
+      const lean = Math.sin(m.elapsed * 1.6 + 1) * 0.015;
+      m.ctx.save();
+      m.ctx.globalAlpha *= clamp01(p * 1.5);
+      moved(m, (1 - p) * m.W * 0.12 + sway, (1 - p) * m.H * 0.05, 1, () => about(m, 1, 1, lean, d));
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "settle",
+    label: "눈송이처럼 천천히 내려앉기",
+    apply: (m, d) => {
+      const p = easeOut(inP(m, 1.1));
+      const sway = Math.sin(m.elapsed * 2.4 + m.seed) * (1 - p) * minSide(m) * 0.03;
+      moved(m, sway, -(1 - p) * m.H * 0.12, p * 1.2, d);
+    },
+  },
+  {
+    id: "stagger_center",
+    label: "가운데부터 차례로 솟아오르기",
+    apply: (m, d) => {
+      if (m.elapsed > 0.9) return d();
+      inStrips(
+        m,
+        16,
+        (i) => {
+          const p = staggered(m, staggerAt(i, 16, "center", m.seed), 0.35, 0.5);
+          return { dx: 0, dy: (1 - easeOutBack(p)) * m.H * 0.12, sy: 1, a: p * 2 };
+        },
+        d,
+      );
+    },
+  },
+  {
+    id: "stagger_edges",
+    label: "양끝에서 안쪽으로 차례로 내려앉기",
+    apply: (m, d) => {
+      if (m.elapsed > 1) return d();
+      inStrips(
+        m,
+        16,
+        (i) => {
+          const p = staggered(m, staggerAt(i, 16, "edges", m.seed), 0.4, 0.55);
+          return { dx: 0, dy: -(1 - bounceOut(p)) * m.H * 0.18, sy: 1, a: p * 3 };
+        },
+        d,
+      );
+    },
+  },
+  {
+    id: "stagger_random",
+    label: "조각이 무작위 순서로 뒤집혀 나타나기",
+    apply: (m, d) => {
+      if (m.elapsed > 0.85) return d();
+      inStrips(
+        m,
+        18,
+        (i) => {
+          const p = staggered(m, staggerAt(i, 18, "random", m.seed), 0.4, 0.4);
+          return { dx: 0, dy: 0, sy: easeOutBack(p), a: p * 2 };
+        },
+        d,
+      );
+    },
+  },
+  {
+    id: "stagger_wave",
+    label: "물결처럼 출렁이며 노래하기",
+    apply: (m, d) => {
+      const amp = minSide(m) * 0.018 * (0.6 + m.energy * 0.6);
+      const p = easeOut(inP(m, 0.5));
+      inStrips(
+        m,
+        12,
+        (i) => ({
+          dx: 0,
+          dy: Math.sin(m.elapsed * 4 - i * 0.55) * amp + (1 - p) * m.H * 0.06,
+          sy: 1,
+          a: p * 1.5,
+        }),
+        d,
+      );
+    },
+  },
+  {
+    id: "stagger_rows",
+    label: "가로 띠가 엇갈려 맞춰지기",
+    apply: (m, d) => {
+      if (m.elapsed > 0.8) return d();
+      inStrips(
+        m,
+        10,
+        (i) => {
+          const p = easeOut(staggered(m, staggerAt(i, 10, "start", m.seed), 0.25, 0.5));
+          return { dx: (i % 2 ? 1 : -1) * (1 - p) * m.W * 0.3, dy: 0, sy: 1, a: p * 1.5 };
+        },
+        d,
+        true,
+      );
+    },
+  },
+  {
+    id: "elastic_snap",
+    label: "고무줄처럼 늘었다 튕겨 맞춰지기",
+    apply: (m, d) => {
+      const p = elasticOut(inP(m, 0.9));
+      m.ctx.save();
+      m.ctx.globalAlpha *= clamp01(inP(m, 0.12));
+      about(m, Math.max(0.02, p), 1 + (1 - p) * 0.3, 0, d);
+      m.ctx.restore();
+    },
+  },
+  {
+    id: "rough_in",
+    label: "거칠게 떨다 자리 잡기",
+    apply: (m, d) => {
+      const p = inP(m, 0.6);
+      const k = (1 - easeOut(p)) * minSide(m) * 0.04;
+      const tick = Math.floor(m.elapsed * 24);
+      moved(m, hashSigned(tick, m.seed) * k, hashSigned(tick, m.seed + 5) * k, p * 2, d);
+    },
+  },
 ];
 
 export const MOTION_BY_ID = new Map(MOTIONS.map((x) => [x.id, x]));
@@ -731,6 +1097,24 @@ const EXIT_OF: Record<string, keyof typeof EXITS> = {
   stretch_wide: "flatten",
   slice_fall: "fall",
   camera_pan: "slideOut",
+  ripple_in: "blurOut",
+  flicker_on: "glitchOut",
+  petal_whirl: "spinOut",
+  film_jump: "glitchOut",
+  scan_reveal: "wipeOut",
+  curtain_open: "flatten",
+  fold_open: "flatten",
+  zoom_blur: "zoomIn",
+  drip_reveal: "fall",
+  tide: "slideOut",
+  settle: "fall",
+  stagger_center: "rise",
+  stagger_edges: "fall",
+  stagger_random: "flatten",
+  stagger_wave: "fade",
+  stagger_rows: "slideOut",
+  elastic_snap: "shrink",
+  rough_in: "glitchOut",
 };
 
 /** The exit that goes with a motion. */
@@ -753,7 +1137,7 @@ export function applyMotion(
 }
 export const motionLabel = (id: string): string => MOTION_BY_ID.get(id)?.label ?? id;
 
-/** The twelve motions that suit each theme, best first. */
+/** The seventeen motions that suit each theme, best first. */
 export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
   album_jacket: [
     "slide_side",
@@ -768,6 +1152,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "type_steps",
     "orbit",
     "diagonal_wipe",
+    "curtain_open",
+    "zoom_blur",
+    "stagger_center",
+    "stagger_wave",
+    "stagger_rows",
   ],
   pop_cutout: [
     "stamp",
@@ -782,6 +1171,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "squash_stretch",
     "beat_jump",
     "stretch_wide",
+    "pendulum",
+    "heartbeat",
+    "elastic_snap",
+    "stagger_edges",
+    "stagger_random",
   ],
   tint_panels: [
     "wipe_side",
@@ -796,6 +1190,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "blinds_vertical",
     "split_vertical",
     "type_steps",
+    "scan_reveal",
+    "curtain_open",
+    "stagger_rows",
+    "stagger_center",
+    "stagger_random",
   ],
   ballad_hud: [
     "blur_in",
@@ -810,6 +1209,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "camera_pan",
     "orbit",
     "ink_reveal",
+    "heartbeat",
+    "settle",
+    "stagger_center",
+    "stagger_wave",
+    "stagger_rows",
   ],
   cinematic_fantasy: [
     "blur_in",
@@ -824,6 +1228,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "glow_flash",
     "spiral_in",
     "camera_pan",
+    "curtain_open",
+    "settle",
+    "stagger_center",
+    "stagger_wave",
+    "stagger_edges",
   ],
   digital_crt: [
     "glitch_slices",
@@ -838,6 +1247,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "jitter_hold",
     "wave",
     "blinds_vertical",
+    "scan_reveal",
+    "flicker_on",
+    "stagger_random",
+    "rough_in",
+    "stagger_rows",
   ],
   dark_glitch: [
     "glitch_slices",
@@ -852,6 +1266,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "zoom_through",
     "slice_fall",
     "wave",
+    "zoom_blur",
+    "flicker_on",
+    "rough_in",
+    "stagger_random",
+    "stagger_rows",
   ],
   summer_film: [
     "slide_side",
@@ -866,6 +1285,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "orbit",
     "camera_pan",
     "type_steps",
+    "film_jump",
+    "pendulum",
+    "stagger_wave",
+    "stagger_center",
+    "elastic_snap",
   ],
   flat_type: [
     "stamp",
@@ -880,6 +1304,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "slice_fall",
     "diagonal_wipe",
     "stretch_wide",
+    "fold_open",
+    "pendulum",
+    "stagger_edges",
+    "stagger_rows",
+    "elastic_snap",
   ],
   eclipse_nebula: [
     "iris",
@@ -894,6 +1323,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "glow_flash",
     "zoom_through",
     "orbit",
+    "zoom_blur",
+    "settle",
+    "stagger_center",
+    "stagger_wave",
+    "stagger_random",
   ],
   mono_accent: [
     "wipe_side",
@@ -908,6 +1342,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "blinds_vertical",
     "type_steps",
     "slice_fall",
+    "fold_open",
+    "scan_reveal",
+    "stagger_rows",
+    "stagger_edges",
+    "rough_in",
   ],
   vintage_paper: [
     "blur_in",
@@ -922,6 +1361,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "jitter_hold",
     "swing_in",
     "type_steps",
+    "film_jump",
+    "fold_open",
+    "rough_in",
+    "stagger_center",
+    "stagger_wave",
   ],
   pastel_dream: [
     "pop_bounce",
@@ -936,6 +1380,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "swing_in",
     "beat_jump",
     "orbit",
+    "heartbeat",
+    "petal_whirl",
+    "stagger_wave",
+    "elastic_snap",
+    "stagger_center",
   ],
   crimson_ink: [
     "wipe_side",
@@ -950,6 +1399,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "slam_down",
     "diagonal_wipe",
     "jitter_hold",
+    "drip_reveal",
+    "curtain_open",
+    "rough_in",
+    "stagger_edges",
+    "stagger_random",
   ],
   sakura_breeze: [
     "drift",
@@ -964,6 +1418,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "orbit",
     "wave",
     "camera_pan",
+    "petal_whirl",
+    "settle",
+    "stagger_wave",
+    "stagger_center",
+    "stagger_edges",
   ],
   snow_night: [
     "blur_in",
@@ -978,6 +1437,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "orbit",
     "ink_reveal",
     "swing_in",
+    "settle",
+    "ripple_in",
+    "stagger_edges",
+    "stagger_wave",
+    "stagger_center",
   ],
   rain_window: [
     "wipe_down",
@@ -992,6 +1456,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "ink_reveal",
     "blinds_vertical",
     "camera_pan",
+    "drip_reveal",
+    "ripple_in",
+    "stagger_edges",
+    "stagger_wave",
+    "stagger_random",
   ],
   manga_panel: [
     "stamp",
@@ -1006,6 +1475,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "slice_fall",
     "jitter_hold",
     "stretch_wide",
+    "zoom_blur",
+    "pendulum",
+    "elastic_snap",
+    "rough_in",
+    "stagger_edges",
   ],
   deep_sea: [
     "drift",
@@ -1020,6 +1494,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "orbit",
     "glow_flash",
     "ink_reveal",
+    "ripple_in",
+    "tide",
+    "stagger_wave",
+    "stagger_center",
+    "stagger_random",
   ],
   neon_sign: [
     "strobe",
@@ -1034,6 +1513,11 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "jitter_hold",
     "beat_jump",
     "zoom_through",
+    "flicker_on",
+    "heartbeat",
+    "stagger_random",
+    "rough_in",
+    "stagger_wave",
   ],
 };
 

@@ -104,6 +104,17 @@ export function findActiveLine(
   return null;
 }
 
+/** The quiet stretch between lines at timeSec, or null when there is no line still to come. */
+export function gapAt(lines: readonly LyricLine[], timeSec: number): { from: number; to: number } | null {
+  let from = -1;
+  for (const l of lines) {
+    if (l.overlap) continue;
+    if (l.startTime > timeSec) return { from, to: l.startTime };
+    from = Math.max(from, l.endTime);
+  }
+  return null;
+}
+
 /**
  * Lines on screen at timeSec: the main one and the overlapping ("&") ones sung
  * over it. An overlapping line that outlasts its main line takes its place.
@@ -258,10 +269,12 @@ function drawFrame(input: FrameInput): void {
         timeSec,
         line: activeLine,
         nextLine: active?.next ?? null,
+        gap: activeLine || overlaps.length > 0 ? null : gapAt(lines, timeSec),
         overlaps,
         lineElapsed,
         lineProgress: Math.min(1, Math.max(0, lineElapsed / lineDur)),
         songEnd: lines.reduce((end, l) => Math.max(end, l.endTime), 0),
+        songStart: lines.reduce((start, l) => Math.min(start, l.startTime), Infinity),
         style,
         subtitles,
         energy,

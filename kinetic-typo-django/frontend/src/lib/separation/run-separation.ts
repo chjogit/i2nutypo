@@ -1,64 +1,19 @@
 /// <reference lib="webworker" />
-import * as ort from "onnxruntime-web";
+import separate from "@audio/neural-separate";
 import { WHISPER_SAMPLE_RATE } from "@/lib/sync/whisper-protocol";
-import { KIM_VOCAL_2, separateVocals } from "./mdx";
 import { SEPARATION_SAMPLE_RATE, type SeparateRequest, type SeparateResponse } from "./protocol";
 import { resample, toMono } from "./resample";
 
-// Runs inside the speech worker (workers/whisper.worker.ts), so it shares the
-// ONNX runtime that transformers.js already set up. The model file is kept in
-// the browser's Cache Storage after the first download.
+// Runs inside the separation worker (workers/separation.worker.ts) with the
+// onnxruntime-web build @audio/neural-separate is tested against. Its .wasm
+// files come from jsDelivr at that exact version.
 
-const CACHE_NAME = "kinetic-typo-models";
+const ORT_VERSION = "1.30.0";
+const WASM_PATHS = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist/`;
 
-async function fetchModel(url: string, onProgress: (p: number) => void): Promise<ArrayBuffer> {
-  const cache = await caches.open(CACHE_NAME).catch(() => null);
-  const hit = await cache?.match(url);
-  if (hit) {
-    onProgress(1);
-    return hit.arrayBuffer();
-  }
-  const res = await fetch(url);
-  if (!res.ok || !res.body) throw new Error(`분리 모델을 내려받지 못했습니다 (fetch ${res.status})`);
-  const total = Number(res.headers.get("content-length")) || 0;
-  const reader = res.body.getReader();
-  const parts: Uint8Array[] = [];
-  let loaded = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    parts.push(value);
-    loaded += value.length;
-    if (total) onProgress(loaded / total);
-  }
-  const bytes = new Uint8Array(loaded);
-  let at = 0;
-  for (const p of parts) {
-    bytes.set(p, at);
-    at += p.length;
-  }
-  await cache?.put(url, new Response(bytes, { headers: { "content-type": "application/octet-stream" } }));
-  return bytes.buffer;
-}
-
-async function createSession(
-  model: ArrayBuffer,
-): Promise<{ session: ort.InferenceSession; device: "webgpu" | "wasm" }> {
-  const hasGpu = "gpu" in self.navigator;
-  if (hasGpu) {
-    try {
-      return {
-        session: await ort.InferenceSession.create(model, { executionProviders: ["webgpu"] }),
-        device: "webgpu",
-      };
-    } catch (err) {
-      console.warn("Separation on WebGPU failed, using the CPU:", err);
-    }
-  }
-  return {
-    session: await ort.InferenceSession.create(model, { executionProviders: ["wasm"] }),
-    device: "wasm",
-  };
+async function hasGpu(): Promise<boolean> {
+  const gpu = (self.navigator as Navigator & { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
+  return Boolean(gpu && (await gpu.requestAdapter().catch(() => null)));
 }
 
 export async function runSeparation(
@@ -66,27 +21,35 @@ export async function runSeparation(
   post: (msg: SeparateResponse) => void,
 ): Promise<void> {
   post({ type: "status", status: "loading-model" });
-  const model = await fetchModel(req.modelUrl, (progress) => post({ type: "load-progress", progress }));
-  const { session, device } = await createSession(model);
-  try {
-    post({ type: "status", status: "separating" });
-    const cfg = KIM_VOCAL_2;
-    const shape = [1, 4, cfg.dimF, cfg.dimT];
-    const stems = await separateVocals(
-      req.left,
-      req.right,
-      cfg,
-      async (spectrum) => {
-        const out = await session.run({
-          [session.inputNames[0]]: new ort.Tensor("float32", spectrum, shape),
-        });
-        return out[session.outputNames[0]].data as Float32Array;
+  const run = async (device: "webgpu" | "wasm") => {
+    let started = false;
+    const out = await separate([req.left, req.right], {
+      sampleRate: SEPARATION_SAMPLE_RATE,
+      model: req.model,
+      targets: ["vocals"],
+      device,
+      wasmPaths: WASM_PATHS,
+      progress: ({ chunk, totalChunks }) => {
+        if (!started) {
+          started = true;
+          post({ type: "status", status: "separating" });
+        }
+        post({ type: "separate-progress", progress: totalChunks ? chunk / totalChunks : 0 });
       },
-      (progress) => post({ type: "separate-progress", progress }),
-    );
-    const vocals = resample(toMono(stems.left, stems.right), SEPARATION_SAMPLE_RATE, WHISPER_SAMPLE_RATE);
-    self.postMessage({ type: "separated", vocals, device } satisfies SeparateResponse, [vocals.buffer]);
-  } finally {
-    await session.release();
+    });
+    return out.stems.vocals;
+  };
+  let device: "webgpu" | "wasm" = (await hasGpu()) ? "webgpu" : "wasm";
+  let stems: Float32Array[];
+  try {
+    stems = await run(device);
+  } catch (err) {
+    if (device === "wasm" || req.model === "mel-roformer") throw err;
+    console.warn("Separation on WebGPU failed, using the CPU:", err);
+    device = "wasm";
+    stems = await run(device);
   }
+  const [left, right = left] = stems;
+  const vocals = resample(toMono(left, right), SEPARATION_SAMPLE_RATE, WHISPER_SAMPLE_RATE);
+  self.postMessage({ type: "separated", vocals, device } satisfies SeparateResponse, [vocals.buffer]);
 }

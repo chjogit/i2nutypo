@@ -1,3 +1,4 @@
+import { drawScenery } from "./scenery";
 import { easeOutBack } from "../easing";
 import {
   amt,
@@ -49,7 +50,7 @@ function scene(f: LookFrame): void {
     ctx.globalAlpha = 1 - amt(f, "wash") * 0.85;
     drawIllustration(f, { x: 0, y: 0, w: W, h: H });
     ctx.restore();
-  }
+  } else drawScenery(f, { x: 0, y: 0, w: W, h: H });
 
   drawHalftone(f);
 

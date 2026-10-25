@@ -301,6 +301,9 @@ export type ThemeColors = Pick<StyleSettings, "bgColor" | "textColor" | "accentC
 
 /** Lyrics across (horizontal) or in columns (vertical); auto: as the theme sets them. */
 export type LyricOrientation = "auto" | "horizontal" | "vertical";
+/** Generated background pattern drawn by a theme's "pattern" element; "auto" uses the theme's own. */
+export type BgPattern =
+  "auto" | "waves" | "blobs" | "peaks" | "steps" | "lowpoly" | "scatter" | "topo" | "blur";
 
 /** A filter on the background video alone (style.bgVideoFilter); the lyrics and decorations keep their colors. */
 export interface BgVideoFilter {
@@ -423,6 +426,8 @@ export interface StyleSettings {
   noVibration: boolean;
   /** Lyrics set across or in columns over the whole video; "auto" keeps each theme's own. */
   lyricOrientation: LyricOrientation;
+  /** Which generated pattern the theme's "pattern" element draws. */
+  bgPattern?: BgPattern;
   /** Timeline clips also snap to the analysed beats while dragged. */
   snapToBeats: boolean;
   activePresetId: string;

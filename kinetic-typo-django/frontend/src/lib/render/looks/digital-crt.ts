@@ -1,3 +1,4 @@
+import { drawScenery } from "./scenery";
 import { drawImageRect, type Rect } from "./illustration";
 import { lineGlyphs } from "./glyphs";
 import {
@@ -104,6 +105,7 @@ function scene(f: LookFrame): void {
     g.addColorStop(1, withAlpha(style.secondaryColor, 0.9));
     ctx.fillStyle = g;
     ctx.fillRect(content.x, content.y, content.w, content.h);
+    drawScenery(f, content);
   }
   // The character keeps its screen position but only shows through the window
   drawCharacterLayer(f, { bounce: f.energy * 0.6, tilt: 0 });

@@ -1,0 +1,188 @@
+[
+  {
+    "family": "Noto Sans KR",
+    "slug": "noto-sans-kr",
+    "license": "OFL-1.1",
+    "version": "5.3.1"
+  },
+  {
+    "family": "Black Han Sans",
+    "slug": "black-han-sans",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Do Hyeon",
+    "slug": "do-hyeon",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Jua",
+    "slug": "jua",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Nanum Gothic",
+    "slug": "nanum-gothic",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Gothic A1",
+    "slug": "gothic-a1",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Gowun Dodum",
+    "slug": "gowun-dodum",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Nanum Myeongjo",
+    "slug": "nanum-myeongjo",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Gowun Batang",
+    "slug": "gowun-batang",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Nanum Pen Script",
+    "slug": "nanum-pen-script",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Noto Sans JP",
+    "slug": "noto-sans-jp",
+    "license": "OFL-1.1",
+    "version": "5.3.1"
+  },
+  {
+    "family": "M PLUS 1",
+    "slug": "m-plus-1",
+    "license": "OFL-1.1",
+    "version": "5.3.1"
+  },
+  {
+    "family": "M PLUS Rounded 1c",
+    "slug": "m-plus-rounded-1c",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Kosugi Maru",
+    "slug": "kosugi-maru",
+    "license": "Apache-2.0",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Zen Maru Gothic",
+    "slug": "zen-maru-gothic",
+    "license": "OFL-1.1",
+    "version": "5.3.1"
+  },
+  {
+    "family": "Dela Gothic One",
+    "slug": "dela-gothic-one",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "RocknRoll One",
+    "slug": "rocknroll-one",
+    "license": "OFL-1.1",
+    "version": "5.3.1"
+  },
+  {
+    "family": "DotGothic16",
+    "slug": "dotgothic16",
+    "license": "OFL-1.1",
+    "version": "5.3.1"
+  },
+  {
+    "family": "Shippori Mincho",
+    "slug": "shippori-mincho",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Klee One",
+    "slug": "klee-one",
+    "license": "OFL-1.1",
+    "version": "5.3.1"
+  },
+  {
+    "family": "Montserrat",
+    "slug": "montserrat",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Poppins",
+    "slug": "poppins",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Inter",
+    "slug": "inter",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Anton",
+    "slug": "anton",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Bebas Neue",
+    "slug": "bebas-neue",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Oswald",
+    "slug": "oswald",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Raleway",
+    "slug": "raleway",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Nunito",
+    "slug": "nunito",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Playfair Display",
+    "slug": "playfair-display",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  },
+  {
+    "family": "Permanent Marker",
+    "slug": "permanent-marker",
+    "license": "Apache-2.0",
+    "version": "5.3.0"
+  },
+  {
+    "family": "JetBrains Mono",
+    "slug": "jetbrains-mono",
+    "license": "OFL-1.1",
+    "version": "5.3.0"
+  }
+]

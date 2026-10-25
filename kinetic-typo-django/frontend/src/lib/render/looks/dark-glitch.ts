@@ -1,3 +1,4 @@
+import { drawScenery } from "./scenery";
 import { drawImageBand, type Rect } from "./illustration";
 import { drawVerticalColumn, lineGlyphs, splitColumns } from "./glyphs";
 import { cellRect, GRID, pickCell, pickColumn } from "./layout";
@@ -57,6 +58,7 @@ function scene(f: LookFrame): void {
     g.addColorStop(1, "rgba(0,0,0,0)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+    drawScenery(f, { x: 0, y: 0, w: W, h: H });
   }
   ctx.restore();
 

@@ -13,6 +13,7 @@ import { Fold } from "./fold";
 import { TimeField } from "./time-field";
 import { probeVideo } from "@/lib/media/video-bg";
 import { Tip } from "@/components/ui/tip";
+import { RightsNote } from "@/components/ui/rights-note";
 
 const now = () => usePlaybackStore.getState().currentTime;
 
@@ -332,6 +333,7 @@ export function PropsPanel() {
           패널의 "배경 영상"을 쓰세요.
         </Tip>
       </p>
+      <RightsNote what="그림·영상" />
       {error && <p className="text-xs text-red-400">{error}</p>}
 
       <div className="rounded-md border border-zinc-800">

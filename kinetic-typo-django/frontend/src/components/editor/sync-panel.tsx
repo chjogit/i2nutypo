@@ -10,6 +10,11 @@ import {
   type TranscribeHandle,
 } from "@/lib/sync/whisper-client";
 import { detectAccelerator, type Accelerator } from "@/lib/sync/device";
+import {
+  DEFAULT_SEPARATION_MODEL,
+  SEPARATION_MODELS,
+  type SeparationModel,
+} from "@/lib/separation/protocol";
 import { decodeStereo, encodeWav, separateInWorker } from "@/lib/separation/separation-client";
 import { isDesktopApp, transcribeLocal } from "@/lib/desktop/local-whisper";
 import {
@@ -56,6 +61,7 @@ type SyncMode = "fast" | "normal" | "power";
 /** A song's separated vocals, kept so recognizing again (another model, edited lyrics) skips separation. */
 interface SeparatedVocals {
   objectUrl: string;
+  model: SeparationModel;
   vocals: Float32Array;
   previewUrl: string;
 }
@@ -93,6 +99,7 @@ export function SyncPanel() {
   const jobRef = useRef<Pick<TranscribeHandle, "cancel"> | null>(null);
   const [separate, setSeparate] = useState(true);
   const separateTouchedRef = useRef(false);
+  const [sepModel, setSepModel] = useState<SeparationModel>(DEFAULT_SEPARATION_MODEL);
   const [separatedVocals, setSeparatedVocals] = useState<SeparatedVocals | null>(null);
   const [desktop, setDesktop] = useState(false);
   const engine = useEngineStore((s) => s.engine);
@@ -156,14 +163,17 @@ export function SyncPanel() {
       let pcm: Float32Array | null = null;
       let separationError: string | undefined;
       if (separate) {
-        const cached = separatedVocals?.objectUrl === audio.objectUrl ? separatedVocals : null;
+        const cached =
+          separatedVocals?.objectUrl === audio.objectUrl && separatedVocals.model === sepModel
+            ? separatedVocals
+            : null;
         if (cached) {
           // The worker takes ownership of what it is sent, so the kept copy stays intact
           pcm = cached.vocals.slice();
         } else {
           try {
             const stereo = await decodeStereo(audio.objectUrl);
-            const job = separateInWorker(stereo.left, stereo.right, {
+            const job = separateInWorker(stereo.left, stereo.right, sepModel, {
               onStatus: (status) =>
                 setPhase(
                   status === "loading-model"
@@ -177,7 +187,7 @@ export function SyncPanel() {
             const { vocals } = await job.result;
             jobRef.current = null;
             const previewUrl = URL.createObjectURL(encodeWav(vocals, WHISPER_SAMPLE_RATE));
-            setSeparatedVocals({ objectUrl: audio.objectUrl, vocals, previewUrl });
+            setSeparatedVocals({ objectUrl: audio.objectUrl, model: sepModel, vocals, previewUrl });
             pcm = vocals.slice();
           } catch (err) {
             jobRef.current = null;
@@ -276,12 +286,40 @@ export function SyncPanel() {
           <span>
             <span className="font-semibold text-zinc-200">보컬만 분리해서 인식</span>{" "}
             <span className="text-zinc-500">
-              반주를 걷어내고 목소리만 들려줘 인식이 훨씬 정확해집니다. 처음 한 번 분리 모델(67MB)을
+              반주를 걷어내고 목소리만 들려줘 인식이 훨씬 정확해집니다. 처음 한 번 분리 모델을
               내려받습니다.
               {accelerator === "cpu" && " 이 브라우저는 GPU를 못 써서 곡 길이에 따라 몇 분 더 걸립니다."}
             </span>
           </span>
         </label>
+        {separate && (
+          <div role="radiogroup" aria-label="보컬 분리 모델" className="grid grid-cols-2 gap-1">
+            {SEPARATION_MODELS.map((m) => {
+              const off = busy || (m.gpuOnly && accelerator === "cpu");
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={sepModel === m.id}
+                  disabled={off}
+                  title={m.gpuOnly && accelerator === "cpu" ? "GPU(WebGPU)가 있어야 쓸 수 있습니다" : undefined}
+                  onClick={() => setSepModel(m.id)}
+                  className={`rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${
+                    sepModel === m.id
+                      ? "border-indigo-500 bg-indigo-600/15 text-zinc-100"
+                      : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                  }`}
+                >
+                  <span className="block text-[11px] font-semibold">{m.label}</span>
+                  <span className="block text-[10px] text-zinc-500">
+                    {m.sizeMb}MB · {m.note}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         {!useLocal && (
           <>
             <div role="radiogroup" aria-label="싱크 모드" className="grid grid-cols-3 gap-1">

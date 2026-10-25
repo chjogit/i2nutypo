@@ -1,8 +1,8 @@
 import {
   SEPARATION_SAMPLE_RATE,
-  VOCAL_MODEL_URL,
   type SeparateRequest,
   type SeparateResponse,
+  type SeparationModel,
 } from "./protocol";
 
 /** Decodes an audio file to stereo PCM at 44.1 kHz, the separation model's rate. */
@@ -31,13 +31,14 @@ export interface SeparateHandle {
   cancel: () => void;
 }
 
-/** Separates the vocals in a fresh worker (the speech worker bundle), terminated when done. */
+/** Separates the vocals in a fresh worker, terminated when done. */
 export function separateInWorker(
   left: Float32Array,
   right: Float32Array,
+  model: SeparationModel,
   callbacks: SeparateCallbacks,
 ): SeparateHandle {
-  const worker = new Worker(new URL("./whisper-worker.js", import.meta.url), { type: "module" });
+  const worker = new Worker(new URL("./separation-worker.js", import.meta.url), { type: "module" });
   let rejectFn: (err: Error) => void = () => {};
   const result = new Promise<{ vocals: Float32Array; device: "webgpu" | "wasm" }>((resolve, reject) => {
     rejectFn = reject;
@@ -59,7 +60,7 @@ export function separateInWorker(
       reject(new Error(e.message || "보컬 분리 워커 오류"));
     };
   });
-  const req: SeparateRequest = { type: "separate", modelUrl: VOCAL_MODEL_URL, left, right };
+  const req: SeparateRequest = { type: "separate", model, left, right };
   worker.postMessage(req, left.buffer === right.buffer ? [left.buffer] : [left.buffer, right.buffer]);
   return {
     result,

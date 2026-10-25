@@ -1,11 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ mode_label }} · Kinetic Typo Studio{% endblock %}
 {% block fonts %}
-    <!-- Typography fonts drawn on the canvas -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Dela+Gothic+One&family=JetBrains+Mono:wght@500;700&family=Nanum+Gothic:wght@700;800&family=Nanum+Myeongjo:wght@700;800&family=Noto+Sans+JP:wght@400;700;900&family=Noto+Sans+KR:wght@400;500;600;700;900&family=Shippori+Mincho:wght@700;800&display=swap"
-    />
+    <!-- Typography fonts drawn on the canvas, served from static/fonts/ (frontend/scripts/vendor-fonts.mjs) -->
+    {%- for slug in ["black-han-sans", "dela-gothic-one", "jetbrains-mono", "nanum-gothic", "nanum-myeongjo", "noto-sans-jp", "noto-sans-kr", "shippori-mincho"] %}
+    <link rel="stylesheet" href="{{ static('fonts/' ~ slug ~ '/' ~ slug ~ '.css') }}" />
+    {%- endfor %}
 {% endblock %}
 {% block head %}
     <script type="module" src="{{ static('js/studio.js') }}?v={{ v }}"></script>

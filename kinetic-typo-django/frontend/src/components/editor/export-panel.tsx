@@ -25,6 +25,7 @@ import { TimeField } from "./time-field";
 import { RangeBar } from "./range-bar";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
+import { RightsNote } from "@/components/ui/rights-note";
 
 type VideoState =
   | { kind: "idle" }
@@ -226,6 +227,7 @@ export function ExportPanel() {
   return (
     <section aria-label="내보내기" className="space-y-4 px-4 py-4">
       <h2 className="text-xs font-semibold tracking-wide text-zinc-400">내보내기</h2>
+      <RightsNote what="음원·가사·소재" />
 
       <div className="space-y-2">
         <h3 className="text-xs font-medium text-zinc-200">완성 영상</h3>

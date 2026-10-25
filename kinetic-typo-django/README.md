@@ -12,6 +12,11 @@
 | `static/css/studio.css`             | 편집기 스타일 (빌드 결과)                                               |
 | `static/js/studio.js`               | 편집기 (빌드 결과)                                                      |
 | `static/js/whisper-worker.js`       | 음성 인식 워커 (빌드 결과)                                              |
+| `static/js/separation-worker.js`    | 보컬 분리 워커 (빌드 결과)                                              |
+| `static/fonts/`                     | 글꼴 31종 woff2와 라이선스 (`frontend/scripts/vendor-fonts.mjs`로 만듦)  |
+| `static/licenses/`                  | 오픈소스 고지 원문·목록 (빌드할 때 자동 생성)                           |
+| `docs/`                             | 설명서 원고(`guide.md` 사용법, `about.md` 프로젝트 소개)와 `build.py`   |
+| `LICENSE`                           | 이 앱의 라이선스 (All rights reserved, 제3자 부분은 각자의 라이선스)    |
 | `static/js/ffmpeg-worker.js`        | ProRes(MOV) 내보내기 워커 (빌드 결과). FFmpeg 본체(약 32MB)는 처음 쓸 때 jsDelivr(실패하면 unpkg)에서 받음 |
 | `frontend/`                         | 편집기 원본 소스(TypeScript/React)와 빌드 스크립트                      |
 | `requirements.txt`, `vercel.json`   | Python 의존성, Vercel 배포 설정                                         |
@@ -29,6 +34,10 @@
 | `/pro/`      | 숙련 | 모든 기능(기본 + 캐릭터 등장·퇴장, 소품 레이어, 타임라인 캐릭터·소품 줄)                           |
 
 단계마다 작업이 브라우저에 따로 저장됩니다(숙련은 예전 저장을 그대로 씀). 첫 페이지도 `static/css/studio.css`를 함께 쓰므로, 템플릿에 Tailwind 클래스를 바꾸면 `npm run build`로 CSS를 다시 만듭니다.
+
+## Docs 페이지
+
+첫 화면 오른쪽 위 **Docs** 버튼이 `/docs/`(`templates/docs.html`)를 엽니다. 사용법 설명서와 프로젝트 소개 두 부분이고, 왼쪽 목차는 `studio/views.py`의 `doc_headings()`가 만듭니다. 내용은 `docs/guide.md`, `docs/about.md`를 고친 뒤 `pip install markdown && python docs/build.py`로 `templates/docs/_guide.html`, `_about.html`을 다시 만듭니다(서버에는 markdown 패키지가 필요 없음). 제3자에게 공개하는 문서라 참고한 작업물이나 개인 정보는 넣지 않습니다.
 
 ## 로컬 실행
 
@@ -119,17 +128,25 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 
 싱크는 4단계로 돕니다. 모두 브라우저 안에서만 처리하고 음원은 밖으로 보내지 않습니다.
 
-1. 보컬 분리(켜고 끄기 가능): MDX-Net 모델 Kim Vocal 2(Ultimate Vocal Remover, MIT, 67MB)를 처음 한 번 Hugging Face에서 받아 Cache Storage에 둡니다. WebGPU가 있으면 GPU, 없으면 CPU(WASM)로 돌립니다. 분리 실패 시 원곡으로 인식합니다. 결과 화면에서 분리된 보컬을 들어 볼 수 있습니다.
+1. 보컬 분리(켜고 끄기 가능): `@audio/neural-separate`(MIT)로 두 모델 중 하나를 씁니다. "가볍게"는 SCNet(13MB, 가중치 MIT), "정밀하게"는 Mel-Band RoFormer(464MB, 가중치 MIT, GPU 전용)입니다. 둘 다 Hugging Face `audiojs/*`에서 고정 리비전으로 받아 SHA-256을 확인한 뒤 Cache Storage("audio-neural")에 둡니다. 전용 워커(`separation-worker.js`)에서 onnxruntime-web 1.30으로 돌리고(WASM 파일은 jsDelivr), WebGPU가 있으면 GPU, 없으면 CPU입니다. 분리 실패 시 원곡으로 인식합니다. 결과 화면에서 분리된 보컬을 들어 볼 수 있습니다. 예전 Kim Vocal 2는 가중치에 라이선스 표기가 없어 2026-10-24에 뺐습니다.
 2. 인식: 분리된 보컬은 노래하는 구간만 골라 숨 쉬는 지점에서 창을 나눠 Whisper에 넣습니다(긴 간주·무음은 건너뜀). 가사를 미리 알기 때문에, 가사에 있는 토큰과 가사 흐름을 잇는 다음 토큰에 작은 가중치를 줍니다(애매할 때만 가사 쪽으로 기울고, 확실히 들린 말은 그대로).
 3. 발음 비교: 한국어는 소리 나는 대로 바꿔 비교합니다(있어=이써, 없는=엄는, 같이=가치, 좋다=조타 등). 일본어는 발음 줄(한글)에서 한자 읽기를 배워, 가사의 한자와 인식된 가나를 같은 소리로 봅니다.
 4. 정렬: 가사 전체를 인식 결과에 한 번에 맞춥니다(기존과 같음). 결과 화면 맨 위에 "평균 일치율"이 나옵니다.
 
-- 코드: `frontend/src/lib/separation/`(FFT, STFT, 청크 분리, 리샘플, 워커 실행), `frontend/src/lib/sync/lyric-bias.ts`, `kanji-readings.ts`, `pronunciation.ts`, `windows.ts`(planVoicedWindows)
+- 코드: `frontend/src/lib/separation/`(모델 목록, 워커 실행, 리샘플), `frontend/src/workers/separation.worker.ts`, `frontend/src/lib/sync/lyric-bias.ts`, `kanji-readings.ts`, `pronunciation.ts`, `windows.ts`(planVoicedWindows)
 - 측정 테스트: `frontend/src/lib/sync/__tests__/sync-benchmark.test.ts`
 
 ## 참고
 
 - 데이터베이스는 쓰지 않습니다(`DATABASES = {}`). 작업 내용은 브라우저 저장소에 남습니다.
 - Whisper 모델과 보컬 분리 모델 파일은 처음 한 번 Hugging Face에서 받아 브라우저에 캐시합니다. 인식·분리용 WASM 파일은 jsDelivr에서 받습니다.
+
+## 라이선스와 글꼴
+
+- 이 앱 자체 코드는 `LICENSE`(Copyright © 2026 i2nu, All rights reserved)를 따릅니다.
+- `/licenses/` 페이지(`templates/licenses.html`, 첫 화면 아래 링크)에 묶인 라이브러리·글꼴·실행 중에 받는 파일(모델, FFmpeg, Mixkit)과 라이선스가 나옵니다. 원문은 `static/licenses/THIRD_PARTY_NOTICES.txt`이고, `npm run build`가 실제로 번들에 들어간 패키지(esbuild metafile)와 `static/fonts/`를 보고 다시 씁니다. 페이지의 "실행 중에 받는 파일" 표는 `studio/views.py`의 `RUNTIME_DOWNLOADS`를 손으로 고칩니다.
+- 글꼴은 Google Fonts에 요청하지 않고 `static/fonts/`에서 내보냅니다(보는 사람의 IP가 제3자에게 가지 않음). 목록은 `frontend/fonts.json`, 바꿨을 때만 `cd frontend && node scripts/vendor-fonts.mjs`로 다시 만듭니다. 모두 SIL OFL이고 Kosugi Maru·Permanent Marker만 Apache-2.0입니다.
+- FFmpeg(GPL-2.0-or-later)은 앱에 넣지 않고 ProRes로 내보낼 때만 브라우저가 CDN에서 받습니다.
+- 음원·소재를 올리는 칸과 내보내기 칸에 "권리가 있는 소재만" 안내가 있습니다(`components/ui/rights-note.tsx`).
 - `onnxruntime-node`는 `frontend/stubs/`의 빈 패키지로 대체했습니다(브라우저 전용 앱이라 쓰지 않음).
 - 린트는 `eslint-config-next` 대신 `typescript-eslint` + `eslint-plugin-react-hooks`, CSS는 Tailwind CLI 대신 `@tailwindcss/postcss`를 씁니다. 둘 다 취약한 `braces` 패키지를 끌어오던 의존성을 없애기 위해서이며, `npm audit` 결과는 0건입니다.

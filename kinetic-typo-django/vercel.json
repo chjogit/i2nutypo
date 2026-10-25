@@ -1,9 +1,21 @@
 {
   "builds": [
-    { "src": "config/wsgi.py", "use": "@vercel/python" },
+    {
+      "src": "config/wsgi.py",
+      "use": "@vercel/python",
+      "config": { "excludeFiles": "{frontend/**,static/fonts/**/files/**}" }
+    },
     { "src": "static/**", "use": "@vercel/static" }
   ],
   "routes": [
+    {
+      "src": "/static/fonts/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=604800",
+        "X-Content-Type-Options": "nosniff"
+      },
+      "dest": "/static/fonts/$1"
+    },
     {
       "src": "/static/(.*)",
       "headers": {

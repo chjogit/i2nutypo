@@ -1,4 +1,5 @@
 import { fitGlyphRows, lineGlyphs } from "./glyphs";
+import { drawScenery } from "./scenery";
 import {
   amt,
   boxHeight,
@@ -49,6 +50,7 @@ function drawPlaceholderPastel(f: LookFrame, r: Rect): void {
     ctx.fillStyle = g;
     ctx.fillRect(r.x, r.y, r.w, r.h);
   }
+  drawScenery(f, r);
 }
 
 /** Blob with a noisy edge, grown from the center like ink soaking into paper. */

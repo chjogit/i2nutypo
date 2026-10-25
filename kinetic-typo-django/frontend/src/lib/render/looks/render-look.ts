@@ -1,11 +1,12 @@
 import type { LookPresetId } from "@/types/project";
 import { drawBottomSubtitles, showsKineticLyrics } from "../subtitles";
-import { recordTextBounds } from "../text-bounds";
+import { recordTextBounds, type Box } from "../text-bounds";
 import { balladHud } from "./ballad-hud";
 import { cinematicFantasy } from "./cinematic-fantasy";
 import { darkGlitch } from "./dark-glitch";
 import { digitalCrt } from "./digital-crt";
 import type { LookFrame, LookRenderer } from "./frame";
+import type { Ctx2D } from "../motifs";
 import { eclipseNebula } from "./eclipse-nebula";
 import { flatType } from "./flat-type";
 import { popCutout } from "./pop-cutout";
@@ -31,6 +32,10 @@ import { drawOrganicMarks } from "./element-motion";
 import { drawReadable } from "./auto-contrast";
 import { orientedLyrics } from "./orientation";
 import { contrastFor } from "./theme-contrast";
+import { THEME_EXTRAS } from "./theme-extras";
+import { drawThemeTitleCard } from "./title-cards";
+import { drawAccentMark, wantsAccentMark } from "./accent-marks";
+import { drawInterlude } from "./interlude";
 
 /** How each theme's hand-drawn marks are stroked. */
 const MARK_STROKE: Partial<Record<Exclude<LookPresetId, "classic">, "glow" | "brush">> = {
@@ -76,6 +81,14 @@ function mixFrames(f: LookFrame): { r: LookRenderer; f: LookFrame }[] {
 }
 
 /** The picked theme that draws the lyrics, with a frame in its name so its own lyric elements apply. */
+/** A mixed-in theme's extras run at a little over half strength so three themes don't crowd the frame. */
+function mixedExtra(ctx: Ctx2D, draw: () => void): void {
+  ctx.save();
+  ctx.globalAlpha *= 0.55;
+  draw();
+  ctx.restore();
+}
+
 function lyricFrame(f: LookFrame, base: LookRenderer): { r: LookRenderer; f: LookFrame } {
   const id = lyricLookOf(f.style);
   if (id === f.preset || id === "classic" || !(id in RENDERERS)) return { r: base, f };
@@ -106,7 +119,10 @@ export function renderLookFrame(
     ctx.clearRect(0, 0, f.W, f.H);
     ctx.save();
     ctx.translate(f.frameShake.x, f.frameShake.y);
-    if (showsKineticLyrics(f.subtitles)) drawLyrics(lyr.r, lyr.f, false);
+    if (showsKineticLyrics(f.subtitles)) drawAccentMark(lyr.f, drawLyrics(lyr.r, lyr.f, false));
+    // The title card is type too, so it goes with the lyrics on the clear layer
+    drawThemeTitleCard(lyr.f);
+    drawInterlude(lyr.f);
     drawProps(f, true);
     ctx.restore();
   } else {
@@ -115,8 +131,11 @@ export function renderLookFrame(
     ctx.fillRect(0, 0, f.W, f.H);
     ctx.save();
     ctx.translate(f.frameShake.x, f.frameShake.y);
-    r.scene(f);
-    for (const m of mixes) m.r.decor?.(m.f);
+    drawScene(r, f);
+    for (const m of mixes) {
+      m.r.decor?.(m.f);
+      mixedExtra(ctx, () => THEME_EXTRAS[m.f.preset]?.back?.(m.f));
+    }
     drawOrganicMarks({
       ctx,
       W: f.W,
@@ -131,11 +150,16 @@ export function renderLookFrame(
       energy: f.energy,
     });
     drawProps(f, false);
+    THEME_EXTRAS[f.preset]?.mid?.(f);
     if (layer === "full") {
       // In the bottom-only display the line is shown in the subtitles alone
-      if (showsKineticLyrics(f.subtitles)) drawLyrics(lyr.r, lyr.f);
+      if (showsKineticLyrics(f.subtitles)) drawAccentMark(lyr.f, drawLyrics(lyr.r, lyr.f));
+      drawThemeTitleCard(lyr.f);
+      drawInterlude(lyr.f);
       drawProps(f, true);
     }
+    THEME_EXTRAS[f.preset]?.front?.(f);
+    for (const m of mixes) mixedExtra(ctx, () => THEME_EXTRAS[m.f.preset]?.front?.(m.f));
     ctx.restore();
     r.overlay(f);
     for (const m of mixes) m.r.overlay(m.f);
@@ -168,13 +192,34 @@ export function renderLookFrame(
 }
 
 /**
+ * The background theme's scene, with its extra back elements (theme-extras.ts)
+ * slipped in right before the character, or after the scene when it draws none.
+ */
+function drawScene(r: LookRenderer, f: LookFrame): void {
+  const back = THEME_EXTRAS[f.preset]?.back;
+  if (!back) {
+    r.scene(f);
+    return;
+  }
+  let drawn = false;
+  const once = () => {
+    if (drawn) return;
+    drawn = true;
+    back(f);
+  };
+  r.scene({ ...f, beforeCharacter: once });
+  once();
+}
+
+/**
  * Lyrics moved by the global and per-line position, then any overlapping lines
  * beside them. Over a picture they are kept readable as the lyric theme's auto
  * contrast says (contrastFor); on
  * the transparent layer there is no picture to read against, so they are not.
  */
-function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): void {
+function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): Box | null {
   const hasOverlaps = (f.overlaps?.length ?? 0) > 0;
+  const measure = !!f.textBounds || hasOverlaps || wantsAccentMark(f);
   f.ctx.save();
   f.ctx.translate(f.lyricShift.x, f.lyricShift.y);
   const contrast = contrastFor(f.style, f.preset);
@@ -186,9 +231,10 @@ function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): void {
       const g = c === f.ctx ? f : { ...f, ctx: c };
       // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
       const lyrics = orientedLyrics(r, g);
-      const draw = withMotion(g, () => lyrics(g));
+      const wrap = THEME_EXTRAS[g.preset]?.lyrics;
+      const draw = withMotion(g, wrap ? () => wrap(g, () => lyrics(g)) : () => lyrics(g));
       // The readability check needs the box of the copy it draws on its own layer
-      if (f.textBounds || hasOverlaps || c !== f.ctx) return recordTextBounds(g.ctx, draw);
+      if (measure || c !== f.ctx) return recordTextBounds(g.ctx, draw);
       draw();
       return null;
     },
@@ -197,6 +243,7 @@ function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): void {
   if (f.textBounds) f.textBounds.lyrics = box;
   f.ctx.restore();
   if (hasOverlaps) drawOverlapLines(r, f, box);
+  return box;
 }
 
 /** The line's lyric motion (see motions.ts) wrapped around the theme's own lyrics. */

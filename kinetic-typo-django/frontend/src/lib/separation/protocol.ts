@@ -1,14 +1,37 @@
-import { MDX_SAMPLE_RATE } from "./mdx";
+// Vocal separation models. Both have MIT-licensed weights and are fetched from
+// Hugging Face at a pinned revision, checked by SHA-256 (@audio/neural-separate),
+// then kept in the browser's Cache Storage ("audio-neural").
 
-/** Kim Vocal 2 from the Ultimate Vocal Remover project (MIT), 67 MB, downloaded once and cached by the browser. */
-export const VOCAL_MODEL_URL =
-  "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/MDXNet/Kim_Vocal_2.onnx";
+export const SEPARATION_SAMPLE_RATE = 44100;
 
-export const SEPARATION_SAMPLE_RATE = MDX_SAMPLE_RATE;
+export type SeparationModel = "scnet" | "mel-roformer";
+
+export interface SeparationModelInfo {
+  id: SeparationModel;
+  label: string;
+  /** Download size in MB. */
+  sizeMb: number;
+  note: string;
+  /** Needs a GPU (WebGPU) to finish in reasonable time. */
+  gpuOnly: boolean;
+}
+
+export const SEPARATION_MODELS: readonly SeparationModelInfo[] = [
+  { id: "scnet", label: "가볍게 (SCNet)", sizeMb: 13, note: "작고 빠름, CPU에서도 동작", gpuOnly: false },
+  {
+    id: "mel-roformer",
+    label: "정밀하게 (Mel-Band RoFormer)",
+    sizeMb: 464,
+    note: "가장 깨끗한 보컬, GPU 전용, 처음 한 번 큰 다운로드",
+    gpuOnly: true,
+  },
+];
+
+export const DEFAULT_SEPARATION_MODEL: SeparationModel = "scnet";
 
 export type SeparateRequest = {
   type: "separate";
-  modelUrl: string;
+  model: SeparationModel;
   /** Stereo PCM at 44.1 kHz (the same array twice for a mono file). */
   left: Float32Array;
   right: Float32Array;

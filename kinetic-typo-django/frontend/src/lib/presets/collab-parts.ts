@@ -1,10 +1,10 @@
 import type { CollabPart } from "@/types/project";
 
-// Ported from COLLAB_16_PARTS in the original studio template. Creator names are replaced by
-// part numbers so no real person is named in the app.
+// Ported from COLLAB_16_PARTS in the original studio template. Creator names and ids are
+// replaced by part numbers so no real person is named in the app or its code.
 export const COLLAB_PARTS: readonly CollabPart[] = [
   {
-    partId: "SYUN_INTRO",
+    partId: "PART_01",
     creator: "파트 01",
     title: "보케 야경 & 시네마 타이틀",
     bgColor: "#0c1626",
@@ -14,7 +14,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "bokeh_scope",
   },
   {
-    partId: "STWORK_P1",
+    partId: "PART_02",
     creator: "파트 02",
     title: "네이비·옐로우 보색 & 스타버스트 반전",
     bgColor: "#16263b",
@@ -24,7 +24,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "starburst_flash",
   },
   {
-    partId: "DARTER_P2",
+    partId: "PART_03",
     creator: "파트 03",
     title: "3D 원근 틸트 & 중괄호 스코프 타겟",
     bgColor: "#192a42",
@@ -34,7 +34,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "bracket_scope",
   },
   {
-    partId: "IPAD_P3",
+    partId: "PART_04",
     creator: "파트 04",
     title: "다크 체인 교차 & 골드 세리프 글로우",
     bgColor: "#070709",
@@ -44,7 +44,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "dark_chain",
   },
   {
-    partId: "KAEL_P4",
+    partId: "PART_05",
     creator: "파트 05",
     title: "옐로우 매거진 그리드 & 타임라인 태그",
     bgColor: "#e5c138",
@@ -54,7 +54,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "grid_timeline",
   },
   {
-    partId: "OKYU_P5",
+    partId: "PART_06",
     creator: "파트 06",
     title: "12:00 잠금화면 시계 UI & 알림 배너",
     bgColor: "#060913",
@@ -64,7 +64,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "lockscreen_ui",
   },
   {
-    partId: "DALI_P6",
+    partId: "PART_07",
     creator: "파트 07",
     title: "초승달 창가 야경 & 우측 트랙 싱크",
     bgColor: "#0f1b33",
@@ -74,7 +74,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "moon_window",
   },
   {
-    partId: "YOHA_P7",
+    partId: "PART_08",
     creator: "파트 08",
     title: "기하학 초승달 모핑 & #53 REMIX 카드",
     bgColor: "#111a1f",
@@ -84,7 +84,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "yoha_moon_card",
   },
   {
-    partId: "UMYEON_P8",
+    partId: "PART_09",
     creator: "파트 09",
     title: "골드 스크립트 & 볼텍스 소용돌이 터널",
     bgColor: "#06070b",
@@ -94,7 +94,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "vortex_tunnel",
   },
   {
-    partId: "KIMDOK_P9",
+    partId: "PART_10",
     creator: "파트 10",
     title: "네온 블룸 에코 & 달빛 고드레이 궤적",
     bgColor: "#091326",
@@ -104,7 +104,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "neon_godray",
   },
   {
-    partId: "SIA_P11",
+    partId: "PART_11",
     creator: "파트 11",
     title: "아날로그 노트 줄무늬 & 실루엣 캡슐",
     bgColor: "#d6d3cd",
@@ -114,7 +114,7 @@ export const COLLAB_PARTS: readonly CollabPart[] = [
     motif: "analog_notebook",
   },
   {
-    partId: "RINS_P13",
+    partId: "PART_12",
     creator: "파트 12",
     title: "삼각형 파편 & 필름 스트립 시계 팝아트",
     bgColor: "#141c2b",

@@ -197,10 +197,10 @@ export function LyricFontPicker() {
           )}
           {lang !== "mine" && (
             <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
-              무료 글꼴(OFL) · 상업 사용 가능
+              무료 글꼴(OFL·Apache) · 상업 사용 가능
               <Tip>
-                모두 Google Fonts의 무료 글꼴(OFL)이라 영상에 상업적으로 써도 됩니다. 고른 글씨체만 인터넷에서
-                받아옵니다.
+                모두 무료 글꼴(SIL OFL, 일부 Apache-2.0)이라 영상에 상업적으로 써도 됩니다. 글꼴 파일만 따로
+                팔거나 나눠 주지는 마세요. 이 사이트에서 고른 글씨체만 받아오고, 다른 곳으로는 요청하지 않습니다.
               </Tip>
             </p>
           )}

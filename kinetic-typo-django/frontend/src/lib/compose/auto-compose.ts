@@ -44,7 +44,8 @@ export function composeStyle(style: StyleSettings, seed: number): Partial<StyleS
       const key = lookElementKey(id, def.id);
       // Keep where the user moved an element; roll whether it shows and how strong
       const prev = style.lookElements[key];
-      const on = def.on ? rand() < 0.85 : rand() < 0.35;
+      // Extras that are off by default come on more rarely, so three themes do not crowd the frame
+      const on = def.on ? rand() < 0.85 : rand() < (def.extra ? 0.2 : 0.35);
       lookElements[key] = { ...prev, on, amount: round2(between(rand, 0.35, 1)) };
     }
   }
