@@ -30,17 +30,8 @@
         </p>
       </header>
 
-      <img
-        src="{{ static('img/sample-themes.jpg') }}"
-        alt="테마로 만든 영상 화면 예시 네 장"
-        width="1288"
-        height="728"
-        class="mb-5 block h-40 w-full rounded-xl border border-zinc-800 object-cover object-top md:h-52"
-        loading="eager"
-      />
-
       {#- The three cards stretch to the same height; every line is short enough to stay on one line. -#}
-      <ol class="grid items-stretch gap-4 md:grid-cols-[1.2fr_1fr_1fr]">
+      <ol class="grid items-stretch gap-4 md:grid-cols-3">
         {% for m in modes %}
         <li class="flex">
           <a
