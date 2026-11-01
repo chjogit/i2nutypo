@@ -117,8 +117,8 @@ export function Preview() {
           {FEATURES_NOW.characters && <IllustrationOverlay canvasRef={canvasRef} />}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <span className="flex items-center gap-1.5 text-xs text-zinc-400">
           미리보기에서 바로 고치기
           <Tip label="미리보기 조작법">
             가사 박스를 끌어 옮기고, 모서리로 글자 크기, 좌우 막대로 가로 폭(줄바꿈), 위아래 막대로 줄 간격을
@@ -129,7 +129,7 @@ export function Preview() {
           </Tip>
         </span>
         <label
-          className="ml-auto flex shrink-0 items-center gap-1 text-xs text-zinc-500"
+          className="ml-auto flex shrink-0 items-center gap-1 text-xs text-zinc-400"
           title="아래로 스크롤해 미리보기가 안 보이면 화면 구석에 작은 미리보기 창을 띄웁니다"
         >
           <input
@@ -141,7 +141,7 @@ export function Preview() {
           작은 창
         </label>
         <label
-          className="flex shrink-0 items-center gap-1 text-xs text-zinc-500"
+          className="flex shrink-0 items-center gap-1 text-xs text-zinc-400"
           title="미리보기 화질 (내보내기 화질과는 따로 정합니다)"
         >
           화질
@@ -160,7 +160,7 @@ export function Preview() {
             ))}
           </select>
         </label>
-        <span className="shrink-0 text-xs text-zinc-500">화면 비율</span>
+        <span className="shrink-0 text-xs text-zinc-400">화면 비율</span>
         <div className="flex flex-wrap rounded-md border border-zinc-800 text-xs">
           {ASPECT_RATIOS.map((r) => (
             <button

@@ -379,7 +379,7 @@ export function TextBoxOverlay({
         <span
           ref={badgeRef}
           style={{ display: "none" }}
-          className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-indigo-600 px-1.5 py-0.5 text-[10px] font-medium text-white"
+          className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-indigo-600 px-1.5 py-0.5 text-[11px] font-medium text-white"
         />
       </div>
       {editing && (
@@ -399,7 +399,7 @@ export function TextBoxOverlay({
             }}
             className="w-full resize-none rounded-md border border-indigo-500 bg-zinc-950/95 p-2 text-sm text-zinc-100 focus:outline-none"
           />
-          <p className="rounded bg-zinc-950/90 px-1.5 py-0.5 text-[10px] text-zinc-400">
+          <p className="rounded bg-zinc-950/90 px-1.5 py-0.5 text-[11px] text-zinc-400">
             Enter: 줄바꿈 · Ctrl+Enter 또는 바깥 클릭: 저장 · Esc: 취소
           </p>
         </div>

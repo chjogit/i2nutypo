@@ -115,10 +115,10 @@ export function CommandPalette() {
                   onClick={() => void run(a)}
                   className={`flex w-full items-center gap-3 px-4 py-1.5 text-left text-xs ${i === active ? "bg-indigo-500/20 text-zinc-50" : "text-zinc-300"} disabled:text-zinc-600`}
                 >
-                  <span className="w-16 shrink-0 text-[10px] text-zinc-500">{a.group}</span>
+                  <span className="w-16 shrink-0 text-[11px] text-zinc-400">{a.group}</span>
                   <span className="min-w-0 flex-1 truncate">{a.label}</span>
                   {a.hint && (
-                    <kbd className="rounded border border-zinc-700 px-1 font-mono text-[10px] text-zinc-400">
+                    <kbd className="rounded border border-zinc-700 px-1 font-mono text-[11px] text-zinc-400">
                       {a.hint}
                     </kbd>
                   )}
@@ -126,7 +126,7 @@ export function CommandPalette() {
               </li>
             );
           })}
-          {list.length === 0 && <li className="px-4 py-3 text-xs text-zinc-500">맞는 작업이 없습니다.</li>}
+          {list.length === 0 && <li className="px-4 py-3 text-xs text-zinc-400">맞는 작업이 없습니다.</li>}
         </ul>
       </div>
     </div>

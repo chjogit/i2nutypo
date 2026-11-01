@@ -16,7 +16,7 @@ import { Fold } from "./fold";
 
 const ON = "border-indigo-500 bg-indigo-500/10 text-zinc-100";
 const OFF = "border-zinc-800 text-zinc-400 hover:border-indigo-500";
-const RESET = "text-[11px] font-normal text-indigo-400 hover:underline";
+const RESET = "text-xs font-normal text-indigo-400 hover:underline";
 
 const BASIC: Array<{ key: BasicKey; label: string; left: string; right: string }> = [
   { key: "exposure", label: "밝기", left: "어둡게", right: "밝게" },
@@ -173,7 +173,7 @@ function Wheel({
         onDoubleClick={() => onChange({ ...value, l: 0 })}
         className="w-16 accent-indigo-500"
       />
-      <span className="text-[10px] text-zinc-400">{label}</span>
+      <span className="text-[11px] text-zinc-400">{label}</span>
     </div>
   );
 }
@@ -209,7 +209,7 @@ export function FinishPanel() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-[11px] text-zinc-400">
+      <div className="flex items-center justify-between text-xs text-zinc-400">
         <span className="flex items-center gap-1.5 font-semibold">
           마무리 보정
           <Tip>
@@ -344,7 +344,7 @@ export function FinishPanel() {
             />
           ))}
         </div>
-        <p className="flex items-center gap-1.5 pt-1 text-[11px] font-semibold text-zinc-400">
+        <p className="flex items-center gap-1.5 pt-1 text-xs font-semibold text-zinc-400">
           인화 필터
           <Tip>
             사진관 인화기의 색 필터처럼 시안·마젠타·옐로를 더하거나 뺍니다. 필름 색감을 미세하게 맞출 때
@@ -369,7 +369,7 @@ export function FinishPanel() {
           value={finish.cmy.y}
           onChange={(y) => update({ cmy: { ...finish.cmy, y } })}
         />
-        <p className="flex items-center gap-1.5 pt-1 text-[11px] font-semibold text-zinc-400">
+        <p className="flex items-center gap-1.5 pt-1 text-xs font-semibold text-zinc-400">
           밝기별 온도
           <Tip>그림자·중간·밝은 곳을 따로 차갑게(−) 또는 따뜻하게(+) 물들입니다.</Tip>
         </p>
@@ -397,7 +397,7 @@ export function FinishPanel() {
           onChange={(compression) => update({ compression })}
         />
         <div className="space-y-1.5 border-t border-zinc-800/60 pt-2">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-400">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400">
             보정 범위
             <Tip>
               색 휠·기본 보정·룩이 들어갈 곳을 정합니다. 가운데 원은 인물·가사에, 위·아래는 하늘이나 바닥에
@@ -411,7 +411,7 @@ export function FinishPanel() {
                 type="button"
                 aria-pressed={finish.mask.kind === kind}
                 onClick={() => update({ mask: { ...finish.mask, kind } })}
-                className={`rounded-full border px-2 py-0.5 text-[11px] ${finish.mask.kind === kind ? ON : OFF}`}
+                className={`rounded-full border px-2 py-0.5 text-xs ${finish.mask.kind === kind ? ON : OFF}`}
               >
                 {label}
               </button>
@@ -474,7 +474,7 @@ export function FinishPanel() {
             />
           </>
         )}
-        <div className="flex items-center gap-1.5 pt-1 text-[11px] text-zinc-400">
+        <div className="flex items-center gap-1.5 pt-1 text-xs text-zinc-400">
           <span className="font-semibold">필름 크기</span>
           <Tip>
             누르면 그 필름 크기에 맞는 입자 크기·흔들림·깜빡임·번짐·먼지를 한 번에 맞춥니다. 아래 막대로 다시

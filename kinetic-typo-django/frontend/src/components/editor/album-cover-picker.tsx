@@ -47,7 +47,7 @@ export function AlbumCoverPicker() {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+      <div className="flex items-center gap-2 text-xs text-zinc-400">
         <span className="font-semibold text-zinc-300">앨범 커버</span>
         <Tip>
           앨범 자켓 테마의 정사각 커버와 레코드 라벨에 들어가는 그림입니다. 정사각형 그림이 가장 잘 맞습니다.
@@ -68,7 +68,7 @@ export function AlbumCoverPicker() {
         {cover ? "앨범 커버 바꾸기" : "앨범 커버 올리기"}
       </label>
       {cover && (
-        <p className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
+        <p className="flex items-center justify-between gap-2 text-xs text-zinc-400">
           <span className="truncate">{cover.fileName}</span>
           <button
             type="button"
@@ -82,7 +82,7 @@ export function AlbumCoverPicker() {
           </button>
         </p>
       )}
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
 }

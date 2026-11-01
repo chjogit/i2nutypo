@@ -34,6 +34,26 @@ describe("auto composition", () => {
     expect(out[1].lineStyle.motion).not.toBe(out[0].lineStyle.motion);
   });
 
+  it("gives a chorus that comes back the same motions each time", () => {
+    const style = { ...DEFAULT_STYLE, ...composeStyle(DEFAULT_STYLE, 11) };
+    const at = (t: number, text: string): TimedLyric => ({ ...line(t), rawText: text });
+    const lines = [
+      at(0, "첫 절 하나"),
+      at(4, "첫 절 둘"),
+      at(8, "첫 절 셋"),
+      at(20, "후렴 하나"),
+      at(24, "후렴 둘"),
+      at(40, "둘째 절 하나"),
+      at(44, "둘째 절 둘"),
+      at(48, "둘째 절 셋"),
+      at(60, "후렴 하나"),
+      at(64, "후렴 둘"),
+    ];
+    const out = composeLines(lines, style, 11).map((l) => l.lineStyle.motion);
+    expect(out[3]).toBe(out[8]);
+    expect(out[4]).toBe(out[9]);
+  });
+
   it("rerolls to a different motion", () => {
     const l = { ...line(0), lineStyle: { motion: 1 } };
     for (let i = 0; i < 10; i++) expect(rerollMotion(l, DEFAULT_STYLE, mulberry32(i))).not.toBe(1);

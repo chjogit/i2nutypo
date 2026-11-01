@@ -1,6 +1,7 @@
 import type { LineStyle, LookElementState, StyleSettings } from "@/types/project";
 import type { TimedLyric } from "@/lib/lyrics/parse";
 import { mulberry32, pickSome } from "@/lib/random";
+import { detectSections, sectionOfLines } from "@/lib/structure/sections";
 import { themeAt } from "@/lib/render/theme-clips";
 import {
   getLookPreset,
@@ -11,13 +12,7 @@ import {
   MAX_MIX_LOOKS,
   type ThemedPresetId,
 } from "@/lib/render/looks/presets";
-import {
-  activeMotions,
-  MOTIONS,
-  MOTIONS_PER_SONG,
-  motionNumber,
-  THEME_MOTIONS,
-} from "@/lib/render/looks/motions";
+import { activeMotions, MOTIONS_PER_SONG, motionNumber, THEME_MOTIONS } from "@/lib/render/looks/motions";
 
 // One-click composition: themes, colors, elements, strengths and each line's
 // motion, all from one seed so the same seed gives the same video again.
@@ -69,23 +64,58 @@ export function composeStyle(style: StyleSettings, seed: number): Partial<StyleS
   };
 }
 
-/** Picks a motion for every unlocked line from the lyric theme's active motions, never twice in a row. */
+/**
+ * Picks a motion for every unlocked line from the lyric theme's active motions.
+ * The song's structure leads: each kind of section (verse, chorus, bridge …)
+ * gets its own pair of motions that its lines alternate between, so a chorus
+ * that comes back looks like the same chorus. A motion never repeats twice in
+ * a row across a section boundary.
+ */
 export function composeLines(lines: readonly TimedLyric[], style: StyleSettings, seed: number): TimedLyric[] {
   const rand = mulberry32(seed ^ 0x5bd1e995);
+  const sections = detectSections(
+    lines.map((l) => ({ startTime: l.startTime, endTime: l.endTime, overlap: l.overlap, text: l.rawText })),
+    style.sectionKinds,
+  );
+  const sectionOf = sectionOfLines(sections, lines.length);
+  const pairs = new Map<string, [number, number]>();
+  const taken = new Set<number>();
   let prev = 0;
-  return lines.map((l) => {
+  let posInSection = 0;
+  let lastSection = -1;
+  return lines.map((l, i) => {
     // A theme clip over the line decides which motions it draws from
     const at = themeAt(style, l.startTime);
     const theme = lyricLookOf(at);
     const list = theme === "classic" ? [] : activeMotions(at, theme);
+    const sec = sections[sectionOf[i]];
+    if (sectionOf[i] !== lastSection) {
+      lastSection = sectionOf[i];
+      posInSection = 0;
+    }
+    const pos = posInSection++;
     if (l.lineStyle.lock) {
       prev = l.lineStyle.motion ?? 0;
       return l;
     }
     if (list.length === 0) return { ...l, lineStyle: withoutMotion(l.lineStyle) };
-    let n = motionNumber(list[Math.floor(rand() * list.length)]);
-    if (n === prev && list.length > 1)
-      n = motionNumber(list[(list.indexOf(MOTIONS[n - 1].id) + 1) % list.length]);
+    const numbers = list.map(motionNumber);
+    const key = sec?.kind ?? "verse";
+    let pair = pairs.get(key);
+    if (!pair || !numbers.includes(pair[0]) || !numbers.includes(pair[1])) {
+      // Kinds that have not used a motion yet get first pick, so the sections differ from each other
+      const fresh = numbers.filter((n) => !taken.has(n));
+      const pool = fresh.length >= 2 ? fresh : numbers;
+      const a = pool[Math.floor(rand() * pool.length)];
+      const rest = pool.filter((n) => n !== a);
+      const b = rest.length > 0 ? rest[Math.floor(rand() * rest.length)] : a;
+      pair = [a, b];
+      pairs.set(key, pair);
+      taken.add(a).add(b);
+    }
+    let n = pair[pos % 2];
+    if (n === prev && pair[0] !== pair[1]) n = pair[(pos + 1) % 2];
+    if (n === prev && numbers.length > 1) n = numbers[(numbers.indexOf(n) + 1) % numbers.length];
     prev = n;
     return { ...l, lineStyle: { ...l.lineStyle, motion: n } };
   });

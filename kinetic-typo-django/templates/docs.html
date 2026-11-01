@@ -12,11 +12,11 @@
     <p class="mb-2 {{ 'mt-6' if not loop.first }} text-xs font-semibold tracking-wide text-zinc-400"><a href="#{{ s.id }}" class="hover:text-zinc-100">{{ s.title }}</a></p>
     <ul class="space-y-1.5 border-l border-zinc-800">
       {% for hid, text in s.headings %}
-      <li><a href="#{{ hid }}" class="-ml-px block border-l border-transparent pl-3 text-zinc-500 hover:border-indigo-400 hover:text-zinc-100">{{ text|safe }}</a></li>
+      <li><a href="#{{ hid }}" class="-ml-px block border-l border-transparent pl-3 text-zinc-400 hover:border-indigo-400 hover:text-zinc-100">{{ text|safe }}</a></li>
       {% endfor %}
     </ul>
     {% endfor %}
-    <p class="mt-6 text-xs"><a href="{{ url('licenses') }}" class="text-zinc-500 underline hover:text-zinc-200">오픈소스·라이선스</a></p>
+    <p class="mt-6 text-xs"><a href="{{ url('licenses') }}" class="text-zinc-400 underline hover:text-zinc-200">오픈소스·라이선스</a></p>
   </nav>
 
   <main class="min-w-0 flex-1 space-y-16">

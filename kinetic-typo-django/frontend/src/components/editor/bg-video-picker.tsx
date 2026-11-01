@@ -104,7 +104,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+      <div className="flex items-center gap-2 text-xs text-zinc-400">
         <span className="font-semibold text-zinc-300">배경 영상</span>
         <Tip>
           배경 그림 대신 움직이는 영상을 깝니다. 노래보다 짧으면 반복됩니다. 직접 올린 영상과 고른 영상은 이
@@ -133,10 +133,10 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
       </div>
 
       {bgVideo && (
-        <div className="flex items-center gap-2 rounded-md border border-indigo-500/50 bg-indigo-500/10 px-2 py-1.5 text-[11px]">
+        <div className="flex items-center gap-2 rounded-md border border-indigo-500/50 bg-indigo-500/10 px-2 py-1.5 text-xs">
           <span className="min-w-0 flex-1 truncate text-zinc-200" title={bgVideo.fileName}>
-            🎞 {bgVideo.stock ? bgVideo.stock.title : bgVideo.fileName}
-            <span className="ml-1 text-zinc-500">{bgVideo.duration.toFixed(1)}초</span>
+            {bgVideo.stock ? bgVideo.stock.title : bgVideo.fileName}
+            <span className="ml-1 text-zinc-400">{bgVideo.duration.toFixed(1)}초</span>
           </span>
           {bgVideo.stock && (
             <a
@@ -164,7 +164,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
             type="button"
             aria-pressed={cat === id}
             onClick={() => setCat(id)}
-            className={`rounded-full border px-2 py-0.5 text-[11px] ${cat === id ? CHIP_ON : CHIP_OFF}`}
+            className={`rounded-full border px-2 py-0.5 text-xs ${cat === id ? CHIP_ON : CHIP_OFF}`}
           >
             {label}
           </button>
@@ -180,7 +180,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
       {error && (
         <p
           role="alert"
-          className="rounded-md border border-amber-700/60 bg-amber-950/40 px-2 py-1.5 text-[11px] leading-snug text-amber-200"
+          className="rounded-md border border-amber-700/60 bg-amber-950/40 px-2 py-1.5 text-xs leading-snug text-amber-200"
         >
           {error.text}
           {error.video && (
@@ -208,10 +208,10 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
           />
         ))}
         {list.length === 0 && (
-          <p className="col-span-full py-3 text-center text-[11px] text-zinc-500">찾는 영상이 없습니다.</p>
+          <p className="col-span-full py-3 text-center text-xs text-zinc-400">찾는 영상이 없습니다.</p>
         )}
       </div>
-      <p className="text-[10px] text-zinc-600">
+      <p className="text-[11px] text-zinc-400">
         무료 영상 제공: Mixkit ·{" "}
         <a
           href={MIXKIT_LICENSE_URL}
@@ -274,19 +274,19 @@ function StockCard({
             <span className="absolute inset-0 flex items-center justify-center text-lg text-zinc-700">🎞</span>
           )}
           {busy && (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[11px] text-zinc-100">
+            <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs text-zinc-100">
               받는 중…
             </span>
           )}
         </div>
-        <span className="block truncate px-1.5 py-1 text-[10px] text-zinc-300">{video.title}</span>
+        <span className="block truncate px-1.5 py-1 text-[11px] text-zinc-300">{video.title}</span>
       </button>
       <a
         href={video.pageUrl}
         target="_blank"
         rel="noreferrer"
         aria-label={`${video.title} Mixkit 페이지`}
-        className="absolute right-1 top-1 rounded bg-black/60 px-1 text-[10px] text-zinc-200 opacity-0 hover:text-indigo-200 focus:opacity-100 group-hover:opacity-100"
+        className="absolute right-1 top-1 rounded bg-black/60 px-1 text-[11px] text-zinc-200 opacity-0 hover:text-indigo-200 focus:opacity-100 group-hover:opacity-100"
       >
         ↗
       </a>

@@ -18,7 +18,7 @@ const FIELD =
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-2 text-[11px] text-zinc-400">
+    <label className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-2 text-xs text-zinc-400">
       <span>{label}</span>
       {children}
     </label>
@@ -108,7 +108,7 @@ export function Inspector() {
         <button
           type="button"
           onClick={() => seek(Math.max(0, clip.start - 0.5))}
-          className="font-mono text-[10px] text-zinc-500 hover:text-indigo-300"
+          className="font-mono text-[11px] text-zinc-400 hover:text-indigo-300"
           title="이 구간 조금 앞으로 이동"
         >
           {formatLrcTime(clip.start)} – {formatLrcTime(clip.end)}
@@ -123,7 +123,7 @@ export function Inspector() {
         <button
           type="button"
           onClick={remove}
-          className="ml-auto text-[11px] text-red-300 hover:underline"
+          className="ml-auto text-xs text-red-300 hover:underline"
           title="Delete"
         >
           삭제
@@ -132,7 +132,7 @@ export function Inspector() {
           type="button"
           onClick={() => selectFx(null)}
           aria-label="닫기"
-          className="text-zinc-500 hover:text-zinc-200"
+          className="text-zinc-400 hover:text-zinc-200"
         >
           ✕
         </button>
@@ -170,7 +170,7 @@ export function Inspector() {
                     type="button"
                     aria-pressed={tr.color === id}
                     onClick={() => patchTransitions({ color: id as TransitionColor })}
-                    className={`rounded-full border px-2 py-0.5 text-[11px] ${tr.color === id ? "border-indigo-500 bg-indigo-500/15 text-zinc-100" : "border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
+                    className={`rounded-full border px-2 py-0.5 text-xs ${tr.color === id ? "border-indigo-500 bg-indigo-500/15 text-zinc-100" : "border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
                   >
                     {label}
                   </button>

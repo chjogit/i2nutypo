@@ -38,7 +38,7 @@ export function BgVideoFilterControls() {
 
   return (
     <div className="space-y-1.5 rounded-md border border-zinc-800 p-2">
-      <div className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+      <div className="flex items-center gap-1.5 text-xs text-zinc-400">
         <span className="font-semibold text-zinc-300">영상 필터</span>
         <Tip>
           배경 영상에만 거는 보정입니다. 가사·장식·일러스트·하단 자막 색은 그대로이고, 미리보기와 내보낸
@@ -62,7 +62,7 @@ export function BgVideoFilterControls() {
             type="button"
             aria-pressed={same(filter, p.filter)}
             onClick={() => setStyle({ bgVideoFilter: p.filter })}
-            className={`rounded-full border px-2 py-0.5 text-[11px] ${same(filter, p.filter) ? CHIP_ON : CHIP_OFF}`}
+            className={`rounded-full border px-2 py-0.5 text-xs ${same(filter, p.filter) ? CHIP_ON : CHIP_OFF}`}
           >
             {p.label}
           </button>
@@ -71,7 +71,7 @@ export function BgVideoFilterControls() {
       {SLIDERS.map((s) => {
         const [min, max] = BG_FILTER_RANGES[s.key];
         return (
-          <label key={s.key} className="flex items-center gap-2 text-[11px] text-zinc-400">
+          <label key={s.key} className="flex items-center gap-2 text-xs text-zinc-400">
             <span className="w-8 shrink-0">{s.label}</span>
             <input
               type="range"
@@ -88,7 +88,7 @@ export function BgVideoFilterControls() {
           </label>
         );
       })}
-      <div className="flex flex-wrap items-center gap-1 text-[11px] text-zinc-400">
+      <div className="flex flex-wrap items-center gap-1 text-xs text-zinc-400">
         <span className="w-8 shrink-0">색</span>
         {COLOR_FILTERS.map((c) => (
           <button

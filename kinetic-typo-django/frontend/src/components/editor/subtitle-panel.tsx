@@ -42,9 +42,16 @@ export function SubtitlePanel() {
 
   return (
     <section aria-label="하단 자막" className="px-4 py-4">
-      <h2 className="mb-3 flex items-center justify-between text-xs font-semibold tracking-wide text-zinc-400">
-        자막
-        <span className="font-normal text-zinc-500">{sub.enabled ? "켜짐" : "꺼짐"}</span>
+      <h2 className="mb-3 flex items-center justify-between text-sm font-bold text-zinc-200">
+        <span className="flex items-center gap-1.5">
+          자막
+          <Tip label="자막 방식 설명">
+            {sub.display === "bottomOnly"
+              ? "가운데 가사 없이, 아래 자막 상자에 가사·발음·뜻을 함께 표시합니다."
+              : "가운데에는 움직이는 가사, 아래에는 발음과 뜻을 표시합니다."}
+          </Tip>
+        </span>
+        <span className="font-normal text-zinc-400">{sub.enabled ? "켜짐" : "꺼짐"}</span>
       </h2>
       <div className="space-y-2.5">
         <label className="flex items-center gap-1.5 text-xs text-zinc-200">
@@ -83,11 +90,6 @@ export function SubtitlePanel() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] leading-relaxed text-zinc-500">
-              {sub.display === "bottomOnly"
-                ? "가운데 가사 없이, 아래 자막 상자에 가사·발음·뜻을 함께 표시합니다."
-                : "가운데에는 움직이는 가사, 아래에는 발음과 뜻을 표시합니다."}
-            </p>
             <Row label="폰트">
               <select
                 value={sub.font}
@@ -103,7 +105,7 @@ export function SubtitlePanel() {
               </select>
             </Row>
             {sub.display === "bottomOnly" && (
-              <Row label="가사 크기">
+              <Row label="하단 자막 가사 크기">
                 {sizeInput(sub.mainFontSize, (v) => setSubtitles({ mainFontSize: v }), "자막 가사 글자 크기")}
               </Row>
             )}
@@ -185,7 +187,7 @@ export function SubtitlePanel() {
               />
               반투명 배경 박스
             </label>
-            <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <p className="flex items-center gap-1.5 text-xs text-zinc-400">
               720p 기준 크기
               <Tip>크기와 여백은 720p 기준이며 화면 비율에 맞춰 자동으로 조절됩니다.</Tip>
             </p>

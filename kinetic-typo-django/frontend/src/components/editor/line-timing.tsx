@@ -235,7 +235,7 @@ export function LineTimingRow({
                 const step = (e.key === "ArrowLeft" ? -0.05 : 0.05) / span;
                 onChange(moveMark(marks, i, v + step));
               }}
-              className={`pointer-events-auto absolute -translate-x-1/2 cursor-ew-resize whitespace-nowrap rounded px-1 text-[11px] leading-5 ${
+              className={`pointer-events-auto absolute -translate-x-1/2 cursor-ew-resize whitespace-nowrap rounded px-1 text-xs leading-5 ${
                 tapAt !== null && i === tapAt
                   ? "bg-rose-500 text-white"
                   : firsts.has(i)

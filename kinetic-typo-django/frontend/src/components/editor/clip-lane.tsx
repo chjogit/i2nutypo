@@ -207,7 +207,7 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
         />
       )}
       <span
-        className={`pointer-events-none sticky left-0 inline-flex h-full max-w-[9rem] items-center gap-1 truncate pl-1 pr-1.5 text-[10px] ${p.tone.label}`}
+        className={`pointer-events-none sticky left-0 inline-flex h-full max-w-[9rem] items-center gap-1 truncate pl-1 pr-1.5 text-[11px] ${p.tone.label}`}
       >
         {p.label}
       </span>

@@ -23,7 +23,7 @@ export function PropLanes({ pps, timeAt }: { pps: number; timeAt: (clientX: numb
           return (
             <ClipLane
               key={p.id}
-              label={`🖼 ${name}`}
+              label={`${name}`}
               ariaLabel={`일러스트 타임라인: ${name}`}
               clips={p.clips}
               selectedId={selected?.propId === p.id ? selected.clipId : null}
@@ -40,7 +40,7 @@ export function PropLanes({ pps, timeAt }: { pps: number; timeAt: (clientX: numb
                     alt=""
                     className="pointer-events-none h-4 w-4 shrink-0 object-contain"
                   />
-                  <span className="pointer-events-none truncate text-[10px] text-zinc-200">
+                  <span className="pointer-events-none truncate text-[11px] text-zinc-200">
                     {c.front ? "▲ " : ""}
                     {name}
                   </span>
@@ -68,12 +68,12 @@ export function ThemeLane({ pps, timeAt }: { pps: number; timeAt: (clientX: numb
   const selectThemeClip = usePropUiStore((s) => s.selectThemeClip);
   const label = (c: (typeof clips)[number]) =>
     [c.lookPreset, ...c.mixLooks]
-      .map((id) => `${getLookPreset(id).emoji} ${getLookPreset(id).label}`)
+      .map((id) => getLookPreset(id).label)
       .join(" + ");
 
   return (
     <ClipLane
-      label="🎨 테마"
+      label="테마"
       ariaLabel="테마 타임라인"
       clips={clips ?? []}
       selectedId={selectedId}
@@ -84,7 +84,7 @@ export function ThemeLane({ pps, timeAt }: { pps: number; timeAt: (clientX: numb
       onAdd={addThemeClip}
       title={label}
       content={(c) => (
-        <span className="pointer-events-none truncate text-[10px] text-zinc-200">{label(c)}</span>
+        <span className="pointer-events-none truncate text-[11px] text-zinc-200">{label(c)}</span>
       )}
       tone={{
         on: "border-amber-400 bg-amber-900/80",

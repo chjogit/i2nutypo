@@ -30,7 +30,32 @@ interface MotionDef {
 }
 
 const IN = 0.42;
-const easeOut = (x: number) => 1 - Math.pow(1 - clamp01(x), 3);
+const cubicOut = (x: number) => 1 - Math.pow(1 - clamp01(x), 3);
+
+/**
+ * How a theme's lines settle: a ballad drifts in softly, a glitch theme steps,
+ * a pop theme snaps, and heavy cinematic themes arrive with weight. Set around
+ * each line's motion (see applyMotion), so the motions themselves stay as they are.
+ */
+const THEME_EASE: Partial<Record<ThemedPresetId, (x: number) => number>> = {
+  ballad_hud: (x) => Math.sin((clamp01(x) * Math.PI) / 2),
+  pastel_dream: (x) => Math.sin((clamp01(x) * Math.PI) / 2),
+  sakura_breeze: (x) => Math.sin((clamp01(x) * Math.PI) / 2),
+  snow_night: (x) => Math.sin((clamp01(x) * Math.PI) / 2),
+  deep_sea: (x) => Math.sin((clamp01(x) * Math.PI) / 2),
+  vintage_paper: (x) => Math.sin((clamp01(x) * Math.PI) / 2),
+  dark_glitch: (x) => Math.round(cubicOut(x) * 7) / 7,
+  digital_crt: (x) => Math.round(cubicOut(x) * 7) / 7,
+  neon_sign: (x) => Math.round(cubicOut(x) * 9) / 9,
+  pop_cutout: (x) => (clamp01(x) >= 1 ? 1 : 1 - Math.pow(2, -9 * clamp01(x))),
+  flat_type: (x) => (clamp01(x) >= 1 ? 1 : 1 - Math.pow(2, -9 * clamp01(x))),
+  manga_panel: (x) => (clamp01(x) >= 1 ? 1 : 1 - Math.pow(2, -9 * clamp01(x))),
+  cinematic_fantasy: (x) => 1 - Math.pow(1 - clamp01(x), 4),
+  crimson_ink: (x) => 1 - Math.pow(1 - clamp01(x), 4),
+  eclipse_nebula: (x) => 1 - Math.pow(1 - clamp01(x), 4),
+};
+let currentEase = cubicOut;
+const easeOut = (x: number) => currentEase(x);
 const easeOutBack = (x: number) => {
   const t = clamp01(x) - 1;
   return 1 + 2.7 * t * t * t + 1.7 * t * t;
@@ -1128,12 +1153,19 @@ export function applyMotion(
   m: MotionFrame,
   draw: () => void,
   exits: boolean,
+  theme?: ThemedPresetId,
 ): void {
   const left = m.dur - m.elapsed;
   const exiting = exits && m.dur > EXIT_SEC * 2.5 && left < EXIT_SEC;
   const inner = exiting ? () => exitFor(motion?.id)(m, draw, 1 - Math.max(0, left) / EXIT_SEC) : draw;
-  if (motion) motion.apply(m, inner);
-  else inner();
+  const before = currentEase;
+  currentEase = (theme && THEME_EASE[theme]) || cubicOut;
+  try {
+    if (motion) motion.apply(m, inner);
+    else inner();
+  } finally {
+    currentEase = before;
+  }
 }
 export const motionLabel = (id: string): string => MOTION_BY_ID.get(id)?.label ?? id;
 

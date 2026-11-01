@@ -34,7 +34,7 @@ function Chips<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className="flex flex-wrap items-center gap-1 text-[11px] text-zinc-400"
+      className="flex flex-wrap items-center gap-1 text-xs text-zinc-400"
     >
       <span className="w-14 shrink-0">{label}</span>
       {options.map(([id, text]) => (
@@ -74,7 +74,7 @@ export function PropMaskFold({
       className="space-y-1.5 border-t border-zinc-800/70 pt-2"
       right={
         <span className="flex items-center gap-2">
-          <label className="flex items-center gap-1 text-[11px] text-zinc-300">
+          <label className="flex items-center gap-1 text-xs text-zinc-300">
             <input
               type="checkbox"
               checked={m.on}
@@ -113,7 +113,7 @@ export function PropMaskFold({
             onChange={(target) => set({ target })}
           />
           {SLIDERS.map((s) => (
-            <label key={s.key} className="flex items-center gap-2 text-[11px] text-zinc-400">
+            <label key={s.key} className="flex items-center gap-2 text-xs text-zinc-400">
               <span className="w-14 shrink-0">{s.label}</span>
               <input
                 type="range"
@@ -129,7 +129,7 @@ export function PropMaskFold({
               <span className="w-10 text-right font-mono text-zinc-300">{Math.round(m[s.key] * 100)}%</span>
             </label>
           ))}
-          <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+          <div className="flex items-center gap-2 text-xs text-zinc-400">
             <span className="w-14 shrink-0">영역 색</span>
             <input
               type="color"
