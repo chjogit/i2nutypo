@@ -54,8 +54,8 @@ export function ProjectFile() {
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-medium text-zinc-200">프로젝트 파일</h3>
-      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+      <h3 className="text-sm font-bold text-zinc-200">프로젝트 파일</h3>
+      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         설정 전체를 JSON으로 · 음원·그림 제외
         <Tip>
           가사, 싱크, 테마, 테마 구간과 모든 설정을 JSON 파일로 저장하고 다시 엽니다. 음원과 그림은 파일에

@@ -39,6 +39,7 @@ import { SAMPLE_LYRICS } from "@/lib/lyrics/samples";
 import { pickMotions, sanitizeMotionPicks } from "@/lib/render/looks/motions";
 import { sanitizeColorFilter } from "@/lib/render/looks/color-filter";
 import { freshSeed, mulberry32, textSeed } from "@/lib/random";
+import { SECTION_KINDS, type SectionKind } from "@/lib/structure/sections";
 import { composeLines, composeStyle, rerollMotion } from "@/lib/compose/auto-compose";
 import { linesToLrc } from "@/lib/sync/align";
 import {
@@ -122,6 +123,7 @@ export const DEFAULT_STYLE: StyleSettings = {
   bgPattern: "auto",
   noVibration: false,
   snapToBeats: false,
+  sectionKinds: {},
 };
 
 export const DEFAULT_SYNC: SyncSettings = {
@@ -325,6 +327,7 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
           : "auto",
       bgPattern: sanitizeBgPattern(p.style?.bgPattern),
       snapToBeats: p.style?.snapToBeats === true,
+      sectionKinds: restoreSectionKinds(p.style?.sectionKinds),
     },
     beats: sanitizeBeats(p.beats),
     sync: { ...current.sync, ...p.sync },
@@ -352,6 +355,17 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
  * kept one setting for the whole video; a changed one goes to the theme it was
  * saved with.
  */
+function restoreSectionKinds(saved: unknown): StyleSettings["sectionKinds"] {
+  const out: StyleSettings["sectionKinds"] = {};
+  if (saved && typeof saved === "object") {
+    for (const [k, v] of Object.entries(saved as Record<string, unknown>)) {
+      if (/^\d+$/.test(k) && typeof v === "string" && (SECTION_KINDS as readonly string[]).includes(v))
+        out[k] = v as SectionKind;
+    }
+  }
+  return out;
+}
+
 function restoreThemeContrast(saved: Partial<StyleSettings> | undefined): StyleSettings["themeContrast"] {
   const out = sanitizeThemeContrast(saved?.themeContrast);
   const old = (saved ?? {}) as { autoContrast?: unknown; autoContrastAmount?: unknown; lookPreset?: unknown };

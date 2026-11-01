@@ -87,8 +87,8 @@ export function LocalEnginePanel({ disabled }: { disabled: boolean }) {
         <>
           <p className={info.backend === "cpu" ? "text-amber-400" : "text-emerald-400"}>
             {info.backend === "cpu"
-              ? "🐢 이 앱은 GPU 없이 빌드되어 CPU로 인식합니다. NVIDIA는 cuda, 그 밖의 GPU는 vulkan 기능으로 빌드하면 빨라집니다."
-              : `⚡ ${LOCAL_BACKEND_LABEL[info.backend]}로 whisper.cpp를 실행합니다.`}
+              ? "이 앱은 GPU 없이 빌드되어 CPU로 인식합니다. NVIDIA는 cuda, 그 밖의 GPU는 vulkan 기능으로 빌드하면 빨라집니다."
+              : `${LOCAL_BACKEND_LABEL[info.backend]}로 whisper.cpp를 실행합니다.`}
           </p>
           <label className="flex items-center justify-between gap-3 text-zinc-400">
             모델
@@ -134,7 +134,7 @@ export function LocalEnginePanel({ disabled }: { disabled: boolean }) {
             </div>
           )}
           {model?.installed && (
-            <p className="flex items-center gap-2 text-zinc-500">
+            <p className="flex items-center gap-2 text-zinc-400">
               모델 준비됨.
               <button
                 type="button"

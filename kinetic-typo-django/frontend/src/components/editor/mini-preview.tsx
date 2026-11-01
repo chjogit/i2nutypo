@@ -185,7 +185,7 @@ export function MiniPreview({
         onPointerUp={onBarUp}
         onPointerCancel={onBarUp}
         title="끌어서 옮기기"
-        className="flex cursor-move touch-none select-none items-center gap-1 border-b border-zinc-800 px-2 py-1 text-[11px]"
+        className="flex cursor-move touch-none select-none items-center gap-1 border-b border-zinc-800 px-2 py-1 text-xs"
       >
         <span className="mr-auto font-medium text-zinc-300">미리보기</span>
         <button

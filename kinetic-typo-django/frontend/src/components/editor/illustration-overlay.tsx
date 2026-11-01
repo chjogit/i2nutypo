@@ -189,7 +189,7 @@ export function IllustrationOverlay({ canvasRef }: { canvasRef: RefObject<HTMLCa
       />
       <span
         ref={badgeRef}
-        className="pointer-events-none absolute -top-7 left-0 hidden whitespace-nowrap rounded bg-zinc-900/90 px-1.5 py-0.5 text-[10px] text-zinc-100"
+        className="pointer-events-none absolute -top-7 left-0 hidden whitespace-nowrap rounded bg-zinc-900/90 px-1.5 py-0.5 text-[11px] text-zinc-100"
       />
     </div>
   );

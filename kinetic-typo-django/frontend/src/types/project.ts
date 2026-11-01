@@ -430,6 +430,8 @@ export interface StyleSettings {
   bgPattern?: BgPattern;
   /** Timeline clips also snap to the analysed beats while dragged. */
   snapToBeats: boolean;
+  /** The user's corrections to the song structure found from the lyrics, by block number. */
+  sectionKinds: Record<string, "intro" | "verse" | "chorus" | "bridge" | "outro">;
   activePresetId: string;
   collabRelay: boolean;
   fixedMotif: MotifId;

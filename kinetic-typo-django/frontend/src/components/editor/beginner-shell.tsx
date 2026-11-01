@@ -47,12 +47,12 @@ function StepCard({
   return (
     <section
       aria-label={`${n}단계 ${title}`}
-      className={`rounded-xl border-2 bg-zinc-900/40 ${current ? "border-indigo-500" : "border-zinc-800"}`}
+      className={`rounded-xl ${current ? "border-2 border-indigo-500 bg-zinc-900/60" : done ? "border border-zinc-800/70 bg-transparent" : "border border-zinc-800 bg-zinc-900/30"}`}
     >
       <header className="flex items-center gap-3 px-4 pt-4">
         <span
           aria-hidden
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg font-bold ${
+          className={`flex shrink-0 items-center justify-center rounded-full font-bold ${current ? "h-10 w-10 text-lg" : "h-8 w-8 text-sm"} ${
             done
               ? "bg-emerald-500 text-zinc-950"
               : current
@@ -63,7 +63,7 @@ function StepCard({
           {done ? "✓" : n}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-bold text-zinc-100">
+          <h2 className={`font-bold ${current ? "text-lg text-zinc-100" : "text-base text-zinc-200"}`}>
             {n}. {title}
           </h2>
           <p className="text-xs text-zinc-400">{hint}</p>
@@ -104,7 +104,7 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/5 px-3 py-2 text-xs">
           <span className="min-w-0 flex-1 break-keep text-zinc-300">
             <span className="font-semibold text-indigo-200">
-              추천: {getLookPreset(rec.lookPreset).emoji} {getLookPreset(rec.lookPreset).label}
+              추천: {getLookPreset(rec.lookPreset).label}
             </span>{" "}
             <span className="text-zinc-400">
               가사와 템포를 보면 {rec.tags.slice(0, 2).join(" · ")} 느낌이 어울려요.
@@ -146,17 +146,17 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
                   fontFamily: p.palette.mainFont,
                 }}
               >
-                <span style={{ color: p.palette.accentColor }}>{p.emoji}</span>&nbsp;가사
+                가사<span className="ml-2 inline-block h-1.5 w-8 rounded-full" style={{ background: p.palette.accentColor }} />
               </span>
               <span className="block text-sm font-bold text-zinc-100">
                 {p.label}
                 {rec?.lookPreset === id && (
-                  <span className="ml-1.5 rounded-full bg-indigo-600/25 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-indigo-200">
+                  <span className="ml-1.5 rounded-full bg-indigo-600/25 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-indigo-200">
                     추천
                   </span>
                 )}
               </span>
-              <span className="block break-keep text-[11px] leading-snug text-zinc-400">{p.description}</span>
+              <span className="block break-keep text-xs leading-snug text-zinc-400">{p.description}</span>
             </button>
           );
         })}
@@ -172,7 +172,7 @@ function LyricLook() {
   const setStyle = useProjectStore((s) => s.setStyle);
   return (
     <div className="space-y-2.5 px-4 pt-4 text-xs text-zinc-400">
-      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         미리보기에서 바로 고치는 법
         <Tip>
           미리보기의 가사 상자를 끌면 위치, 모서리는 크기, 좌우 막대는 줄바꿈 폭이 바뀝니다. 두 번 클릭하면
@@ -191,7 +191,7 @@ function LyricLook() {
         />
       </label>
       <label className="flex items-center justify-between gap-3">
-        <span>가사 크기</span>
+        <span>영상 속 가사 크기</span>
         <span className="flex items-center gap-2">
           <input
             type="range"
@@ -201,7 +201,7 @@ function LyricLook() {
             value={fontScale}
             onChange={(e) => setStyle({ fontScale: Number(e.target.value) })}
             onDoubleClick={() => setStyle({ fontScale: 1 })}
-            aria-label="가사 크기"
+            aria-label="영상 속 가사 크기"
             className="w-32 accent-indigo-500"
           />
           <span className="w-10 text-right font-mono text-zinc-300">{Math.round(fontScale * 100)}%</span>

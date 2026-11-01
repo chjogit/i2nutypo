@@ -5,7 +5,7 @@ import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
 
 const BTN =
-  "rounded-md border border-zinc-800 px-2 py-1 text-[11px] text-zinc-300 hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40";
+  "rounded-md border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40";
 
 /**
  * One click rolls a whole look: themes, colors, elements, strengths and each
@@ -46,7 +46,7 @@ export function AutoComposeBox() {
           onClick={() => roll(freshSeed())}
           className="flex-1 rounded-md bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400"
         >
-          🎲 자동 구성
+          자동 구성
         </button>
         <button type="button" onClick={() => go(-1)} disabled={at <= 0} className={BTN}>
           ◀ 이전 안
@@ -55,7 +55,7 @@ export function AutoComposeBox() {
           다음 안 ▶
         </button>
       </div>
-      <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+      <div className="flex items-center gap-2 text-xs text-zinc-400">
         <label className="flex items-center gap-1.5">
           시드
           <input
@@ -71,12 +71,12 @@ export function AutoComposeBox() {
           이 시드로
         </button>
         {entries.length > 0 && (
-          <span className="ml-auto text-zinc-500">
+          <span className="ml-auto text-zinc-400">
             {at === 0 ? "원래 안" : `${at}번째 안`} / {entries.length - 1}
           </span>
         )}
       </div>
-      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         테마·색·움직임을 한 번에
         <Tip>
           테마·색·요소·강도와 줄마다의 움직임을 한 번에 정합니다. 타임라인에서 잠근 줄은 그대로 둡니다. 같은

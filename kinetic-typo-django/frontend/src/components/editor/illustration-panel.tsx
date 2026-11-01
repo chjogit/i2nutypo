@@ -72,13 +72,13 @@ function LockToggle({
       onClick={() => onChange(!locked)}
       aria-pressed={locked}
       aria-label={`${label} ${locked ? "고정 풀기" : "고정"}`}
-      className={`rounded-md border px-2 py-0.5 text-[11px] ${
+      className={`rounded-md border px-2 py-0.5 text-xs ${
         locked
           ? "border-amber-500/60 bg-amber-500/15 text-amber-200"
           : "border-zinc-700 text-zinc-300 hover:border-zinc-500"
       }`}
     >
-      {locked ? "🔒 고정" : "✋ 이동"}
+      {locked ? "고정" : "이동"}
     </button>
   );
 }
@@ -294,7 +294,7 @@ export function IllustrationPanel() {
           {asset ? `${title} 바꾸기` : `${title} 선택`}
         </label>
         {asset ? (
-          <p className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
+          <p className="flex items-center justify-between gap-2 text-xs text-zinc-400">
             <span className="truncate">{asset.fileName}</span>
             <button
               type="button"
@@ -305,7 +305,7 @@ export function IllustrationPanel() {
             </button>
           </p>
         ) : (
-          <p className="text-[11px] text-zinc-500">{hint}</p>
+          <p className="text-xs text-zinc-400">{hint}</p>
         )}
       </div>
     );
@@ -315,7 +315,7 @@ export function IllustrationPanel() {
 
   return (
     <section className="space-y-3 px-4 py-4">
-      <h2 className="text-xs font-semibold tracking-wide text-zinc-400">배경 · 배치</h2>
+      <h2 className="text-sm font-bold text-zinc-200">배경 · 배치</h2>
       <RightsNote what="배경·커버 그림" />
 
       <div className="space-y-1.5">
@@ -326,8 +326,8 @@ export function IllustrationPanel() {
         >
           {(
             [
-              ["move", "✋ 옮기기"],
-              ["cells", "🟥 가사 금지 칸"],
+              ["move", "옮기기"],
+              ["cells", "가사 금지 칸"],
             ] as const
           ).map(([id, text]) => (
             <button
@@ -362,14 +362,14 @@ export function IllustrationPanel() {
         />
         {tool === "cells" ? (
           <>
-            <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <p className="flex items-center gap-1.5 text-xs text-zinc-400">
               빨간 칸 = 가사 금지
               <Tip>
                 칸을 누르거나 끌어서 빨간 칸으로 지정하세요. 가사는 빨간 칸을 피해 가고, 맨 아래 가운데 두 칸
                 중 하나가 빨간색이면 하단 자막은 위로 올라갑니다.
               </Tip>
             </p>
-            <div className="flex gap-3 text-[11px]">
+            <div className="flex gap-3 text-xs">
               <button
                 type="button"
                 onClick={() => setIllustration({ noTextCells: Array<boolean>(CELLS).fill(false) })}
@@ -380,7 +380,7 @@ export function IllustrationPanel() {
             </div>
           </>
         ) : (
-          <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+          <p className="flex items-center gap-1.5 text-xs text-zinc-400">
             배경을 끌어서 옮기기
             <Tip>
               배경을 끌어서 옮기세요. 가사가 들어가면 안 되는 곳은 &quot;가사 금지 칸&quot;에서 지정합니다.
@@ -432,7 +432,7 @@ export function IllustrationPanel() {
           type="button"
           disabled={ill.bgLocked}
           onClick={() => setIllustration({ bgX: 0, bgY: 0, bgZoom: 1 })}
-          className="text-[11px] text-indigo-400 hover:underline disabled:opacity-40"
+          className="text-xs text-indigo-400 hover:underline disabled:opacity-40"
         >
           배경 위치 가운데로
         </button>

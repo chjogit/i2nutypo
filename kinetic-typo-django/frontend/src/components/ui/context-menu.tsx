@@ -78,7 +78,7 @@ export function ContextMenuHost() {
       className="fixed z-[70] overflow-hidden rounded-md border border-zinc-700 bg-zinc-900 py-1 text-xs text-zinc-200 shadow-2xl shadow-black/60"
     >
       {menu.title && (
-        <div className="truncate px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+        <div className="truncate px-3 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
           {menu.title}
         </div>
       )}
@@ -98,7 +98,7 @@ export function ContextMenuHost() {
             className={`flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left hover:bg-indigo-500/15 focus:bg-indigo-500/20 focus:outline-none disabled:opacity-40 ${it.danger ? "text-red-300" : ""}`}
           >
             <span className="truncate">{it.label}</span>
-            {it.hint && <span className="shrink-0 font-mono text-[10px] text-zinc-500">{it.hint}</span>}
+            {it.hint && <span className="shrink-0 font-mono text-[11px] text-zinc-400">{it.hint}</span>}
           </button>
         ),
       )}

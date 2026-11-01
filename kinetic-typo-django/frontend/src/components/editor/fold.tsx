@@ -31,7 +31,7 @@ export function Fold({
         >
           <span
             aria-hidden
-            className={`text-[10px] text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`}
+            className={`text-[11px] text-zinc-400 transition-transform ${open ? "" : "-rotate-90"}`}
           >
             ▾
           </span>

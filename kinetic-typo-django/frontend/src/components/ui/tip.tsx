@@ -72,7 +72,7 @@ export function Tip({
           e.stopPropagation();
           setPinned((v) => !v);
         }}
-        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-zinc-700 text-[10px] font-bold leading-none text-zinc-400 hover:border-indigo-400 hover:text-indigo-200 focus:border-indigo-400 focus:outline-none ${pinned ? "border-indigo-400 text-indigo-200" : ""} ${className}`}
+        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-zinc-700 text-[11px] font-bold leading-none text-zinc-400 hover:border-indigo-400 hover:text-indigo-200 focus:border-indigo-400 focus:outline-none ${pinned ? "border-indigo-400 text-indigo-200" : ""} ${className}`}
       >
         ?
       </button>
@@ -81,7 +81,7 @@ export function Tip({
           id={id}
           role="tooltip"
           style={{ left: pos.left, top: pos.top, transform: pos.above ? "translateY(-100%)" : undefined }}
-          className="pointer-events-none fixed z-[60] w-[280px] rounded-md border border-zinc-700 bg-zinc-900/98 px-3 py-2 text-[11px] font-normal leading-relaxed text-zinc-200 shadow-xl shadow-black/50"
+          className="pointer-events-none fixed z-[60] w-[280px] rounded-md border border-zinc-700 bg-zinc-900/98 px-3 py-2 text-xs font-normal leading-relaxed text-zinc-200 shadow-xl shadow-black/50"
         >
           {children}
         </div>

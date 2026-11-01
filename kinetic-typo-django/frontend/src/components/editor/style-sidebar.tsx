@@ -1,3 +1,4 @@
+import { ThemeSwatch } from "@/components/ui/theme-swatch";
 import { useEffect, useState } from "react";
 import type {
   DetailSettings,
@@ -113,7 +114,7 @@ export function StyleSidebar() {
   }, [themeClip]);
   return (
     <section className="px-4 py-4">
-      <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-400">영상 스타일</h2>
+      <h2 className="mb-3 text-sm font-bold text-zinc-200">영상 스타일</h2>
       <div className="space-y-3">
         <Segmented
           label="스타일 보기"
@@ -149,22 +150,22 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
         className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-zinc-900/60"
       >
         <span className="shrink-0 font-semibold text-zinc-200">테마</span>
-        <span className="shrink-0 font-mono text-[10px] text-zinc-500">
+        <span className="shrink-0 font-mono text-[11px] text-zinc-400">
           {picked.length}/{MAX_MIX_LOOKS + 1}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-400">
-          {picked.map((id) => `${getLookPreset(id).emoji} ${getLookPreset(id).label}`).join(" · ")}
+        <span className="min-w-0 flex-1 truncate text-xs text-zinc-400">
+          {picked.map((id) => getLookPreset(id).label).join(" · ")}
         </span>
         <span
           aria-hidden
-          className={`shrink-0 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
         >
           ▾
         </span>
       </button>
       {open && (
         <div id="theme-grid" className="space-y-1.5 border-t border-zinc-800 p-2">
-          <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+          <p className="flex items-center gap-1.5 text-xs text-zinc-400">
             최대 3개 · 1번이 배경
             <Tip>
               {target.clip
@@ -189,14 +190,15 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
                   className={`relative rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${on ? ON : OFF}`}
                 >
                   {on && (
-                    <span className="absolute right-1.5 top-1.5 rounded-full bg-indigo-600 px-1.5 text-[10px] font-semibold text-white">
+                    <span className="absolute right-1.5 top-1.5 rounded-full bg-indigo-600 px-1.5 text-[11px] font-semibold text-white">
                       {order + 1}
                     </span>
                   )}
                   <span className="block break-keep pr-5 text-xs font-semibold text-zinc-200">
-                    {p.emoji} {p.label}
+                    <ThemeSwatch id={p.id} className="mr-1.5" />
+                    {p.label}
                   </span>
-                  <span className="block break-keep text-[10px] leading-snug text-zinc-500">
+                  <span className="block break-keep text-[11px] leading-snug text-zinc-400">
                     {p.description}
                   </span>
                 </button>
@@ -260,7 +262,7 @@ function MoveControls({
   return (
     <div className="ml-5 space-y-1 rounded-md border border-zinc-800 px-2 py-1.5">
       {MOVE_SLIDERS.map((m) => (
-        <label key={m.key} className="flex items-center gap-2 text-[11px] text-zinc-400">
+        <label key={m.key} className="flex items-center gap-2 text-xs text-zinc-400">
           <span className="w-8 shrink-0">{m.label}</span>
           <input
             type="range"
@@ -281,7 +283,7 @@ function MoveControls({
       <button
         type="button"
         onClick={() => onChange({ x: 0, y: 0, rot: 0, size: 1 })}
-        className="text-[11px] text-indigo-400 hover:underline"
+        className="text-xs text-indigo-400 hover:underline"
       >
         원래 자리로
       </button>
@@ -317,7 +319,7 @@ function ElementRow({
           {/* Name and role on two lines, so a narrow sidebar never hides the name */}
           <span className="min-w-0 flex-1">
             <span className="block break-keep leading-snug">{def.label}</span>
-            <span className="block text-[10px] leading-tight text-zinc-500">
+            <span className="block text-[11px] leading-tight text-zinc-400">
               {active ? ROLE_LABEL[def.role] : (ROLE_HINT[def.role] ?? ROLE_LABEL[def.role])}
             </span>
           </span>
@@ -333,7 +335,7 @@ function ElementRow({
           aria-label={`${def.label} 적용 정도`}
           className="w-20 accent-indigo-500 disabled:opacity-30"
         />
-        <span className={`w-9 text-right font-mono ${state.on ? "text-zinc-300" : "text-zinc-600"}`}>
+        <span className={`w-9 text-right font-mono ${state.on ? "text-zinc-300" : "text-zinc-400"}`}>
           {Math.round(state.amount * 100)}%
         </span>
         {def.move ? (
@@ -343,10 +345,10 @@ function ElementRow({
             aria-expanded={moving}
             aria-label={`${def.label} 위치 · 회전 · 크기`}
             title="위치 · 회전 · 크기"
-            className={`w-6 shrink-0 rounded border text-[11px] ${
+            className={`w-6 shrink-0 rounded border text-xs ${
               moving || moved
                 ? "border-indigo-500 text-indigo-200"
-                : "border-zinc-800 text-zinc-500 hover:border-indigo-500"
+                : "border-zinc-800 text-zinc-400 hover:border-indigo-500"
             }`}
           >
             ⌖
@@ -383,7 +385,7 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
       type="button"
       aria-pressed={on}
       onClick={onClick}
-      className={`rounded-md border px-2 py-0.5 text-[11px] ${on ? ON : OFF}`}
+      className={`rounded-md border px-2 py-0.5 text-xs ${on ? ON : OFF}`}
     >
       {label}
     </button>
@@ -404,7 +406,7 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
   return (
     <Fold
       className="space-y-1.5 border-t border-zinc-800/70 pt-3"
-      title={`${p.emoji} ${p.label}`}
+      title={p.label}
       right={
         <span className="flex shrink-0 gap-2">
           <button type="button" onClick={reset} className="text-indigo-400 hover:underline">
@@ -434,7 +436,7 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
         className="space-y-1.5 rounded-md border border-zinc-800/70 px-2 py-1.5"
         title={`추가 연출 ${LOOK_ELEMENTS[id].filter((def) => def.extra).length}`}
         right={
-          <span className="flex shrink-0 items-center gap-2 text-[11px]">
+          <span className="flex shrink-0 items-center gap-2 text-xs">
             <button type="button" onClick={() => setExtras(true)} className="text-indigo-400 hover:underline">
               모두 켜기
             </button>
@@ -455,12 +457,12 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
         }
       >
         {LOOK_ELEMENTS[id].filter((def) => def.extra).map(row)}
-        <label className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
+        <label className="flex items-center justify-between gap-2 text-xs text-zinc-400">
           <span>생성 배경 무늬 모양</span>
           <select
             value={style.bgPattern ?? "auto"}
             onChange={(e) => setStyle({ bgPattern: e.target.value as BgPattern })}
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-[11px] text-zinc-200"
+            className="rounded-md border border-zinc-700 bg-zinc-900 px-1.5 py-0.5 text-xs text-zinc-200"
           >
             {(["auto", ...BG_PATTERNS] as const).map((k) => (
               <option key={k} value={k}>
@@ -489,17 +491,17 @@ function MotionChips({ id, isLyric }: { id: ThemedPresetId; isLyric: boolean }) 
     });
   return (
     <div className="space-y-1 rounded-md border border-zinc-800/70 px-2 py-1.5">
-      <div className="flex items-center gap-2 text-[11px]">
+      <div className="flex items-center gap-2 text-xs">
         <span className="flex-1 font-semibold text-zinc-300">
           가사 움직임 {on.length}/{THEME_MOTIONS[id].length}
-          {!isLyric && <span className="ml-1 font-normal text-zinc-500">(가사 테마일 때 적용)</span>}
+          {!isLyric && <span className="ml-1 font-normal text-zinc-400">(가사 테마일 때 적용)</span>}
         </span>
         <button
           type="button"
           onClick={() => save(pickSome(THEME_MOTIONS[id], MOTIONS_PER_SONG, mulberry32(freshSeed())))}
           className="text-indigo-400 hover:underline"
         >
-          🎲 섞기
+          섞기
         </button>
       </div>
       <div className="flex flex-wrap gap-1">
@@ -511,14 +513,14 @@ function MotionChips({ id, isLyric }: { id: ThemedPresetId; isLyric: boolean }) 
               type="button"
               aria-pressed={lit}
               onClick={() => save(lit ? on.filter((x) => x !== m) : [...on, m])}
-              className={`rounded-full border px-2 py-0.5 text-[11px] ${lit ? ON : OFF}`}
+              className={`rounded-full border px-2 py-0.5 text-xs ${lit ? ON : OFF}`}
             >
               {motionLabel(m)}
             </button>
           );
         })}
       </div>
-      {on.length === 0 && <p className="text-[11px] text-zinc-500">모두 끄면 테마 기본 움직임만 씁니다.</p>}
+      {on.length === 0 && <p className="text-xs text-zinc-400">모두 끄면 테마 기본 움직임만 씁니다.</p>}
     </div>
   );
 }
@@ -593,9 +595,9 @@ function ThemeClipBanner({ clip }: { clip: ThemeClip }) {
   const selectThemeClip = usePropUiStore((s) => s.selectThemeClip);
   const removeThemeClip = useProjectStore((s) => s.removeThemeClip);
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-amber-500/50 bg-amber-500/5 px-2.5 py-1.5 text-[11px]">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-amber-500/50 bg-amber-500/5 px-2.5 py-1.5 text-xs">
       <span className="min-w-0 flex-1 font-semibold text-amber-200">
-        🎨 테마 구간 {formatLrcTime(clip.start)} ~ {formatLrcTime(clip.end)} 편집 중
+        테마 구간 {formatLrcTime(clip.start)} ~ {formatLrcTime(clip.end)} 편집 중
       </span>
       <button
         type="button"
@@ -640,7 +642,7 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
   return (
     <Fold
       className="space-y-2 border-t border-zinc-800/70 pt-3"
-      title={clip ? "🎨 이 구간 테마 색상" : "🎨 테마 색상"}
+      title={clip ? "이 구간 테마 색상" : "테마 색상"}
       right={
         <button type="button" onClick={reset} className="text-indigo-400 hover:underline">
           테마 기본 색
@@ -754,7 +756,7 @@ function ElementMotionFold() {
             aria-pressed={em.mode === mode}
             title={hint}
             onClick={() => set({ mode: mode as ElementMotionMode })}
-            className={`rounded-full border px-2 py-0.5 text-[11px] ${em.mode === mode ? ON : OFF}`}
+            className={`rounded-full border px-2 py-0.5 text-xs ${em.mode === mode ? ON : OFF}`}
           >
             {label}
           </button>
@@ -802,7 +804,7 @@ function ThemeTab() {
       <ThemeGrid target={target} />
       <ThemeColorsFold target={target} />
       {picked.some((id) => isThemedPresetId(id) && LOOK_ELEMENTS[id].some((d) => d.move)) && (
-        <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        <p className="flex items-center gap-1.5 text-xs text-zinc-400">
           ⌖ 요소는 옮기고 돌릴 수 있음
           <Tip>
             ⌖ 표시가 있는 요소(레코드, 커버, 원, 낙관 등)는 눌러서 위치·회전·크기를 바꿀 수 있습니다.

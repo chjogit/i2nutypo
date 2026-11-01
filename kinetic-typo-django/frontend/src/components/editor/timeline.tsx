@@ -22,6 +22,7 @@ import { CELLS, GRID } from "@/lib/render/looks/layout";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { FEATURES_NOW } from "@/lib/mode/mode";
+import { SectionLane } from "./section-lane";
 import { PROP_LANE_HEIGHT, PropLanes, ThemeLane } from "./prop-lanes";
 import { AdjustLane, BeatMarks, TransitionLane } from "./fx-lanes";
 import { Tip } from "@/components/ui/tip";
@@ -713,20 +714,20 @@ export function Timeline() {
                   className="pointer-events-none absolute top-0 h-full border-l border-zinc-800/80"
                   style={{ left: t * pps }}
                 >
-                  <span className="ml-1 font-mono text-[10px] text-zinc-500">
+                  <span className="ml-1 font-mono text-[11px] text-zinc-400">
                     {formatLrcTime(t).slice(0, 5)}
                   </span>
                 </div>
               ))}
 
               {twoLanes && (
-                <span className="pointer-events-none absolute bottom-1 left-1 top-[calc(50%+10px)] flex items-center text-[10px] font-semibold text-violet-300/60">
+                <span className="pointer-events-none absolute bottom-1 left-1 top-[calc(50%+10px)] flex items-center text-[11px] font-semibold text-violet-300/60">
                   &
                 </span>
               )}
 
               {lines.length === 0 && (
-                <p className="pointer-events-none absolute left-2 top-8 text-xs text-zinc-500">
+                <p className="pointer-events-none absolute left-2 top-8 text-xs text-zinc-400">
                   가사를 입력하면 여기에 자막 구간이 생깁니다.
                 </p>
               )}
@@ -790,10 +791,10 @@ export function Timeline() {
                       {line.cleanText}
                     </span>
                     {line.pronText && (
-                      <span className="truncate text-[10px] text-amber-200/70">{line.pronText}</span>
+                      <span className="truncate text-[11px] text-amber-200/70">{line.pronText}</span>
                     )}
                     {line.transText && (
-                      <span className="truncate text-[10px] text-zinc-300">{line.transText}</span>
+                      <span className="truncate text-[11px] text-zinc-300">{line.transText}</span>
                     )}
                     <span
                       aria-hidden
@@ -809,6 +810,7 @@ export function Timeline() {
                 );
               })}
             </div>
+            <SectionLane pps={pps} />
             {(FEATURES_NOW.themeMix || FEATURES_NOW.characters) && (
               <div className="shrink-0 border-t border-zinc-800/80">
                 {FEATURES_NOW.themeMix && <ThemeLane pps={pps} timeAt={timeAt} />}
@@ -1037,7 +1039,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
     <>
       <div className="flex flex-wrap items-center justify-center gap-2 text-zinc-300">
         <span className="font-semibold text-indigo-200">{picked.length}줄 선택</span>
-        <span className="text-zinc-500">
+        <span className="text-zinc-400">
           {formatLrcTime(from)} ~ {formatLrcTime(to)}
         </span>
         <button
@@ -1066,7 +1068,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
             title="고른 줄이 나오는 동안 쓸 테마 구간을 만들고, 왼쪽 테마 칸에서 고르게 합니다"
             className={SMALL_BTN}
           >
-            🎨 이 줄들에 테마 타임라인 추가
+            이 줄들에 테마 타임라인 추가
           </button>
         )}
         <button
@@ -1083,7 +1085,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
           선택 해제
         </button>
       </div>
-      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         여러 줄 고르는 법
         <Tip>
           Ctrl(⌘)+클릭: 줄 더하기·빼기 · Shift+클릭: 사이의 줄 모두 · 고른 줄 하나를 끌면 함께 움직입니다
@@ -1098,7 +1100,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-zinc-400">
         <span>움직임</span>
         <button type="button" onClick={() => rerollLines(indices)} className={SMALL_BTN}>
-          🎲 모두 다시 뽑기
+          모두 다시 뽑기
         </button>
         <button
           type="button"
@@ -1123,7 +1125,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
             onChange={(e) => toggle("flash", e.target.checked)}
             className="accent-indigo-500"
           />
-          ⚡ 모두 번쩍
+          모두 번쩍
         </label>
       </div>
     </>
@@ -1259,10 +1261,10 @@ function LineMotionRow({
     <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-zinc-400">
       <span>
         움직임: <span className="font-semibold text-zinc-200">{motion?.label ?? "테마 기본"}</span>
-        {!own && motion && <span className="ml-1 text-zinc-600">(테마가 고름)</span>}
+        {!own && motion && <span className="ml-1 text-zinc-400">(테마가 고름)</span>}
       </span>
       <button type="button" onClick={onReroll} className={SMALL_BTN}>
-        🎲 다시 뽑기
+        다시 뽑기
       </button>
       {own && (
         <button type="button" onClick={clearMotion} className={SMALL_BTN}>
@@ -1288,7 +1290,7 @@ function LineMotionRow({
           onChange={(e) => toggle("flash", e.target.checked)}
           className="accent-indigo-500"
         />
-        ⚡ 번쩍
+        번쩍
       </label>
     </div>
   );
@@ -1399,7 +1401,7 @@ function LineStyleRow({ value, onChange }: { value: LineStyle; onChange: (next: 
                 <span className="w-10 font-mono text-zinc-300">{c.format(own)}</span>
               </>
             ) : (
-              <span className="text-zinc-600">전체 설정</span>
+              <span className="text-zinc-400">전체 설정</span>
             )}
           </span>
         );

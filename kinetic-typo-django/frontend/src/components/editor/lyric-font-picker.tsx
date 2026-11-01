@@ -155,12 +155,12 @@ export function LyricFontPicker() {
                       >
                         가사 歌詞 Aa
                       </span>
-                      <span className="block truncate text-[10px] text-zinc-500">{f.fileName}</span>
+                      <span className="block truncate text-[11px] text-zinc-400">{f.fileName}</span>
                     </button>
                   );
                 })}
               </div>
-              <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+              <p className="flex items-center gap-1.5 text-xs text-zinc-400">
                 내 글꼴은 이 브라우저에서만 쓰임
                 <Tip>
                   글꼴 파일은 이 브라우저 안에서만 읽고, 페이지를 닫으면 다시 올려야 합니다. 영상에 쓸 수 있는
@@ -189,14 +189,14 @@ export function LyricFontPicker() {
                     >
                       {SAMPLE[lang]}
                     </span>
-                    <span className="block truncate text-[10px] text-zinc-500">{f.label}</span>
+                    <span className="block truncate text-[11px] text-zinc-400">{f.label}</span>
                   </button>
                 );
               })}
             </div>
           )}
           {lang !== "mine" && (
-            <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <p className="flex items-center gap-1.5 text-xs text-zinc-400">
               무료 글꼴(OFL·Apache) · 상업 사용 가능
               <Tip>
                 모두 무료 글꼴(SIL OFL, 일부 Apache-2.0)이라 영상에 상업적으로 써도 됩니다. 글꼴 파일만 따로

@@ -21,7 +21,7 @@ export function TimeField({
     setText(null);
   };
   return (
-    <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+    <span className="flex items-center gap-1.5 text-xs text-zinc-400">
       <span className="w-12 shrink-0">{label}</span>
       <input
         type="number"
@@ -36,7 +36,7 @@ export function TimeField({
         aria-label={`${label} (초)`}
         className="w-16 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 font-mono text-zinc-100 focus:border-indigo-500 focus:outline-none"
       />
-      <span className="font-mono text-zinc-500">{fmtTime(value)}</span>
+      <span className="font-mono text-zinc-400">{fmtTime(value)}</span>
       <button
         type="button"
         onClick={() => onCommit(Math.round(usePlaybackStore.getState().currentTime * 100) / 100)}

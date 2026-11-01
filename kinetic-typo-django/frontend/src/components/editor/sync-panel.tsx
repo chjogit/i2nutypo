@@ -262,9 +262,9 @@ export function SyncPanel() {
 
   return (
     <div className="space-y-2.5 border-t border-zinc-800/70 pt-3 text-xs">
-      <h3 className="text-xs font-semibold tracking-wide text-zinc-400">자동 싱크</h3>
+      <h3 className="text-sm font-bold text-zinc-200">자동 싱크</h3>
       <div className="space-y-2.5">
-        <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        <p className="flex items-center gap-1.5 text-xs text-zinc-400">
           음성 인식으로 줄 시작 맞추기 · 음원은 밖으로 안 나감
           <Tip>
             음원을 {useLocal ? "이 컴퓨터의 GPU로" : "브라우저 안에서"} 음성 인식(Whisper)해 각 줄의 시작
@@ -285,7 +285,7 @@ export function SyncPanel() {
           />
           <span>
             <span className="font-semibold text-zinc-200">보컬만 분리해서 인식</span>{" "}
-            <span className="text-zinc-500">
+            <span className="text-zinc-400">
               반주를 걷어내고 목소리만 들려줘 인식이 훨씬 정확해집니다. 처음 한 번 분리 모델을
               내려받습니다.
               {accelerator === "cpu" && " 이 브라우저는 GPU를 못 써서 곡 길이에 따라 몇 분 더 걸립니다."}
@@ -311,8 +311,8 @@ export function SyncPanel() {
                       : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
                   }`}
                 >
-                  <span className="block text-[11px] font-semibold">{m.label}</span>
-                  <span className="block text-[10px] text-zinc-500">
+                  <span className="block text-xs font-semibold">{m.label}</span>
+                  <span className="block text-[11px] text-zinc-400">
                     {m.sizeMb}MB · {m.note}
                   </span>
                 </button>
@@ -341,19 +341,19 @@ export function SyncPanel() {
                   }`}
                 >
                   <span className="block font-semibold tracking-wide">{m.label}</span>
-                  <span className="block text-[10px] text-zinc-500">{m.note}</span>
+                  <span className="block text-[11px] text-zinc-400">{m.note}</span>
                 </button>
               ))}
             </div>
             {accelerator && (
               <p className={accelerator === "webgpu" ? "text-emerald-400" : "text-amber-400"}>
                 {accelerator === "webgpu"
-                  ? "⚡ GPU 가속(WebGPU)으로 인식합니다."
-                  : "🐢 이 브라우저는 WebGPU를 쓸 수 없어 CPU로 인식합니다. 몇 배 느리므로 FAST를 권장합니다."}
+                  ? "GPU 가속(WebGPU)으로 인식합니다."
+                  : "이 브라우저는 WebGPU를 쓸 수 없어 CPU로 인식합니다. 몇 배 느리므로 FAST를 권장합니다."}
               </p>
             )}
             {accelerator === "cpu" && (
-              <details className="text-zinc-500">
+              <details className="text-zinc-400">
                 <summary className="cursor-pointer">WebGPU 켜는 방법</summary>
                 <ul className="mt-1 list-disc space-y-0.5 pl-4">
                   <li>최신 Chrome·Edge(113 이상)는 기본으로 켜져 있습니다. 브라우저를 업데이트해 보세요.</li>
@@ -413,7 +413,7 @@ export function SyncPanel() {
               {lines.some((l) => l.overlap) && " 겹치는 줄(&)은 함께 부르는 줄을 따라 움직입니다."}{" "}
               타임라인에서 바로 고칠 수 있습니다.
             </p>
-            <p className="text-zinc-500">
+            <p className="text-zinc-400">
               {done.mode === "word"
                 ? "단어 단위 시간으로 맞췄습니다."
                 : "이 모델은 단어 단위 시간을 지원하지 않아 구간 단위로 맞췄습니다. 줄 시작이 조금 어긋날 수 있습니다."}{" "}
@@ -431,7 +431,7 @@ export function SyncPanel() {
                     ? "text-emerald-400"
                     : a.estimate !== null
                       ? "text-amber-400"
-                      : "text-zinc-600";
+                      : "text-zinc-400";
                 return (
                   <li key={a.lineIdx} className="flex items-baseline gap-2">
                     <span className={`w-4 shrink-0 ${markColor}`}>{mark}</span>
@@ -441,7 +441,7 @@ export function SyncPanel() {
                     <span className="min-w-0 flex-1 truncate text-zinc-200" title={a.heard || undefined}>
                       {line.cleanText}
                     </span>
-                    <span className="shrink-0 font-mono text-zinc-500">
+                    <span className="shrink-0 font-mono text-zinc-400">
                       {Math.round(a.similarity * 100)}%
                     </span>
                   </li>
@@ -469,19 +469,19 @@ export function SyncPanel() {
             </div>
             {done.separated && separatedVocals && (
               <details>
-                <summary className="cursor-pointer text-zinc-500">분리된 보컬 들어 보기</summary>
+                <summary className="cursor-pointer text-zinc-400">분리된 보컬 들어 보기</summary>
                 <audio controls src={separatedVocals.previewUrl} className="mt-1 h-8 w-full" />
               </details>
             )}
             <details>
-              <summary className="cursor-pointer text-zinc-500">인식된 전체 텍스트</summary>
+              <summary className="cursor-pointer text-zinc-400">인식된 전체 텍스트</summary>
               <p className="mt-1 whitespace-pre-wrap text-zinc-400">{done.transcript.trim() || "(없음)"}</p>
             </details>
           </div>
         )}
 
         <details className="text-zinc-400">
-          <summary className="cursor-pointer text-zinc-500">음원 없이 직접 배치</summary>
+          <summary className="cursor-pointer text-zinc-400">음원 없이 직접 배치</summary>
           <div className="mt-2 space-y-2">
             <label className="flex items-center gap-2">
               전주 길이 (이 시간 전엔 가사가 나오지 않음)

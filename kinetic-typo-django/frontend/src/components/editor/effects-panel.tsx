@@ -33,7 +33,7 @@ const TABS: ReadonlyArray<readonly [Tab, string]> = [
 const CARD =
   "rounded-md border border-zinc-800 bg-zinc-900/40 text-left hover:border-indigo-500 focus:border-indigo-500 focus:outline-none";
 const SMALL =
-  "rounded-md border border-zinc-800 px-2 py-1 text-[11px] text-zinc-300 hover:border-indigo-500 disabled:opacity-40";
+  "rounded-md border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:border-indigo-500 disabled:opacity-40";
 
 const now = () => usePlaybackStore.getState().currentTime;
 
@@ -85,16 +85,16 @@ export function EffectsPanel() {
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-zinc-400 hover:text-zinc-100"
+          className="flex items-center gap-1.5 text-sm font-bold text-zinc-200 hover:text-zinc-100"
         >
           <span
             aria-hidden
-            className={`text-[10px] text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`}
+            className={`text-[11px] text-zinc-400 transition-transform ${open ? "" : "-rotate-90"}`}
           >
             ▾
           </span>
           <h2>효과 · 소스</h2>
-          {!open && <span className="font-normal text-zinc-600">{TABS.find(([id]) => id === tab)?.[1]}</span>}
+          {!open && <span className="font-normal text-zinc-400">{TABS.find(([id]) => id === tab)?.[1]}</span>}
         </button>
         <Tip>
           항목에 마우스를 올리면 미리 볼 수 있고, 누르면 재생 위치에 들어갑니다. 타임라인의 해당 줄로 끌어다
@@ -104,7 +104,7 @@ export function EffectsPanel() {
       </div>
       {open && (
         <>
-          <div role="tablist" aria-label="효과 종류" className="grid grid-cols-3 gap-1 text-[11px]">
+          <div role="tablist" aria-label="효과 종류" className="grid grid-cols-3 gap-1 text-xs">
             {TABS.map(([id, label]) => (
               <button
                 key={id}
@@ -134,7 +134,7 @@ function Flash({ text }: { text: string | null }) {
   return (
     <p
       role="status"
-      className="rounded-md border border-emerald-800/60 bg-emerald-950/40 px-2 py-1 text-[11px] text-emerald-200"
+      className="rounded-md border border-emerald-800/60 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-200"
     >
       {text}
     </p>
@@ -160,7 +160,7 @@ function PacksTab() {
   const hasBeats = useProjectStore((s) => s.beats !== null);
   return (
     <div className="space-y-2">
-      <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         한 번에 영상 분위기 입히기
         <Tip>
           팩을 누르면 전환(트랜지션)·테마 요소 움직임·가사 자리·마무리 색감이 한 번에 들어갑니다. 지금 있는
@@ -178,7 +178,7 @@ function PacksTab() {
             >
               {p.label}
               {p.on === "bars" && !hasBeats && (
-                <span className="ml-1 text-[10px] font-normal text-zinc-500">(줄마다)</span>
+                <span className="ml-1 text-[11px] font-normal text-zinc-400">(줄마다)</span>
               )}
             </button>
             <Tip label={`${p.label} 팩 설명`}>{p.hint}</Tip>
@@ -254,7 +254,7 @@ function TransitionCard({ def }: { def: TransitionDef }) {
       className={`${CARD} overflow-hidden ${last === def.id ? "border-indigo-500/70" : ""}`}
     >
       <TransitionPreview kind={def.id} playing={hover} />
-      <span className="block truncate px-1.5 py-1 text-[10px] text-zinc-300">{def.label}</span>
+      <span className="block truncate px-1.5 py-1 text-[11px] text-zinc-300">{def.label}</span>
     </button>
   );
 }
@@ -285,12 +285,12 @@ function TransitionsTab() {
         >
           마디마다
         </button>
-        <span className="ml-auto text-[10px] text-zinc-500">{count}개</span>
+        <span className="ml-auto text-[11px] text-zinc-400">{count}개</span>
       </div>
       <Flash text={msg} />
       {groups.map((g) => (
         <div key={g} className="space-y-1">
-          <p className="text-[10px] font-semibold text-zinc-500">{g}</p>
+          <p className="text-[11px] font-semibold text-zinc-400">{g}</p>
           <div className="grid grid-cols-3 gap-1.5">
             {TRANSITIONS.filter((t) => t.group === g).map((t) => (
               <TransitionCard key={t.id} def={t} />
@@ -307,7 +307,7 @@ function AdjustTab() {
   const selectFx = usePropUiStore((s) => s.selectFx);
   return (
     <div className="space-y-2">
-      <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
+      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         조정 레이어
         <Tip>
           조정 레이어는 정해진 구간 동안 화면 전체에 효과를 덮습니다. 누르면 재생 위치부터 4초, 지금 가사 줄
@@ -334,7 +334,7 @@ function AdjustTab() {
             className={`${CARD} px-2 py-1.5`}
           >
             <span className="block text-xs text-zinc-100">{a.label}</span>
-            <span className="block truncate text-[10px] text-zinc-500">{a.hint}</span>
+            <span className="block truncate text-[11px] text-zinc-400">{a.hint}</span>
           </button>
         ))}
       </div>
@@ -352,7 +352,7 @@ function BeatsTab() {
   const [busy, setBusy] = useState(false);
   const [msg, flash] = useFlash();
   return (
-    <div className="space-y-2 text-[11px] text-zinc-400">
+    <div className="space-y-2 text-xs text-zinc-400">
       <p className="flex items-center gap-1.5">
         비트 마커
         <Tip>
@@ -384,7 +384,7 @@ function BeatsTab() {
           </button>
         )}
       </div>
-      {!hasSong && <p className="text-zinc-500">음원을 올리면 분석할 수 있습니다.</p>}
+      {!hasSong && <p className="text-zinc-400">음원을 올리면 분석할 수 있습니다.</p>}
       <Flash text={msg} />
       {beats && (
         <>

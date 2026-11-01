@@ -60,7 +60,7 @@ export function LyricsEditor({
   return (
     <section aria-label="가사" className="space-y-3 px-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        {heading && <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-400 mb-0">가사</h2>}
+        {heading && <h2 className="mb-3 text-sm font-bold text-zinc-200 mb-0">가사</h2>}
         {collapsed && (
           <button
             type="button"
@@ -87,7 +87,7 @@ export function LyricsEditor({
                 {l.cleanText}
               </li>
             ))}
-            {lines.length > 4 && <li className="text-zinc-500">…</li>}
+            {lines.length > 4 && <li className="text-zinc-400">…</li>}
           </ol>
         </div>
       ) : (
@@ -110,7 +110,7 @@ export function LyricsEditor({
             >
               가사 입력 완료
             </button>
-            <span className="ml-auto text-zinc-500">예시</span>
+            <span className="ml-auto text-zinc-400">예시</span>
             <select
               value={language}
               onChange={(e) => setStyle({ language: e.target.value as LanguageCode })}

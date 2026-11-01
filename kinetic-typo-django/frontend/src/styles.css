@@ -98,3 +98,24 @@ html[data-contrast="dim"] {
 .doc td:first-child {
   @apply whitespace-nowrap;
 }
+
+/* Keyboard focus: one visible ring everywhere, even where a component removed the default outline */
+:focus-visible {
+  outline: 2px solid rgb(129 140 248) !important;
+  outline-offset: 2px;
+}
+input[type="range"]:focus-visible {
+  outline-offset: 4px;
+}
+
+/* People who ask their system for less motion get calm UI: no transitions or looping animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

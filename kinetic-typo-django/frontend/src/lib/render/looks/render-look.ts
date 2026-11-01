@@ -269,5 +269,6 @@ function withMotion(f: LookFrame, draw: () => void): () => void {
       },
       draw,
       exits,
+      f.preset,
     );
 }

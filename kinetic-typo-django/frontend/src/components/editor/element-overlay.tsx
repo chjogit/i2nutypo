@@ -174,7 +174,7 @@ export function ElementOverlay({
               onDoubleClick={() =>
                 useProjectStore.getState().setLookElement(id, { x: 0, y: 0 }, preset as LookPresetId)
               }
-              className={`pointer-events-auto absolute left-0 top-0 flex h-[22px] w-[22px] cursor-move touch-none items-center justify-center rounded-full border text-[11px] shadow-md shadow-black/50 transition-opacity ${shown(dragging === k)}`}
+              className={`pointer-events-auto absolute left-0 top-0 flex h-[22px] w-[22px] cursor-move touch-none items-center justify-center rounded-full border text-xs shadow-md shadow-black/50 transition-opacity ${shown(dragging === k)}`}
             >
               ⌖
             </button>
@@ -193,7 +193,7 @@ export function ElementOverlay({
               onDoubleClick={() =>
                 useProjectStore.getState().setLookElement(id, { size: 1 }, preset as LookPresetId)
               }
-              className={`pointer-events-auto absolute left-0 top-0 flex h-[16px] w-[16px] cursor-nwse-resize touch-none items-center justify-center rounded-sm border text-[10px] shadow-md shadow-black/50 transition-opacity ${shown(dragging === k)}`}
+              className={`pointer-events-auto absolute left-0 top-0 flex h-[16px] w-[16px] cursor-nwse-resize touch-none items-center justify-center rounded-sm border text-[11px] shadow-md shadow-black/50 transition-opacity ${shown(dragging === k)}`}
             >
               ⤡
             </button>

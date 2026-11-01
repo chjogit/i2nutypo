@@ -11,6 +11,11 @@
 {% endblock %}
 {% block content %}
     <!-- The editor reads its mode (beginner, basic, pro) from data-mode -->
+    {% if mode != "beginner" %}
+    <p class="border-b border-amber-700/40 bg-amber-950/30 px-4 py-2 text-xs text-amber-100 lg:hidden">
+      이 단계는 패널이 여러 개라 화면 폭이 넓을 때 편합니다(1024px 이상). 좁은 화면에서는 <a href="{{ url('beginner') }}" class="underline">입문</a>을 쓰거나 넓은 화면에서 열어 주세요.
+    </p>
+    {% endif %}
     <div id="root" data-mode="{{ mode }}"></div>
     <noscript>이 편집기는 JavaScript가 켜져 있어야 동작합니다. <a href="{{ url('landing') }}">처음으로</a></noscript>
 {% endblock %}

@@ -226,11 +226,11 @@ export function ExportPanel() {
 
   return (
     <section aria-label="내보내기" className="space-y-4 px-4 py-4">
-      <h2 className="text-xs font-semibold tracking-wide text-zinc-400">내보내기</h2>
+      <h2 className="text-sm font-bold text-zinc-200">내보내기</h2>
       <RightsNote what="음원·가사·소재" />
 
       <div className="space-y-2">
-        <h3 className="text-xs font-medium text-zinc-200">완성 영상</h3>
+        <h3 className="text-sm font-bold text-zinc-200">완성 영상</h3>
         <div
           role="radiogroup"
           aria-label="저장 방식"
@@ -250,13 +250,13 @@ export function ExportPanel() {
             </button>
           ))}
         </div>
-        <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+        <p className="flex items-center gap-1.5 text-xs text-zinc-400">
           {KINDS.find((k) => k.value === kind)?.label} 저장
           <Tip>{KINDS.find((k) => k.value === kind)?.hint}</Tip>
         </p>
         {(kind === "png" || kind === "layers") && (
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-zinc-500">이미지 형식</span>
+            <span className="text-zinc-400">이미지 형식</span>
             <div className="flex rounded-md border border-zinc-800">
               {SEQUENCES.map((s) => (
                 <button
@@ -274,7 +274,7 @@ export function ExportPanel() {
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-zinc-500">해상도</span>
+          <span className="text-zinc-400">해상도</span>
           <div className="flex rounded-md border border-zinc-800">
             {([720, 1080] as const).map((q) => (
               <button
@@ -288,7 +288,7 @@ export function ExportPanel() {
               </button>
             ))}
           </div>
-          <span className="ml-2 text-zinc-500">프레임</span>
+          <span className="ml-2 text-zinc-400">프레임</span>
           <div className="flex rounded-md border border-zinc-800">
             {([24, 30, 60] as const).map((f) => (
               <button
@@ -304,7 +304,7 @@ export function ExportPanel() {
           </div>
           {isVideoKind(kind) && (
             <>
-              <span className="ml-2 text-zinc-500">화질</span>
+              <span className="ml-2 text-zinc-400">화질</span>
               <div className="flex rounded-md border border-zinc-800">
                 {LEVELS.map((l) => (
                   <button
@@ -344,7 +344,7 @@ export function ExportPanel() {
               음원 넣기
             </label>
           )}
-          <span className="text-zinc-500">
+          <span className="text-zinc-400">
             {size.width}×{size.height} · {formatTime(range ? Math.max(0, range.end - range.start) : duration)}
           </span>
         </div>
@@ -414,7 +414,7 @@ export function ExportPanel() {
                 취소
               </button>
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-zinc-400">
               이 탭을 열어 둔 채 기다려 주세요. 다른 탭으로 가면 느려질 수 있습니다.
             </p>
           </div>
@@ -433,12 +433,12 @@ export function ExportPanel() {
           </button>
         )}
         {isVideoKind(kind) && !hasAudio && lineCount > 0 && (
-          <p className="text-xs text-zinc-500">음원이 없으면 소리 없는 영상이 만들어집니다.</p>
+          <p className="text-xs text-zinc-400">음원이 없으면 소리 없는 영상이 만들어집니다.</p>
         )}
         {video.kind === "done" && (
           <div className="flex items-center justify-between gap-2 rounded-md border border-zinc-800 px-3 py-2 text-xs">
             <span className="min-w-0 truncate text-zinc-300" title={video.fileName}>
-              ✅ {video.note} · {video.sizeMb.toFixed(1)}MB
+              {video.note} · {video.sizeMb.toFixed(1)}MB
             </span>
             <a
               href={video.url}
@@ -456,7 +456,7 @@ export function ExportPanel() {
 
       {FEATURES_NOW.subtitleFiles && (
         <div className="space-y-2">
-          <h3 className="text-xs font-medium text-zinc-200">자막 파일</h3>
+          <h3 className="text-sm font-bold text-zinc-200">자막 파일</h3>
           <div
             role="radiogroup"
             aria-label="자막 형식"
@@ -476,9 +476,9 @@ export function ExportPanel() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-zinc-500">{SUBTITLE_FORMATS.find((f) => f.value === format)?.hint}</p>
+          <p className="text-xs text-zinc-400">{SUBTITLE_FORMATS.find((f) => f.value === format)?.hint}</p>
           <div className="flex items-center gap-4 text-xs text-zinc-200">
-            <span className="text-zinc-500">담을 줄</span>
+            <span className="text-zinc-400">담을 줄</span>
             {ROW_LABELS.map(({ key, label }) => (
               <label key={key} className="flex items-center gap-1.5">
                 <input

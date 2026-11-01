@@ -97,7 +97,7 @@ export function AudioInput({ heading = true }: { heading?: boolean }) {
 
   return (
     <section aria-label="음원" className="space-y-2 px-4 py-4">
-      {heading && <h2 className="mb-3 text-xs font-semibold tracking-wide text-zinc-400">음원</h2>}
+      {heading && <h2 className="mb-3 text-sm font-bold text-zinc-200">음원</h2>}
       <input
         ref={fileInputRef}
         type="file"
@@ -113,7 +113,7 @@ export function AudioInput({ heading = true }: { heading?: boolean }) {
       {audio.kind === "upload" ? (
         <div className="space-y-2">
           <p className="truncate text-xs text-zinc-300" title={audio.fileName}>
-            🎵 {audio.fileName} · {audio.duration.toFixed(1)}초
+            {audio.fileName} · {audio.duration.toFixed(1)}초
           </p>
           <audio ref={audioElRef} src={audio.objectUrl} controls preload="auto" className="w-full" />
           <button

@@ -107,9 +107,9 @@ function Toolbar() {
   const { preset, contrast, leftOpen, rightOpen, set } = useLayoutStore();
   const sidesShown = preset !== "preview";
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-zinc-800 px-4 py-1.5 text-[11px]">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-zinc-800 px-4 py-1.5 text-xs">
       <div className="flex items-center gap-1" role="group" aria-label="레이아웃">
-        <span className="mr-1 text-zinc-500">레이아웃</span>
+        <span className="mr-1 text-zinc-400">레이아웃</span>
         <span className="flex rounded-md bg-zinc-900 p-0.5">
           {PRESETS.map(([id, label, hint]) => (
             <button
@@ -150,7 +150,7 @@ function Toolbar() {
         </button>
       </div>
       <div className="flex items-center gap-1" role="group" aria-label="화면 대비">
-        <span className="mr-1 text-zinc-500">대비</span>
+        <span className="mr-1 text-zinc-400">대비</span>
         <span className="flex rounded-md bg-zinc-900 p-0.5">
           {CONTRASTS.map(([id, label]) => (
             <button
@@ -175,7 +175,7 @@ function Toolbar() {
         className="ml-auto flex items-center gap-2 rounded-md border border-zinc-800 px-2 py-0.5 text-zinc-300 hover:border-indigo-500"
       >
         빠른 작업
-        <kbd className="rounded border border-zinc-700 px-1 font-mono text-[10px] text-zinc-500">Ctrl K</kbd>
+        <kbd className="rounded border border-zinc-700 px-1 font-mono text-[11px] text-zinc-400">Ctrl K</kbd>
       </button>
     </div>
   );
@@ -254,7 +254,7 @@ export function StudioShell() {
           {FEATURES_NOW.characters ? (
             <PropsPanel />
           ) : (
-            <p className="flex items-center gap-2 px-4 py-3 text-[11px] text-zinc-500">
+            <p className="flex items-center gap-2 px-4 py-3 text-xs text-zinc-400">
               캐릭터·소품 레이어
               <Tip>캐릭터·소품 레이어와 등장·퇴장 연출은 숙련 단계에서 쓸 수 있습니다.</Tip>
             </p>

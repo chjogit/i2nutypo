@@ -86,7 +86,7 @@ function EffectRow({
   onChange: (patch: { effect?: CueEffect; sec?: number }) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
+    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
       <span className="w-12 shrink-0">{label}</span>
       <select
         value={effect}
@@ -169,7 +169,7 @@ function ClipCells({
           />
         ))}
       </div>
-      <div className="flex justify-center gap-3 text-[11px]">
+      <div className="flex justify-center gap-3 text-xs">
         <button type="button" onClick={fromPicture} className="text-indigo-400 hover:underline">
           그림 자리로 채우기
         </button>
@@ -307,8 +307,8 @@ export function PropsPanel() {
   return (
     <section className="space-y-3 px-4 py-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold tracking-wide text-zinc-400">일러스트</h2>
-        <label className="cursor-pointer rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-200 hover:border-indigo-500">
+        <h2 className="text-sm font-bold text-zinc-200">일러스트</h2>
+        <label className="cursor-pointer rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-200 hover:border-indigo-500">
           + 올리기
           <input
             type="file"
@@ -322,7 +322,7 @@ export function PropsPanel() {
           />
         </label>
       </div>
-      <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+      <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         그림·영상을 올리면 일러스트 레이어로
         <Tip>
           캐릭터, 소품, 스티커 같은 그림(PNG 권장)을 올리면 일러스트 1, 2, 3… 으로 쌓이고, 그림마다 아래
@@ -345,12 +345,12 @@ export function PropsPanel() {
           className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-zinc-900/60"
         >
           <span className="font-semibold text-zinc-200">소재 목록</span>
-          <span className="font-mono text-[10px] text-zinc-500">
+          <span className="font-mono text-[11px] text-zinc-400">
             {props.length}개 · 타임라인 {onTimeline}
           </span>
           <span
             aria-hidden
-            className={`ml-auto text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`ml-auto text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
           >
             ▾
           </span>
@@ -358,8 +358,8 @@ export function PropsPanel() {
         {open && (
           <div id="prop-list" className="border-t border-zinc-800">
             {
-              <table className="w-full table-fixed text-[11px]">
-                <thead className="text-left text-zinc-500">
+              <table className="w-full table-fixed text-xs">
+                <thead className="text-left text-zinc-400">
                   <tr>
                     <th scope="col" className="w-9 px-1.5 py-1 font-normal">
                       <span className="sr-only">미리보기</span>
@@ -406,7 +406,7 @@ export function PropsPanel() {
                         >
                           {illustrationName(props, p.id)}
                         </button>
-                        <span className="block truncate text-[10px] text-zinc-500">
+                        <span className="block truncate text-[11px] text-zinc-400">
                           {p.onTimeline ? `구간 ${p.clips.length}개` : "타임라인에서 뺌"} · {p.fileName}
                         </span>
                       </td>
@@ -449,9 +449,9 @@ export function PropsPanel() {
 
       {selProp && selClip ? (
         <div className="space-y-1.5 rounded-md border border-emerald-500/50 px-2 py-2">
-          <div className="flex items-center justify-between gap-2 text-[11px]">
+          <div className="flex items-center justify-between gap-2 text-xs">
             <span className="truncate font-semibold text-zinc-200" title={selProp.fileName}>
-              🖼 {illustrationName(props, selProp.id)}
+              {illustrationName(props, selProp.id)}
             </span>
             <span className="flex shrink-0 gap-2">
               <button
@@ -491,7 +491,7 @@ export function PropsPanel() {
           </Fold>
           <Fold title="위치 · 크기 · 모양" className="space-y-1.5 border-t border-zinc-800/70 pt-2">
             {CLIP_SLIDERS.map((m) => (
-              <label key={m.key} className="flex items-center gap-2 text-[11px] text-zinc-400">
+              <label key={m.key} className="flex items-center gap-2 text-xs text-zinc-400">
                 <span className="w-12 shrink-0">{m.label}</span>
                 <input
                   type="range"
@@ -555,7 +555,7 @@ export function PropsPanel() {
                 })
               }
             />
-            <p className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+            <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
               다른 자리에서 다시 나오게 하기
               <Tip>
                 퇴장 후 다른 자리에서 다시 나오게 하려면 &quot;타임라인 추가&quot;로 구간을 하나 더 만들고
@@ -570,7 +570,7 @@ export function PropsPanel() {
                 ["beat", "비트 움직임"],
               ] as const
             ).map(([key, label]) => (
-              <label key={key} className="flex items-center gap-2 text-[11px] text-zinc-400">
+              <label key={key} className="flex items-center gap-2 text-xs text-zinc-400">
                 <span className="w-16 shrink-0">{label}</span>
                 <input
                   type="range"
@@ -588,7 +588,7 @@ export function PropsPanel() {
             ))}
           </Fold>
           <Fold title="빨간 칸 (가사 금지)" className="space-y-1.5 border-t border-zinc-800/70 pt-2">
-            <p className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+            <p className="flex items-center gap-1.5 text-[11px] text-zinc-400">
               빨간 칸 = 가사가 피하는 곳
               <Tip>
                 이 구간이 화면에 있는 동안 가사가 빨간 칸을 피해 갑니다. 칸을 누르거나 끌어서 만들고 지웁니다.
@@ -603,7 +603,7 @@ export function PropsPanel() {
         </div>
       ) : (
         onTimeline > 0 && (
-          <p className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+          <p className="flex items-center gap-1.5 text-xs text-zinc-400">
             초록 구간을 눌러 편집
             <Tip>
               타임라인의 초록 구간을 누르면 여기서 위치, 크기, 효과, 흔들림, 빨간 칸을 바꿀 수 있습니다.

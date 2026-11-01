@@ -65,7 +65,7 @@ export function TransitionLane({ pps, timeAt }: LaneProps) {
       onAdd={(at) => add(last, at)}
       title={(c) => label(c.kind)}
       content={(c) => (
-        <span className="pointer-events-none flex w-full items-center justify-center truncate text-[10px] text-zinc-100">
+        <span className="pointer-events-none flex w-full items-center justify-center truncate text-[11px] text-zinc-100">
           ⧖ {label(c.kind)}
         </span>
       )}
@@ -135,7 +135,7 @@ export function AdjustLane({ pps, timeAt }: LaneProps) {
       onAdd={(at) => add("shake", at)}
       title={(c) => `${label(c.kind)} ${Math.round(c.amount * 100)}%`}
       content={(c) => (
-        <span className="pointer-events-none truncate text-[10px] text-zinc-100">
+        <span className="pointer-events-none truncate text-[11px] text-zinc-100">
           {label(c.kind)} <span className="text-zinc-400">{Math.round(c.amount * 100)}%</span>
         </span>
       )}

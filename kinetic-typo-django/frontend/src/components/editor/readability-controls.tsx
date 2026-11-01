@@ -34,7 +34,7 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
         <span className="inline-flex items-center gap-1.5">
           글자 자동 대비
-          <span className="text-[11px] text-zinc-500">· {getLookPreset(theme).label}</span>
+          <span className="text-xs text-zinc-400">· {getLookPreset(theme).label}</span>
           <Tip>
             배경(그림·영상·테마 색)을 읽어서 가사가 묻힐 때만 가사 색을 밝게 또는 어둡게 바꾸거나(색 맞추기),
             반대색 테두리를 둘러(테두리) 잘 보이게 합니다. 잘 보이는 장면에서는 고른 색 그대로입니다. 테마마다
@@ -43,7 +43,7 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
             배경으로 내보낼 때는 적용되지 않습니다.
           </Tip>
           {own && (
-            <button type="button" onClick={reset} className="text-[11px] text-indigo-400 hover:underline">
+            <button type="button" onClick={reset} className="text-xs text-indigo-400 hover:underline">
               테마 기본
             </button>
           )}
