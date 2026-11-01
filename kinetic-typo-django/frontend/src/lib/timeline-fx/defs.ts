@@ -171,7 +171,7 @@ export const ELEMENT_MOTIONS: ReadonlyArray<readonly [ElementMotionMode, string,
   ["organic", "모두 섞기", "떠다니며 자리를 옮기고, 옮길 때마다 새로 그려짐"],
 ];
 
-export const DEFAULT_ELEMENT_MOTION: ElementMotion = { mode: "organic", amount: 0.5, marks: 0.6 };
+export const DEFAULT_ELEMENT_MOTION: ElementMotion = { mode: "organic", amount: 0.5 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const num = (v: unknown, lo: number, hi: number, fallback: number) =>
@@ -224,7 +224,6 @@ export function sanitizeElementMotion(raw: unknown): ElementMotion {
       ? (r.mode as ElementMotionMode)
       : DEFAULT_ELEMENT_MOTION.mode,
     amount: num(r.amount, 0, 1, DEFAULT_ELEMENT_MOTION.amount),
-    marks: num(r.marks, 0, 1, DEFAULT_ELEMENT_MOTION.marks),
   };
 }
 

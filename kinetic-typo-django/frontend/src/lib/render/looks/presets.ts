@@ -308,6 +308,25 @@ export const LOOK_PRESETS: readonly LookPreset[] = [
 
 export const LOOK_PRESET_IDS: readonly LookPresetId[] = LOOK_PRESETS.map((p) => p.id);
 
+/** The themes used most, in the order the theme list starts with. */
+const FEATURED_THEMES: readonly LookPresetId[] = [
+  "album_jacket",
+  "digital_crt",
+  "flat_type",
+  "pop_cutout",
+  "snow_night",
+];
+
+/**
+ * The themes as the theme list shows them: the most used first, then the rest.
+ * LOOK_PRESETS itself keeps its order, because a seed's automatic composition
+ * picks from it and must keep giving the same video.
+ */
+export const LOOK_PRESETS_LISTED: readonly LookPreset[] = [
+  ...FEATURED_THEMES.map((id) => LOOK_PRESETS.find((p) => p.id === id)).filter((p): p is LookPreset => !!p),
+  ...LOOK_PRESETS.filter((p) => !FEATURED_THEMES.includes(p.id)),
+];
+
 export function isLookPresetId(value: unknown): value is LookPresetId {
   return typeof value === "string" && (LOOK_PRESET_IDS as readonly string[]).includes(value);
 }

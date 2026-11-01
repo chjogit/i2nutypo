@@ -25,3 +25,18 @@ describe("theme palettes", () => {
     }
   });
 });
+
+describe("theme list order", () => {
+  it("starts with the most used themes and still lists every theme once", async () => {
+    const { LOOK_PRESETS, LOOK_PRESETS_LISTED } = await import("../presets");
+    expect(LOOK_PRESETS_LISTED.slice(0, 5).map((p) => p.id)).toEqual([
+      "album_jacket",
+      "digital_crt",
+      "flat_type",
+      "pop_cutout",
+      "snow_night",
+    ]);
+    expect(LOOK_PRESETS_LISTED).toHaveLength(LOOK_PRESETS.length);
+    expect(new Set(LOOK_PRESETS_LISTED.map((p) => p.id)).size).toBe(LOOK_PRESETS.length);
+  });
+});
