@@ -14,7 +14,7 @@ import {
   getLookPreset,
   LOOK_ELEMENTS,
   isThemedPresetId,
-  LOOK_PRESETS,
+  LOOK_PRESETS_LISTED,
   lookElementKey,
   lyricLookOf,
   MAX_ELEMENT_SIZE,
@@ -175,7 +175,7 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
           </p>
           {/* As many columns as the sidebar width fits */}
           <div className="grid max-h-[50vh] grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-1.5 overflow-y-auto pr-0.5">
-            {LOOK_PRESETS.map((p) => {
+            {LOOK_PRESETS_LISTED.map((p) => {
               const order = picked.indexOf(p.id);
               const on = order >= 0;
               const blocked = !on && full;
@@ -194,11 +194,11 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
                       {order + 1}
                     </span>
                   )}
-                  <span className="block break-keep pr-5 text-xs font-semibold text-zinc-200">
+                  <span className="block truncate pr-5 text-xs font-semibold text-zinc-200">
                     <ThemeSwatch id={p.id} className="mr-1.5" />
                     {p.label}
                   </span>
-                  <span className="block break-keep text-[11px] leading-snug text-zinc-400">
+                  <span className="block truncate text-xs leading-snug text-zinc-400">
                     {p.description}
                   </span>
                 </button>
@@ -708,8 +708,7 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
 /**
  * How the themes' decorations move on their own, so they do not sit in the
  * same place all song: drift, hop to a new spot each line, draw themselves on,
- * or a mix of all three, plus hand-drawn marks that come and go around the
- * edges. Also where the lyrics sit from line to line and how they leave.
+ * or a mix of all three. Also where the lyrics sit from line to line and how they leave.
  */
 function ElementMotionFold() {
   const style = useProjectStore((s) => s.style);
@@ -763,12 +762,6 @@ function ElementMotionFold() {
         ))}
       </div>
       {em.mode !== "still" && row("움직임 크기", em.amount, (amount) => set({ amount }))}
-      {row(
-        "손그림 마크",
-        em.marks,
-        (marks) => set({ marks }),
-        "가장자리에 동그라미·밑줄·별 같은 손그림이 줄마다 다른 곳에 그려졌다 사라집니다. 0이면 그리지 않습니다.",
-      )}
       {row(
         "가사 자리 옮기기",
         style.lyricRoam,

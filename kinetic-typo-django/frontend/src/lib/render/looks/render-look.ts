@@ -28,7 +28,6 @@ import { albumJacket } from "./album-jacket";
 import { drawProps } from "./props";
 import { applyMotion, motionForLine } from "./motions";
 import { applyColorFilter } from "./color-filter";
-import { drawOrganicMarks } from "./element-motion";
 import { drawReadable } from "./auto-contrast";
 import { orientedLyrics } from "./orientation";
 import { contrastFor } from "./theme-contrast";
@@ -36,19 +35,6 @@ import { THEME_EXTRAS } from "./theme-extras";
 import { drawThemeTitleCard } from "./title-cards";
 import { drawAccentMark, wantsAccentMark } from "./accent-marks";
 import { drawInterlude } from "./interlude";
-
-/** How each theme's hand-drawn marks are stroked. */
-const MARK_STROKE: Partial<Record<Exclude<LookPresetId, "classic">, "glow" | "brush">> = {
-  digital_crt: "glow",
-  dark_glitch: "glow",
-  neon_sign: "glow",
-  eclipse_nebula: "glow",
-  deep_sea: "glow",
-  crimson_ink: "brush",
-  manga_panel: "brush",
-  vintage_paper: "brush",
-  pop_cutout: "brush",
-};
 
 const RENDERERS: Record<Exclude<LookPresetId, "classic">, LookRenderer> = {
   album_jacket: albumJacket,
@@ -136,19 +122,6 @@ export function renderLookFrame(
       m.r.decor?.(m.f);
       mixedExtra(ctx, () => THEME_EXTRAS[m.f.preset]?.back?.(m.f));
     }
-    drawOrganicMarks({
-      ctx,
-      W: f.W,
-      H: f.H,
-      timeSec: f.timeSec,
-      hop: f.hop,
-      motion: f.style.elementMotion,
-      blocked: f.blocked,
-      color: f.style.accentColor,
-      second: f.style.textColor,
-      stroke: MARK_STROKE[preset] ?? "pen",
-      energy: f.energy,
-    });
     drawProps(f, false);
     THEME_EXTRAS[f.preset]?.mid?.(f);
     if (layer === "full") {

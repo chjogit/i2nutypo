@@ -97,14 +97,14 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
 export function ElementMotionToggle() {
   const motion = useProjectStore((s) => s.style.elementMotion);
   const setStyle = useProjectStore((s) => s.setStyle);
-  const on = motion.mode !== "still" || motion.marks > 0;
+  const on = motion.mode !== "still";
   return (
     <label className="flex items-center justify-between gap-3 text-xs text-zinc-400">
       <span className="inline-flex items-center gap-1.5">
         요소 움직임
         <Tip>
           켜면 테마의 장식(레코드, 원, 도장 등)이 한자리에 머물지 않고 떠다니거나 줄마다 자리를 옮기며 새로
-          그려지고, 가장자리에 손그림 마크가 나타났다 사라집니다. 끄면 장식이 놓인 자리에 가만히 있습니다.
+          그려집니다. 끄면 장식이 놓인 자리에 가만히 있습니다.
         </Tip>
       </span>
       <input
@@ -113,7 +113,7 @@ export function ElementMotionToggle() {
         checked={on}
         onChange={(e) =>
           setStyle({
-            elementMotion: e.target.checked ? DEFAULT_ELEMENT_MOTION : { ...motion, mode: "still", marks: 0 },
+            elementMotion: e.target.checked ? DEFAULT_ELEMENT_MOTION : { ...motion, mode: "still" },
           })
         }
         aria-label="요소 움직임"

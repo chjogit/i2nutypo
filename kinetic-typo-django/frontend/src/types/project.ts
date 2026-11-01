@@ -592,8 +592,6 @@ export interface ElementMotion {
   mode: ElementMotionMode;
   /** 0..1. */
   amount: number;
-  /** 0..1: hand-drawn marks (circles, swooshes, sparkles) drawn on around the lyrics, a new place each line. */
-  marks: number;
 }
 
 /** Beats found in the song (beat markers on the timeline). */
