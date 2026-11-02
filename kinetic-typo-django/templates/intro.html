@@ -19,10 +19,10 @@
       >Docs</a
     >
     <main class="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-4 py-12 md:px-8">
-      <header class="mb-8 max-w-xl">
+      <header class="mb-8 max-w-2xl">
         <p class="text-sm font-semibold text-indigo-300">Kinetic Typo Studio</p>
         <h1 class="mt-2 font-['Black_Han_Sans'] text-4xl leading-[1.15] text-zinc-100 md:text-[3.25rem]">
-          음원과 가사로<br />움직이는 글자 영상
+          음원과 가사로<br />손 쉽게 커버 영상 만들기
         </h1>
         <p class="mt-4 text-sm leading-relaxed text-zinc-400">
           영상 편집을 몰라도 됩니다. 노래와 가사만 넣으면 테마에 맞는 움직임이 붙고, 마음에 안 드는 곳만 고치면 돼요.
@@ -30,17 +30,8 @@
         </p>
       </header>
 
-      <img
-        src="{{ static('img/sample-themes.jpg') }}"
-        alt="테마로 만든 영상 화면 예시 네 장"
-        width="1288"
-        height="728"
-        class="mb-5 block h-40 w-full rounded-xl border border-zinc-800 object-cover object-top md:h-52"
-        loading="eager"
-      />
-
       {#- The three cards stretch to the same height; every line is short enough to stay on one line. -#}
-      <ol class="grid items-stretch gap-4 md:grid-cols-[1.2fr_1fr_1fr]">
+      <ol class="grid items-stretch gap-4 md:grid-cols-3">
         {% for m in modes %}
         <li class="flex">
           <a
