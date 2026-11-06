@@ -35,6 +35,22 @@ import { THEME_EXTRAS } from "./theme-extras";
 import { drawThemeTitleCard } from "./title-cards";
 import { drawAccentMark, wantsAccentMark } from "./accent-marks";
 import { drawInterlude } from "./interlude";
+import { capture } from "./pieces";
+import { clamp01 } from "./noise";
+import { transformScale } from "../logical-blur";
+import {
+  blurBehind,
+  cardContext,
+  drawCard,
+  drawGlass,
+  focalFor,
+  paneAround,
+  poseAt,
+  projectedBox,
+  surfaceOf,
+  type LyricSurface,
+  type Rect,
+} from "./lyric-surface";
 
 const RENDERERS: Record<Exclude<LookPresetId, "classic">, LookRenderer> = {
   album_jacket: albumJacket,
@@ -192,35 +208,103 @@ function drawScene(r: LookRenderer, f: LookFrame): void {
  */
 function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): Box | null {
   const hasOverlaps = (f.overlaps?.length ?? 0) > 0;
-  const measure = !!f.textBounds || hasOverlaps || wantsAccentMark(f);
+  const surface = f.line ? surfaceOf(f.style) : null;
+  const measure = !!f.textBounds || hasOverlaps || wantsAccentMark(f) || !!surface;
   f.ctx.save();
   f.ctx.translate(f.lyricShift.x, f.lyricShift.y);
   const contrast = contrastFor(f.style, f.preset);
   const mode = overPicture ? contrast.mode : "off";
-  const box = drawReadable(
-    f.ctx,
-    mode,
-    (c) => {
-      const g = c === f.ctx ? f : { ...f, ctx: c };
-      // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
-      const lyrics = orientedLyrics(r, g);
-      const wrap = THEME_EXTRAS[g.preset]?.lyrics;
-      const draw = withMotion(g, wrap ? () => wrap(g, () => lyrics(g)) : () => lyrics(g));
-      // The readability check needs the box of the copy it draws on its own layer
-      if (measure || c !== f.ctx) return recordTextBounds(g.ctx, draw);
-      draw();
-      return null;
-    },
-    contrast.amount,
-  );
+  // The theme's own lyrics for frame h, without the line's motion
+  const atRest = (h: LookFrame) => {
+    const lyrics = orientedLyrics(r, h);
+    const wrap = THEME_EXTRAS[h.preset]?.lyrics;
+    return wrap ? () => wrap(h, () => lyrics(h)) : () => lyrics(h);
+  };
+  const lyricsOn = (target: Ctx2D, background?: CanvasImageSource) =>
+    drawReadable(
+      target,
+      mode,
+      (c) => {
+        // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
+        const g = c === f.ctx ? f : { ...f, ctx: c };
+        const draw = withMotion(g, atRest);
+        // The readability check needs the box of the copy it draws on its own layer
+        if (measure || c !== f.ctx) return recordTextBounds(g.ctx, draw);
+        draw();
+        return null;
+      },
+      contrast.amount,
+      background,
+    );
+  const box = surface ? drawOnSurface(f, surface, atRest, lyricsOn, overPicture) : lyricsOn(f.ctx);
   if (f.textBounds) f.textBounds.lyrics = box;
   f.ctx.restore();
   if (hasOverlaps) drawOverlapLines(r, f, box);
   return box;
 }
 
+/**
+ * The lyrics on a glass pane, in 2.5D depth, or both (lyric-surface.ts).
+ * With depth the line is drawn flat on a clear card first, the picture
+ * behind is softened, and the card is set into the frame in perspective.
+ */
+function drawOnSurface(
+  f: LookFrame,
+  s: LyricSurface,
+  atRest: (h: LookFrame) => () => void,
+  lyricsOn: (target: Ctx2D, background?: CanvasImageSource) => Box | null,
+  overPicture: boolean,
+): Box | null {
+  const { ctx } = f;
+  const line = f.line;
+  const main = (ctx as CanvasRenderingContext2D).canvas as HTMLCanvasElement | undefined;
+  if (!line || !main || !(main.width > 0)) return lyricsOn(ctx);
+  const unit = Math.min(f.W, f.H) * 0.01 * transformScale(ctx);
+  const dur = Math.max(0.01, line.endTime - line.startTime);
+  const fade = Math.min(clamp01(f.lineElapsed / 0.35), clamp01((dur - f.lineElapsed) / 0.25));
+  const grow = 0.93 + 0.07 * (1 - Math.pow(1 - clamp01(f.lineElapsed / 0.45), 3));
+
+  // The pane fits the whole line as it will stand once sung, so it does not grow word by word
+  let pane: Rect | null = null;
+  if (s.glass !== "off") {
+    const rest = Math.max(f.lineElapsed, Math.min(dur - 0.3, dur * 0.9));
+    const whole = capture(ctx, (c) =>
+      atRest({ ...f, ctx: c, lineElapsed: rest, timeSec: line.startTime + rest, lineProgress: rest / dur })(),
+    );
+    if (whole) pane = paneAround(whole.text, unit, grow);
+  }
+  const glass = { frost: s.glass === "frost" ? 1 : 0, timeSec: f.timeSec, unit, alpha: fade };
+
+  if (s.depth < 0.01) {
+    if (pane) drawGlass(ctx, main, pane, glass);
+    return lyricsOn(ctx);
+  }
+  if (overPicture) blurBehind(ctx, unit * s.depth * 0.45);
+  const card = cardContext(ctx);
+  if (!card) return lyricsOn(ctx);
+  if (pane) drawGlass(card.c, main, pane, glass);
+  const box = lyricsOn(card.c, main);
+  if (!box && !pane) return null;
+  const pad = box ? (box.y1 - box.y0) * 0.6 + unit * 2 : 0;
+  const shadow = unit * 9;
+  const area: Box = {
+    x0: Math.min(box ? box.x0 - pad : Infinity, pane ? pane.x0 - shadow : Infinity),
+    y0: Math.min(box ? box.y0 - pad : Infinity, pane ? pane.y0 - shadow : Infinity),
+    x1: Math.max(box ? box.x1 + pad : -Infinity, pane ? pane.x1 + shadow : -Infinity),
+    y1: Math.max(box ? box.y1 + pad : -Infinity, pane ? pane.y1 + shadow * 1.4 : -Infinity),
+  };
+  const pivot = pane ?? box;
+  if (!pivot) return null;
+  const cx = (pivot.x0 + pivot.x1) / 2;
+  const cy = (pivot.y0 + pivot.y1) / 2;
+  const pose = poseAt(s.depth, f.lineElapsed, f.lineProgress, f.timeSec, line.index);
+  drawCard(ctx, card.canvas, area, cx, cy, pose, unit, s.depth, !!pane);
+  return box ? projectedBox(box, cx, cy, focalFor(main.width, main.height), pose) : null;
+}
+
 /** The line's lyric motion (see motions.ts) wrapped around the theme's own lyrics. */
-function withMotion(f: LookFrame, draw: () => void): () => void {
+function withMotion(f: LookFrame, make: (g: LookFrame) => () => void): () => void {
+  const draw = make(f);
   const line = f.line;
   if (!line) return draw;
   const motion = motionForLine(f.style, line);
@@ -239,6 +323,7 @@ function withMotion(f: LookFrame, draw: () => void): () => void {
         cx: f.W / 2,
         cy: f.H / 2,
         seed: line.index,
+        capture: (c) => make({ ...f, ctx: c })(),
       },
       draw,
       exits,
