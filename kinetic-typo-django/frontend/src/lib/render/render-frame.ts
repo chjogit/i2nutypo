@@ -11,7 +11,7 @@ import type {
 import { COLLAB_PARTS } from "@/lib/presets/collab-parts";
 import { easeOutBack, easeOutExpo } from "./easing";
 import { drawCollabMotif, type Ctx2D } from "./motifs";
-import { stepParticles, type Particle } from "./particles";
+import { placeParticles, type Particle } from "./particles";
 import { drawBottomSubtitles, hasSubtitleText, showsKineticLyrics } from "./subtitles";
 import { recordTextBounds, type TextBounds } from "./text-bounds";
 import { manualRows, MIN_FIT_SCALE, widthAround, wrapText } from "./wrap";
@@ -27,6 +27,8 @@ import { sanitizeFinish } from "./finish/settings";
 import { hashSigned } from "./looks/noise";
 import { hopClock, type HopClock } from "./looks/element-motion";
 import { applyTimelineFx } from "@/lib/timeline-fx/render-fx";
+// Glows and blurs keep their size at every output resolution
+import "./logical-blur";
 
 export interface FrameInput {
   ctx: Ctx2D;
@@ -41,7 +43,7 @@ export interface FrameInput {
   particles: Particle[];
   /** Beat energy 0..1 driving pulses and particle drift. */
   energy: number;
-  /** Advance particle positions this frame (off for still or exported frames). */
+  /** Let the beat push the particles (off for still thumbnails); where they are follows timeSec either way. */
   animateParticles: boolean;
   /**
    * Draws one layer only: "front" is the lyrics, the illustrations in front of
@@ -334,7 +336,7 @@ function drawFrame(input: FrameInput): void {
     ctx.fillRect(0, 0, W, H);
 
     const showParticles = isInIntroGate ? fx.introBokeh : style.particles;
-    if (input.animateParticles) stepParticles(particles, fx.particleBeatDrift ? energy * 1.4 : 0);
+    placeParticles(particles, timeSec, input.animateParticles && fx.particleBeatDrift ? energy * 1.4 : 0);
     if (showParticles) {
       const hueEnabled = [fx.particleBlue, fx.particleYellow, fx.particleWhite];
       for (const pt of particles) {

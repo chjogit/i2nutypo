@@ -1,3 +1,4 @@
+import { drawSoftLayer } from "./soft-layer";
 import { easeOutExpo } from "../easing";
 import { minSide, type LookFrame } from "./frame";
 import { hash01, hashSigned, withAlpha } from "./noise";
@@ -154,27 +155,36 @@ export function drawAurora(f: LookFrame, amount: number, colors: [string, string
   if (amount <= 0) return;
   const { ctx, W, H } = f;
   const t = f.timeSec;
-  ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  for (let band = 0; band < 3; band++) {
-    const c = band % 2 ? colors[1] : colors[0];
-    const yBase = H * (0.12 + band * 0.07);
-    const depth = H * (0.22 + band * 0.04);
-    const step = Math.max(6, W / 48);
-    for (let x = 0; x <= W; x += step) {
-      const wave =
-        Math.sin((x / W) * 5 + t * 0.4 + band) * 0.6 + Math.sin((x / W) * 11 - t * 0.7 + band * 2) * 0.4;
-      const top = yBase + wave * H * 0.05;
-      const glow = 0.5 + 0.5 * Math.sin((x / W) * 7 + t * 0.9 + band * 3);
-      const g = ctx.createLinearGradient(0, top, 0, top + depth);
-      g.addColorStop(0, withAlpha(c, 0));
-      g.addColorStop(0.15, withAlpha(c, 0.22 * amount * (0.4 + 0.6 * glow)));
-      g.addColorStop(1, withAlpha(c, 0));
-      ctx.fillStyle = g;
-      ctx.fillRect(x, top, step + 1, depth);
-    }
-  }
-  ctx.restore();
+  // About 150 soft gradient strips: painted at a third of the size and scaled up
+  drawSoftLayer(
+    ctx,
+    W,
+    H,
+    "aurora",
+    1 / 3,
+    (c) => {
+      c.globalCompositeOperation = "screen";
+      for (let band = 0; band < 3; band++) {
+        const col = band % 2 ? colors[1] : colors[0];
+        const yBase = H * (0.12 + band * 0.07);
+        const depth = H * (0.22 + band * 0.04);
+        const step = Math.max(6, W / 48);
+        for (let x = 0; x <= W; x += step) {
+          const wave =
+            Math.sin((x / W) * 5 + t * 0.4 + band) * 0.6 + Math.sin((x / W) * 11 - t * 0.7 + band * 2) * 0.4;
+          const top = yBase + wave * H * 0.05;
+          const glow = 0.5 + 0.5 * Math.sin((x / W) * 7 + t * 0.9 + band * 3);
+          const g = c.createLinearGradient(0, top, 0, top + depth);
+          g.addColorStop(0, withAlpha(col, 0));
+          g.addColorStop(0.15, withAlpha(col, 0.22 * amount * (0.4 + 0.6 * glow)));
+          g.addColorStop(1, withAlpha(col, 0));
+          c.fillStyle = g;
+          c.fillRect(x, top, step + 1, depth);
+        }
+      }
+    },
+    "screen",
+  );
 }
 
 /** Rings that spread on a surface (water, a puddle) as drops land. */
