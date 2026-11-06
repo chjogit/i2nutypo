@@ -13,7 +13,7 @@
 | `static/js/studio.js`               | 편집기 (빌드 결과)                                                      |
 | `static/js/whisper-worker.js`       | 음성 인식 워커 (빌드 결과)                                              |
 | `static/js/separation-worker.js`    | 보컬 분리 워커 (빌드 결과)                                              |
-| `static/fonts/`                     | 글꼴 31종 woff2와 라이선스 (`frontend/scripts/vendor-fonts.mjs`로 만듦)  |
+| `static/fonts/`                     | 글꼴 32종 woff2와 라이선스 (`frontend/scripts/vendor-fonts.mjs`로 만듦)  |
 | `static/licenses/`                  | 오픈소스 고지 원문·목록 (빌드할 때 자동 생성)                           |
 | `docs/`                             | 설명서 원고(`guide.md` 사용법, `about.md` 프로젝트 소개)와 `build.py`   |
 | `LICENSE`                           | 이 앱의 라이선스 (All rights reserved, 제3자 부분은 각자의 라이선스)    |
@@ -29,7 +29,7 @@
 
 | 주소         | 단계 | 쓸 수 있는 기능                                                                                     |
 | ------------ | ---- | --------------------------------------------------------------------------------------------------- |
-| `/beginner/` | 입문 | 큰 카드 순서대로: 1 테마(앨범 자켓·디지털 UI·플랫 대형 타이포 중 1개), 2 음원, 3 가사·자동 싱크, 4 자막 다듬기(색·크기·줄바꿈·글씨체, 타임라인), 5 영상 저장 |
+| `/beginner/` | 입문 | 큰 카드 순서대로: 1 테마(앨범 자켓·디지털 UI·플랫 대형 타이포 중 1개), 2 음원, 3 가사·자동 싱크, 4 자막 다듬기(가사 모션 스타일, 색·크기·줄바꿈·글씨체, 타임라인), 5 영상 저장 |
 | `/basic/`    | 기본 | 테마 20종 최대 3개, 요소, 상세·마무리(그레이딩·필터), 배경·앨범 커버, 영상 + 자막 파일 저장       |
 | `/pro/`      | 숙련 | 모든 기능(기본 + 캐릭터 등장·퇴장, 소품 레이어, 타임라인 캐릭터·소품 줄)                           |
 
@@ -102,6 +102,17 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 효과음 기능은 없앴습니다(2026-10-24).
 - 글자 자동 대비: 색 맞추기·테두리·끄기와 세기(0~100%, 50%가 3:1 기준)를 테마마다 따로 정합니다. 테마마다 기본값이 있고(빛나는 글자 테마는 테두리, 단색 포스터형은 끄기, 나머지는 색 맞추기), 타임라인 테마 구간이 바뀌면 그 테마의 설정이 쓰입니다. 코드: `frontend/src/lib/render/looks/theme-contrast.ts`, `auto-contrast.ts`
 
+## 가사 모션 엔진
+
+- 가사 모션 스타일: 테마 탭 맨 위 "가사 모션 스타일"(입문은 4단계)에서 고릅니다. 테마 색은 그대로 두고 움직임과 조판만 바꿉니다. 스무스 리빌(기본, 글자가 바닥에서 솟으며 흐림이 걷힘), 하이프 팝인(단어마다 튀어나옴), 에디토리얼 블러(글자마다 초점이 맞음), 키네틱 하이라이트 박스(강조 단어 뒤로 포인트 색 상자가 먼저 펼쳐짐), 테마 고유(예전처럼 테마가 직접 그림) 중 하나입니다. 모션 스타일을 쓰면 테마의 줄 전체 움직임은 건너뛰고, 세로쓰기 줄은 테마 방식으로 그립니다.
+- 들어오는 때: 단어가 불릴 때 들어오기(sung) 또는 줄 시작에 한꺼번에 물결처럼 들어오기(line).
+- 움직임 곡선: 큐빅 베지어와 스프링(강성 300, 감쇠 22)으로 계산하고, 모두 시간만으로 정해 미리보기와 내보내기가 같습니다.
+- 색: 고른 배경·포인트·보조 색에서 HSL로 배경, 글로우, 상자 위 글자색(4.5:1 대비)을 계산합니다. 배경은 테마 배경·단색·스포트라이트·오로라 중에서 고릅니다.
+- 가상 카메라: 천천히 다가가는 줌과 강조 단어(`*`·`**`·`!`)·줄 끝 ` !`의 튕김. "진동 모두 끄기"를 켜면 멈춥니다. 옅은 필름 그레인·비네팅은 따로 끕니다.
+- 기본 글꼴은 내장한 Pretendard(OFL)이고, 가사 글꼴을 고르면 그 글꼴을 씁니다.
+- 저장 필드: `style.motionStyle`(theme / smooth_reveal / hype_pop / editorial_blur / highlight_box), `kineticBg`(theme / solid / spotlight / aurora), `kineticReveal`(sung / line), `kineticCamera`.
+- 코드: `frontend/src/lib/render/kinetic/`(`renderer.ts`, `styles.ts`, `easing.ts`, `color.ts`, `camera.ts`, `background.ts`, `post.ts`, `fonts.ts`), `components/editor/motion-style-control.tsx`
+
 ## 테마 요소 옮기기와 캐릭터 연출
 
 - 테마 목록은 접히는 칸입니다. 머리줄을 누르면 접히고, 접혀 있을 때는 고른 테마 이름만 보입니다. 펼치면 사이드바 폭에 맞춰 1~3열로 늘어납니다.
@@ -147,7 +158,7 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 
 - 이 앱 자체 코드는 `LICENSE`(Copyright © 2026 i2nu, All rights reserved)를 따릅니다.
 - `/licenses/` 페이지(`templates/licenses.html`, 첫 화면 아래 링크)에 묶인 라이브러리·글꼴·실행 중에 받는 파일(모델, FFmpeg, Mixkit)과 라이선스가 나옵니다. 원문은 `static/licenses/THIRD_PARTY_NOTICES.txt`이고, `npm run build`가 실제로 번들에 들어간 패키지(esbuild metafile)와 `static/fonts/`를 보고 다시 씁니다. 페이지의 "실행 중에 받는 파일" 표는 `studio/views.py`의 `RUNTIME_DOWNLOADS`를 손으로 고칩니다.
-- 글꼴은 Google Fonts에 요청하지 않고 `static/fonts/`에서 내보냅니다(보는 사람의 IP가 제3자에게 가지 않음). 목록은 `frontend/fonts.json`, 바꿨을 때만 `cd frontend && node scripts/vendor-fonts.mjs`로 다시 만듭니다. 모두 SIL OFL이고 Kosugi Maru·Permanent Marker만 Apache-2.0입니다.
+- 글꼴은 Google Fonts에 요청하지 않고 `static/fonts/`에서 내보냅니다(보는 사람의 IP가 제3자에게 가지 않음). 목록은 `frontend/fonts.json`, 바꿨을 때만 `cd frontend && node scripts/vendor-fonts.mjs`로 다시 만듭니다. 모두 SIL OFL이고 Kosugi Maru·Permanent Marker만 Apache-2.0입니다. Pretendard는 Fontsource 판이 라틴 글자만 있어 `pretendard` 패키지(1.3.9)의 한국어 분할 파일을 씁니다(`node scripts/vendor-fonts.mjs --only Pretendard`).
 - FFmpeg(GPL-2.0-or-later)은 앱에 넣지 않고 ProRes로 내보낼 때만 브라우저가 CDN에서 받습니다.
 - 음원·소재를 올리는 칸과 내보내기 칸에 "권리가 있는 소재만" 안내가 있습니다(`components/ui/rights-note.tsx`).
 - `onnxruntime-node`는 `frontend/stubs/`의 빈 패키지로 대체했습니다(브라우저 전용 앱이라 쓰지 않음).
