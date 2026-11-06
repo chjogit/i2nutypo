@@ -13,13 +13,15 @@ import {
   MINI_PRESET_LABELS,
   MINI_PRESETS,
   MINI_WIDTH_BIG_STEP,
+  MINI_EDGE,
   MINI_WIDTH_RANGE,
   MINI_WIDTH_STEP,
+  miniWidthCap,
   nearestMiniPreset,
   nextMiniPreset,
   readMiniWidth,
 } from "@/lib/ui/preview-size";
-const EDGE = 12;
+const EDGE = MINI_EDGE;
 const SETTINGS_KEY = "kinetic-typo-mini-preview";
 const AUTO_KEY = "kinetic-typo-mini-preview-auto";
 
@@ -119,7 +121,26 @@ export function MiniPreview({
   }, [frameRef]);
 
   const visible = enabled && offscreen && !dismissed;
-  const width = settings.size;
+  /** Widest the window may be on this screen; the saved width stays as chosen. */
+  const [cap, setCap] = useState<number>(MINI_WIDTH_RANGE[1]);
+  useEffect(() => {
+    if (!visible) return;
+    const measure = () => {
+      const src = sourceRef.current;
+      const aspect = src && src.height > 0 ? src.width / src.height : Number.NaN;
+      setCap(miniWidthCap(window.innerWidth, window.innerHeight, aspect));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    // The project's frame shape can change while shown
+    const id = window.setInterval(measure, 1000);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.clearInterval(id);
+    };
+  }, [visible, sourceRef]);
+  const width = Math.min(settings.size, cap);
+  const range = [MINI_WIDTH_RANGE[0], cap] as const;
 
   // Copy the preview canvas while shown
   useEffect(() => {
@@ -211,7 +232,7 @@ export function MiniPreview({
     const dx = e.clientX - g.x;
     const wanted = gripSide === "right" ? g.w + dx : g.w - dx;
     const room = gripSide === "right" ? window.innerWidth - g.left - EDGE : g.right - EDGE;
-    g.next = clampTo(Math.min(wanted, room), MINI_WIDTH_RANGE);
+    g.next = clampTo(Math.min(wanted, room), range);
     // Only the box's CSS size moves while dragging; the copy loop picks the new size up after
     el.style.width = `${g.next}px`;
     if (gripSide === "left") el.style.left = `${g.right - g.next}px`;
@@ -228,7 +249,7 @@ export function MiniPreview({
       e.key,
       e.shiftKey,
       width,
-      MINI_WIDTH_RANGE,
+      range,
       { step: MINI_WIDTH_STEP, big: MINI_WIDTH_BIG_STEP },
       [gripSide === "right" ? "ArrowRight" : "ArrowLeft", "ArrowDown"],
       [gripSide === "right" ? "ArrowLeft" : "ArrowRight", "ArrowUp"],
@@ -309,7 +330,7 @@ export function MiniPreview({
         aria-label="작은 미리보기 크기 조절"
         aria-valuenow={width}
         aria-valuemin={MINI_WIDTH_RANGE[0]}
-        aria-valuemax={MINI_WIDTH_RANGE[1]}
+        aria-valuemax={cap}
         aria-valuetext={`폭 ${width}픽셀`}
         tabIndex={0}
         onPointerDown={onGripDown}
