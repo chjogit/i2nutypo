@@ -104,7 +104,7 @@ export function EffectsPanel() {
       </div>
       {open && (
         <>
-          <div role="tablist" aria-label="효과 종류" className="grid grid-cols-3 gap-1 text-xs">
+          <div role="tablist" aria-label="효과 종류" className="flex overflow-hidden rounded-md border border-zinc-800 text-xs">
             {TABS.map(([id, label]) => (
               <button
                 key={id}
@@ -112,7 +112,7 @@ export function EffectsPanel() {
                 role="tab"
                 aria-selected={tab === id}
                 onClick={() => setTab(id)}
-                className={`rounded-md border px-1.5 py-1 ${tab === id ? "border-zinc-100 bg-zinc-100 font-semibold text-zinc-950" : "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200"}`}
+                className={`min-w-0 flex-1 whitespace-nowrap px-1 py-1 ${tab === id ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"}`}
               >
                 {label}
               </button>
