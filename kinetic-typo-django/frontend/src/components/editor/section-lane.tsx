@@ -91,7 +91,7 @@ export function SectionLane({ pps }: { pps: number }) {
           type="button"
           aria-expanded={board}
           onClick={() => setBoard((v) => !v)}
-          className="rounded px-1.5 py-0.5 text-indigo-300 hover:underline"
+          className="rounded px-1.5 py-0.5 text-cue-300 hover:underline"
         >
           {board ? "구간별 장면 접기" : "구간별 장면 보기"}
         </button>

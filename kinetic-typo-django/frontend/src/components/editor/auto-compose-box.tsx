@@ -5,7 +5,7 @@ import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
 
 const BTN =
-  "rounded-md border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40";
+  "rounded-md border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:border-cue-500 disabled:cursor-not-allowed disabled:opacity-40";
 
 /**
  * One click rolls a whole look: themes, colors, elements, strengths and each
@@ -39,12 +39,12 @@ export function AutoComposeBox() {
   const validSeed = Number.isInteger(typed) && typed > 0;
 
   return (
-    <div className="space-y-2 rounded-lg border border-indigo-500/40 bg-indigo-500/5 p-2.5">
+    <div className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900 p-2.5">
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => roll(freshSeed())}
-          className="flex-1 rounded-md bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-400"
+          className="flex-1 rounded-md bg-cue-500 px-3 py-1.5 text-xs font-semibold text-zinc-950 hover:bg-cue-400"
         >
           자동 구성
         </button>
@@ -64,7 +64,7 @@ export function AutoComposeBox() {
             inputMode="numeric"
             placeholder="숫자"
             aria-label="시드"
-            className="w-20 rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
+            className="w-20 rounded-md border border-zinc-800 bg-zinc-950 px-2 py-0.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-cue-500 focus:outline-none"
           />
         </label>
         <button type="button" onClick={() => roll(typed)} disabled={!validSeed} className={BTN}>

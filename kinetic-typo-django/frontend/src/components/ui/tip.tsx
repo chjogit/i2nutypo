@@ -72,7 +72,7 @@ export function Tip({
           e.stopPropagation();
           setPinned((v) => !v);
         }}
-        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-zinc-700 text-[11px] font-bold leading-none text-zinc-400 hover:border-indigo-400 hover:text-indigo-200 focus:border-indigo-400 focus:outline-none ${pinned ? "border-indigo-400 text-indigo-200" : ""} ${className}`}
+        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-zinc-700 text-[11px] font-bold leading-none text-zinc-400 hover:border-cue-400 hover:text-cue-200 focus:border-cue-400 focus:outline-none ${pinned ? "border-cue-400 text-cue-200" : ""} ${className}`}
       >
         ?
       </button>

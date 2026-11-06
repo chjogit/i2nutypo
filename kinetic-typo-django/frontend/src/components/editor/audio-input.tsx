@@ -119,7 +119,7 @@ export function AudioInput({ heading = true }: { heading?: boolean }) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-indigo-500 hover:text-zinc-100"
+            className="w-full rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:border-cue-500 hover:text-zinc-100"
           >
             다른 음원 선택 (가사 초기화)
           </button>
@@ -128,7 +128,7 @@ export function AudioInput({ heading = true }: { heading?: boolean }) {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="flex w-full items-center justify-center rounded-md border border-dashed border-zinc-800 px-3 py-4 text-sm text-zinc-400 hover:border-indigo-500 hover:text-zinc-200"
+          className="flex w-full items-center justify-center rounded-md border border-dashed border-zinc-800 px-3 py-4 text-sm text-zinc-400 hover:border-cue-500 hover:text-zinc-200"
         >
           음원 파일 선택 (mp3, wav, m4a…)
         </button>

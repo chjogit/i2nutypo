@@ -34,14 +34,14 @@ export function TimeField({
           if (e.key === "Enter") commit();
         }}
         aria-label={`${label} (초)`}
-        className="w-16 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 font-mono text-zinc-100 focus:border-indigo-500 focus:outline-none"
+        className="w-16 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 font-mono text-zinc-100 focus:border-cue-500 focus:outline-none"
       />
       <span className="font-mono text-zinc-400">{fmtTime(value)}</span>
       <button
         type="button"
         onClick={() => onCommit(Math.round(usePlaybackStore.getState().currentTime * 100) / 100)}
         title="재생 위치의 시간 넣기"
-        className="ml-auto rounded border border-zinc-800 px-1.5 text-zinc-300 hover:border-indigo-500"
+        className="ml-auto rounded border border-zinc-800 px-1.5 text-zinc-300 hover:border-cue-500"
       >
         ⏱ 지금
       </button>

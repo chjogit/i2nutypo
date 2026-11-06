@@ -197,12 +197,12 @@ export function ClipLane<T extends Span>(p: ClipLaneProps<T>) {
           ? "빈 곳 두 번 클릭: 구간 추가 · 우클릭: 메뉴 · Ctrl/Shift 클릭: 여러 개 고르기 · Delete: 지우기"
           : "빈 곳 두 번 클릭: 구간 추가 · 우클릭: 메뉴 · 구간 고르고 Delete: 지우기"
       }
-      className={`relative border-b border-zinc-900 ${dropAt !== null ? "bg-indigo-500/10" : ""}`}
+      className={`relative border-b border-zinc-900 ${dropAt !== null ? "bg-cue-500/10" : ""}`}
       style={{ height: p.height ?? CLIP_LANE_HEIGHT }}
     >
       {dropAt !== null && (
         <span
-          className="pointer-events-none absolute inset-y-0 z-[2] w-0.5 bg-indigo-400"
+          className="pointer-events-none absolute inset-y-0 z-[2] w-0.5 bg-cue-400"
           style={{ left: dropAt * p.pps }}
         />
       )}

@@ -2,8 +2,76 @@
 /* The page templates (intro, base, header) use the same stylesheet */
 @source "../../templates";
 
+/*
+ * Editor palette. Graphite neutrals with no violet cast, and one accent: the
+ * yellow a lyric fills with as it is sung ("cue"). Solid cue fills carry dark
+ * text. Red is kept for the playhead and destructive actions only.
+ * The indigo scale is pointed at cue too, so any class not yet renamed follows.
+ */
+@theme {
+  --font-sans: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: "Black Han Sans", "Pretendard", sans-serif;
+
+  --color-zinc-50: oklch(0.982 0.002 85);
+  --color-zinc-100: oklch(0.952 0.003 85);
+  --color-zinc-200: oklch(0.895 0.004 85);
+  --color-zinc-300: oklch(0.83 0.005 85);
+  --color-zinc-400: oklch(0.72 0.006 85);
+  --color-zinc-500: oklch(0.585 0.006 85);
+  --color-zinc-600: oklch(0.46 0.006 85);
+  --color-zinc-700: oklch(0.365 0.005 85);
+  --color-zinc-800: oklch(0.285 0.004 85);
+  --color-zinc-900: oklch(0.222 0.004 85);
+  --color-zinc-950: oklch(0.178 0.003 85);
+
+  --color-cue-50: oklch(0.985 0.035 98);
+  --color-cue-100: oklch(0.965 0.065 97);
+  --color-cue-200: oklch(0.935 0.11 95);
+  --color-cue-300: oklch(0.9 0.145 93);
+  --color-cue-400: oklch(0.865 0.165 90);
+  --color-cue-500: oklch(0.835 0.17 87);
+  --color-cue-600: oklch(0.79 0.165 83);
+  --color-cue-700: oklch(0.66 0.14 78);
+  --color-cue-800: oklch(0.52 0.11 75);
+  --color-cue-900: oklch(0.4 0.08 75);
+  --color-cue-950: oklch(0.28 0.05 75);
+
+  --color-indigo-50: var(--color-cue-50);
+  --color-indigo-100: var(--color-cue-100);
+  --color-indigo-200: var(--color-cue-200);
+  --color-indigo-300: var(--color-cue-300);
+  --color-indigo-400: var(--color-cue-400);
+  --color-indigo-500: var(--color-cue-500);
+  --color-indigo-600: var(--color-cue-600);
+  --color-indigo-700: var(--color-cue-700);
+  --color-indigo-800: var(--color-cue-800);
+  --color-indigo-900: var(--color-cue-900);
+  --color-indigo-950: var(--color-cue-950);
+
+  /* Tool-like corners: small controls barely round, panels a little more */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+}
+
 body {
-  font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  font-family: var(--font-sans);
+  /* Korean wraps between words, never inside one */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  letter-spacing: -0.005em;
+}
+/* Times and numbers in controls line up as they change */
+.font-mono,
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+::selection {
+  background: oklch(0.835 0.17 87 / 0.35);
 }
 
 /* Dark, thin scrollbars everywhere: a faint thumb on a clear track, so lists blend into the editor */
@@ -12,10 +80,10 @@ body {
 }
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(82 82 91 / 0.55) transparent;
+  scrollbar-color: oklch(0.46 0.006 85 / 0.6) transparent;
 }
 *:hover {
-  scrollbar-color: rgb(113 113 122 / 0.8) transparent;
+  scrollbar-color: oklch(0.585 0.006 85 / 0.85) transparent;
 }
 ::-webkit-scrollbar {
   width: 8px;
@@ -26,11 +94,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(82 82 91 / 0.55);
+  background: oklch(0.46 0.006 85 / 0.6);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(129 140 248 / 0.6);
+  background: oklch(0.835 0.17 87 / 0.6);
 }
 
 /*
@@ -38,22 +106,22 @@ body {
  * stronger or softer everywhere at once. Utilities read these variables.
  */
 html[data-contrast="high"] {
-  --color-zinc-300: oklch(0.92 0.004 286.32);
-  --color-zinc-400: oklch(0.82 0.008 286.2);
-  --color-zinc-500: oklch(0.7 0.014 286.07);
-  --color-zinc-600: oklch(0.58 0.016 285.9);
-  --color-zinc-700: oklch(0.47 0.015 285.8);
-  --color-zinc-800: oklch(0.36 0.01 285.9);
-  --color-zinc-950: oklch(0.1 0.004 285.8);
+  --color-zinc-300: oklch(0.92 0.004 85);
+  --color-zinc-400: oklch(0.82 0.006 85);
+  --color-zinc-500: oklch(0.7 0.006 85);
+  --color-zinc-600: oklch(0.58 0.006 85);
+  --color-zinc-700: oklch(0.47 0.006 85);
+  --color-zinc-800: oklch(0.36 0.006 85);
+  --color-zinc-950: oklch(0.1 0.004 85);
 }
 html[data-contrast="dim"] {
-  --color-zinc-50: oklch(0.9 0.003 286.3);
-  --color-zinc-100: oklch(0.88 0.003 286.3);
-  --color-zinc-200: oklch(0.83 0.005 286.3);
-  --color-zinc-300: oklch(0.77 0.008 286.2);
-  --color-zinc-800: oklch(0.29 0.006 286);
-  --color-zinc-900: oklch(0.23 0.006 285.9);
-  --color-zinc-950: oklch(0.18 0.005 285.8);
+  --color-zinc-50: oklch(0.9 0.003 85);
+  --color-zinc-100: oklch(0.88 0.003 85);
+  --color-zinc-200: oklch(0.83 0.005 85);
+  --color-zinc-300: oklch(0.77 0.006 85);
+  --color-zinc-800: oklch(0.29 0.006 85);
+  --color-zinc-900: oklch(0.23 0.006 85);
+  --color-zinc-950: oklch(0.18 0.005 85);
 }
 
 /* Rendered Markdown on the docs page (templates/docs/_*.html from docs/*.md) */
@@ -70,7 +138,7 @@ html[data-contrast="dim"] {
   @apply font-semibold text-zinc-100;
 }
 .doc a {
-  @apply text-indigo-300 underline;
+  @apply text-cue-300 underline underline-offset-2;
 }
 .doc ul {
   @apply list-disc space-y-1.5 pl-5;
@@ -85,7 +153,7 @@ html[data-contrast="dim"] {
   @apply rounded bg-zinc-800 px-1 py-0.5 font-mono text-[0.85em] text-zinc-100;
 }
 .doc table {
-  @apply block w-full overflow-x-auto rounded-lg border border-zinc-800 text-left;
+  @apply block w-full overflow-x-auto rounded-md border border-zinc-800 text-left;
 }
 .doc thead {
   @apply bg-zinc-900 text-xs text-zinc-400;
@@ -101,7 +169,7 @@ html[data-contrast="dim"] {
 
 /* Keyboard focus: one visible ring everywhere, even where a component removed the default outline */
 :focus-visible {
-  outline: 2px solid rgb(129 140 248) !important;
+  outline: 2px solid oklch(0.865 0.165 90) !important;
   outline-offset: 2px;
 }
 input[type="range"]:focus-visible {
@@ -117,5 +185,32 @@ input[type="range"]:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * First page headline: each line fills left to right like a lyric being sung,
+ * once, then rests in the cue color. Reduced motion shows the filled line at once.
+ */
+.sung-line {
+  color: transparent;
+  background-image: linear-gradient(90deg, var(--color-cue-400) 0 50%, var(--color-zinc-700) 50% 100%);
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: sung-fill 0.85s cubic-bezier(0.45, 0.05, 0.35, 1) var(--sung-delay, 0s) forwards;
+}
+@keyframes sung-fill {
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sung-line {
+    animation: none;
+    background-position: 0 0;
   }
 }

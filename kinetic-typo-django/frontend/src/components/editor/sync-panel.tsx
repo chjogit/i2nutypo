@@ -10,11 +10,7 @@ import {
   type TranscribeHandle,
 } from "@/lib/sync/whisper-client";
 import { detectAccelerator, type Accelerator } from "@/lib/sync/device";
-import {
-  DEFAULT_SEPARATION_MODEL,
-  SEPARATION_MODELS,
-  type SeparationModel,
-} from "@/lib/separation/protocol";
+import { DEFAULT_SEPARATION_MODEL, SEPARATION_MODELS, type SeparationModel } from "@/lib/separation/protocol";
 import { decodeStereo, encodeWav, separateInWorker } from "@/lib/separation/separation-client";
 import { isDesktopApp, transcribeLocal } from "@/lib/desktop/local-whisper";
 import {
@@ -281,13 +277,12 @@ export function SyncPanel() {
               separateTouchedRef.current = true;
               setSeparate(e.target.checked);
             }}
-            className="mt-0.5 accent-indigo-500"
+            className="mt-0.5 accent-cue-500"
           />
           <span>
             <span className="font-semibold text-zinc-200">보컬만 분리해서 인식</span>{" "}
             <span className="text-zinc-400">
-              반주를 걷어내고 목소리만 들려줘 인식이 훨씬 정확해집니다. 처음 한 번 분리 모델을
-              내려받습니다.
+              반주를 걷어내고 목소리만 들려줘 인식이 훨씬 정확해집니다. 처음 한 번 분리 모델을 내려받습니다.
               {accelerator === "cpu" && " 이 브라우저는 GPU를 못 써서 곡 길이에 따라 몇 분 더 걸립니다."}
             </span>
           </span>
@@ -303,11 +298,13 @@ export function SyncPanel() {
                   role="radio"
                   aria-checked={sepModel === m.id}
                   disabled={off}
-                  title={m.gpuOnly && accelerator === "cpu" ? "GPU(WebGPU)가 있어야 쓸 수 있습니다" : undefined}
+                  title={
+                    m.gpuOnly && accelerator === "cpu" ? "GPU(WebGPU)가 있어야 쓸 수 있습니다" : undefined
+                  }
                   onClick={() => setSepModel(m.id)}
                   className={`rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${
                     sepModel === m.id
-                      ? "border-indigo-500 bg-indigo-600/15 text-zinc-100"
+                      ? "border-cue-500 bg-cue-600/15 text-zinc-100"
                       : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
                   }`}
                 >
@@ -336,7 +333,7 @@ export function SyncPanel() {
                   }}
                   className={`rounded-md border px-2 py-1.5 text-center ${
                     mode === m.id
-                      ? "border-indigo-500 bg-indigo-600/30 text-zinc-100"
+                      ? "border-cue-500 bg-cue-600/30 text-zinc-100"
                       : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-600"
                   }`}
                 >
@@ -376,7 +373,7 @@ export function SyncPanel() {
             type="button"
             onClick={run}
             disabled={audio.kind !== "upload" || busy || lines.length === 0}
-            className="rounded-md bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+            className="rounded-md bg-cue-600 px-3 py-1.5 font-semibold text-zinc-950 hover:bg-cue-500 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
           >
             {done ? "다시 인식" : "음성 인식으로 싱크"}
           </button>
@@ -404,7 +401,7 @@ export function SyncPanel() {
           <div className="space-y-2">
             <p className="text-zinc-300">
               평균 일치율{" "}
-              <span className="font-semibold text-indigo-200">{Math.round(averageMatch * 100)}%</span>
+              <span className="font-semibold text-cue-200">{Math.round(averageMatch * 100)}%</span>
               {done.separated ? " (보컬 분리 후 인식)" : " (원곡 그대로 인식)"}.{" "}
               {result?.alignments.length ?? 0}줄 중{" "}
               <span className="font-semibold text-emerald-300">{confirmed}줄</span>은 발음이 90% 이상 맞아
@@ -435,7 +432,7 @@ export function SyncPanel() {
                 return (
                   <li key={a.lineIdx} className="flex items-baseline gap-2">
                     <span className={`w-4 shrink-0 ${markColor}`}>{mark}</span>
-                    <span className="w-14 shrink-0 font-mono text-indigo-300">
+                    <span className="w-14 shrink-0 font-mono text-cue-300">
                       {formatLrcTime(result.startTimes[a.lineIdx])}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-zinc-200" title={a.heard || undefined}>

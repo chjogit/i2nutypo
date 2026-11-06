@@ -109,7 +109,7 @@ function EffectRow({
         disabled={effect === "cut"}
         onChange={(e) => onChange({ sec: Number(e.target.value) })}
         aria-label={`${label} 길이`}
-        className="w-20 accent-indigo-500 disabled:opacity-30"
+        className="w-20 accent-cue-500 disabled:opacity-30"
       />
       <span className="w-8 text-right font-mono text-zinc-300">{sec.toFixed(1)}s</span>
     </div>
@@ -170,13 +170,13 @@ function ClipCells({
         ))}
       </div>
       <div className="flex justify-center gap-3 text-xs">
-        <button type="button" onClick={fromPicture} className="text-indigo-400 hover:underline">
+        <button type="button" onClick={fromPicture} className="text-cue-400 hover:underline">
           그림 자리로 채우기
         </button>
         <button
           type="button"
           onClick={() => onChange(Array<boolean>(CELLS).fill(false))}
-          className="text-indigo-400 hover:underline"
+          className="text-cue-400 hover:underline"
         >
           모두 지우기
         </button>
@@ -200,7 +200,7 @@ function Check({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="accent-indigo-500"
+        className="accent-cue-500"
       />
       {children}
     </label>
@@ -308,7 +308,7 @@ export function PropsPanel() {
     <section className="space-y-3 px-4 py-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-zinc-200">일러스트</h2>
-        <label className="cursor-pointer rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-200 hover:border-indigo-500">
+        <label className="cursor-pointer rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-200 hover:border-cue-500">
           + 올리기
           <input
             type="file"
@@ -420,8 +420,8 @@ export function PropsPanel() {
                           aria-label={`${p.fileName} ${p.onTimeline ? "타임라인에서 빼기" : "타임라인에 추가"}`}
                           className={`w-full rounded border px-1 py-0.5 ${
                             p.onTimeline
-                              ? "border-zinc-700 text-zinc-300 hover:border-indigo-500"
-                              : "border-indigo-500 bg-indigo-500/10 text-indigo-200"
+                              ? "border-zinc-700 text-zinc-300 hover:border-cue-500"
+                              : "border-cue-500 bg-cue-500/10 text-cue-200"
                           }`}
                         >
                           {p.onTimeline ? "빼기" : "추가"}
@@ -461,7 +461,7 @@ export function PropsPanel() {
                   if (id) select({ propId: selProp.id, clipId: id });
                 }}
                 title="재생 위치에 이 일러스트의 구간을 하나 더 만듭니다 (다른 자리에서 다시 나타나기)"
-                className="text-indigo-400 hover:underline"
+                className="text-cue-400 hover:underline"
               >
                 타임라인 추가
               </button>
@@ -471,7 +471,7 @@ export function PropsPanel() {
                   removePropClip(selProp.id, selClip.id);
                   select(null);
                 }}
-                className="text-indigo-400 hover:underline"
+                className="text-cue-400 hover:underline"
               >
                 현재 구간 삭제
               </button>
@@ -504,7 +504,7 @@ export function PropsPanel() {
                   }
                   onDoubleClick={() => updatePropClip(selProp.id, selClip.id, { [m.key]: m.reset })}
                   aria-label={`일러스트 ${m.label}`}
-                  className="min-w-0 flex-1 accent-indigo-500"
+                  className="min-w-0 flex-1 accent-cue-500"
                 />
                 <span className="w-10 text-right font-mono text-zinc-300">{m.format(selClip[m.key])}</span>
               </label>
@@ -581,7 +581,7 @@ export function PropsPanel() {
                   onChange={(e) => updatePropClip(selProp.id, selClip.id, { [key]: Number(e.target.value) })}
                   onDoubleClick={() => updatePropClip(selProp.id, selClip.id, { [key]: 0 })}
                   aria-label={`일러스트 ${label}`}
-                  className="min-w-0 flex-1 accent-indigo-500"
+                  className="min-w-0 flex-1 accent-cue-500"
                 />
                 <span className="w-10 text-right font-mono text-zinc-300">{pct(selClip[key])}</span>
               </label>

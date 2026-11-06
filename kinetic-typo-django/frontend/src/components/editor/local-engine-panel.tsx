@@ -69,7 +69,7 @@ export function LocalEnginePanel({ disabled }: { disabled: boolean }) {
         checked={engine === value}
         onChange={() => setEngine(value)}
         disabled={disabled}
-        className="accent-indigo-500"
+        className="accent-cue-500"
       />
       {label}
     </label>
@@ -126,7 +126,7 @@ export function LocalEnginePanel({ disabled }: { disabled: boolean }) {
                   type="button"
                   onClick={startDownload}
                   disabled={disabled}
-                  className="rounded-md border border-indigo-500 px-2.5 py-1 font-semibold text-indigo-300 hover:bg-indigo-950 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md border border-cue-500 px-2.5 py-1 font-semibold text-cue-300 hover:bg-cue-950 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   모델 내려받기 ({formatSize(model.sizeMb)})
                 </button>

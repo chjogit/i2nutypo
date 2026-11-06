@@ -44,7 +44,7 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
             배경으로 내보낼 때는 적용되지 않습니다.
           </Tip>
           {own && (
-            <button type="button" onClick={reset} className="text-xs text-indigo-400 hover:underline">
+            <button type="button" onClick={reset} className="text-xs text-cue-400 hover:underline">
               테마 기본
             </button>
           )}
@@ -61,7 +61,7 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
               role="radio"
               aria-checked={mode === id}
               onClick={() => set({ mode: id })}
-              className={`px-2 py-1 ${mode === id ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+              className={`px-2 py-1 ${mode === id ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
             >
               {label}
             </button>
@@ -85,7 +85,7 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
             value={amount}
             onChange={(e) => set({ amount: Number(e.target.value) })}
             aria-label="글자 자동 대비 세기"
-            className="min-w-0 flex-1 accent-indigo-500"
+            className="min-w-0 flex-1 accent-cue-500"
           />
           <span className="w-10 text-right font-mono text-zinc-300">{Math.round(amount * 100)}%</span>
         </label>
@@ -118,7 +118,7 @@ export function ElementMotionToggle() {
           })
         }
         aria-label="요소 움직임"
-        className="h-4 w-4 accent-indigo-500"
+        className="h-4 w-4 accent-cue-500"
       />
     </label>
   );
@@ -156,7 +156,7 @@ export function LyricOrientationControl() {
             role="radio"
             aria-checked={value === id}
             onClick={() => setStyle({ lyricOrientation: id })}
-            className={`px-2 py-1 ${value === id ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+            className={`px-2 py-1 ${value === id ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
           >
             {label}
           </button>
@@ -190,7 +190,7 @@ export function NoVibrationToggle() {
         checked={on}
         onChange={(e) => setStyle({ noVibration: e.target.checked })}
         aria-label="진동 모두 끄기"
-        className="h-4 w-4 accent-indigo-500"
+        className="h-4 w-4 accent-cue-500"
       />
     </label>
   );
@@ -223,7 +223,7 @@ export function LyricSurfaceControl() {
               role="radio"
               aria-checked={glass === id}
               onClick={() => setStyle({ lyricGlass: id })}
-              className={`px-2 py-1 ${glass === id ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+              className={`px-2 py-1 ${glass === id ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
             >
               {label}
             </button>
@@ -248,7 +248,7 @@ export function LyricSurfaceControl() {
           onChange={(e) => setStyle({ lyricDepth: Number(e.target.value) })}
           onDoubleClick={() => setStyle({ lyricDepth: 0 })}
           aria-label="가사 깊이감"
-          className="min-w-0 flex-1 accent-indigo-500"
+          className="min-w-0 flex-1 accent-cue-500"
         />
         <span className="w-10 text-right font-mono text-zinc-300">{Math.round(depth * 100)}%</span>
       </label>

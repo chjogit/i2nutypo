@@ -27,9 +27,10 @@ import { Tip } from "@/components/ui/tip";
 import { ContextMenuHost } from "@/components/ui/context-menu";
 
 /**
- * A numbered step. The step to do next has an indigo border and a "지금 할
- * 차례" tag; a finished one shows a check. Every step stays open, so the order
- * is a guide and not a lock.
+ * A numbered step. The steps are a real sequence, so the number leads each
+ * one. The step to do next gets a cue-colored bar on its left edge and a
+ * "지금 할 차례" note; a finished one shows 완료. Every step stays open, so
+ * the order is a guide and not a lock.
  */
 function StepCard({
   n,
@@ -49,35 +50,34 @@ function StepCard({
   return (
     <section
       aria-label={`${n}단계 ${title}`}
-      className={`rounded-xl ${current ? "border-2 border-indigo-500 bg-zinc-900/60" : done ? "border border-zinc-800/70 bg-transparent" : "border border-zinc-800 bg-zinc-900/30"}`}
+      aria-current={current ? "step" : undefined}
+      className={`relative border-t border-zinc-800 ${current ? "bg-zinc-900" : ""}`}
     >
-      <header className="flex items-center gap-3 px-4 pt-4">
+      {current && <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-cue-400" />}
+      <header className="flex items-start gap-3 px-4 pt-4">
         <span
           aria-hidden
-          className={`flex shrink-0 items-center justify-center rounded-full font-bold ${current ? "h-10 w-10 text-lg" : "h-8 w-8 text-sm"} ${
-            done
-              ? "bg-emerald-500 text-zinc-950"
-              : current
-                ? "bg-indigo-600 text-white"
-                : "bg-zinc-800 text-zinc-300"
-          }`}
+          className={`w-6 shrink-0 font-display text-2xl leading-7 ${current ? "text-cue-400" : done ? "text-zinc-500" : "text-zinc-400"}`}
         >
-          {done ? "✓" : n}
+          {n}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className={`font-bold ${current ? "text-lg text-zinc-100" : "text-base text-zinc-200"}`}>
-            {n}. {title}
+          <h2
+            className={`text-base font-bold leading-7 ${done && !current ? "text-zinc-300" : "text-zinc-50"}`}
+          >
+            {title}
           </h2>
-          <p className="text-xs text-zinc-400">{hint}</p>
+          <p className="text-xs leading-relaxed text-zinc-400">{hint}</p>
         </div>
-        {current && (
-          <span className="shrink-0 rounded-full bg-indigo-600/20 px-2.5 py-1 text-xs font-semibold text-indigo-200">
-            지금 할 차례
+        {current && <span className="shrink-0 pt-1.5 text-xs font-semibold text-cue-300">지금 할 차례</span>}
+        {done && !current && (
+          <span className="flex shrink-0 items-center gap-1 pt-1.5 text-xs font-semibold text-emerald-400">
+            <span aria-hidden>✓</span>완료
           </span>
         )}
-        {done && !current && <span className="shrink-0 text-xs font-semibold text-emerald-400">완료</span>}
       </header>
-      {children}
+      {/* Contents line up with the step title, not the number */}
+      <div className="pb-2 md:pl-9">{children}</div>
     </section>
   );
 }
@@ -103,9 +103,9 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
   return (
     <div className="space-y-2 px-4 py-4">
       {rec && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/5 px-3 py-2 text-xs">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-l-2 border-cue-500/70 py-1 pl-3 text-xs">
           <span className="min-w-0 flex-1 break-keep text-zinc-300">
-            <span className="font-semibold text-indigo-200">추천: {getLookPreset(rec.lookPreset).label}</span>{" "}
+            <span className="font-semibold text-cue-200">추천: {getLookPreset(rec.lookPreset).label}</span>{" "}
             <span className="text-zinc-400">
               가사와 템포를 보면 {rec.tags.slice(0, 2).join(" · ")} 느낌이 어울려요.
             </span>
@@ -114,7 +114,7 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
             <button
               type="button"
               onClick={() => pick(rec.lookPreset)}
-              className="shrink-0 rounded-md bg-indigo-600 px-2.5 py-1 font-semibold text-white hover:bg-indigo-500"
+              className="shrink-0 rounded-md border border-cue-500/70 px-2.5 py-1 font-semibold text-cue-200 hover:bg-cue-500 hover:text-zinc-950"
             >
               추천 테마로
             </button>
@@ -132,14 +132,16 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
               role="radio"
               aria-checked={on}
               onClick={() => pick(id)}
-              className={`relative rounded-lg border-2 p-3 text-left ${
-                on ? "border-indigo-500 bg-indigo-500/10" : "border-zinc-800 hover:border-indigo-500"
+              className={`relative rounded-lg border p-2 text-left ${
+                on
+                  ? "border-cue-400 bg-zinc-800/70 ring-1 ring-cue-400"
+                  : "border-zinc-800 hover:border-zinc-500 hover:bg-zinc-900"
               }`}
             >
               {/* The theme's own colors, so the three read apart at a glance */}
               <span
                 aria-hidden
-                className="mb-2 flex h-14 items-center justify-center rounded-md text-2xl font-black"
+                className="mb-2 flex h-16 items-center justify-center rounded-sm text-2xl font-black"
                 style={{
                   background: p.palette.bgColor,
                   color: p.palette.textColor,
@@ -152,15 +154,15 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
                   style={{ background: p.palette.accentColor }}
                 />
               </span>
-              <span className="block text-sm font-bold text-zinc-100">
+              <span className="block px-1 text-sm font-bold text-zinc-100">
                 {p.label}
                 {rec?.lookPreset === id && (
-                  <span className="ml-1.5 rounded-full bg-indigo-600/25 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-indigo-200">
-                    추천
-                  </span>
+                  <span className="ml-1.5 align-middle text-xs font-semibold text-cue-300">추천</span>
                 )}
               </span>
-              <span className="block break-keep text-xs leading-snug text-zinc-400">{p.description}</span>
+              <span className="block break-keep px-1 pb-1 text-xs leading-snug text-zinc-400">
+                {p.description}
+              </span>
             </button>
           );
         })}
@@ -206,7 +208,7 @@ function LyricLook() {
             onChange={(e) => setStyle({ fontScale: Number(e.target.value) })}
             onDoubleClick={() => setStyle({ fontScale: 1 })}
             aria-label="영상 속 가사 크기"
-            className="w-32 accent-indigo-500"
+            className="w-32 accent-cue-500"
           />
           <span className="w-10 text-right font-mono text-zinc-300">{Math.round(fontScale * 100)}%</span>
         </span>
@@ -241,7 +243,7 @@ export function BeginnerShell() {
   return (
     <div className="flex flex-col">
       <div className="grid gap-6 px-4 py-6 md:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="space-y-5">
+        <div className="border-b border-zinc-800">
           <StepCard
             n={1}
             title="테마 선택"
@@ -294,7 +296,7 @@ export function BeginnerShell() {
           </StepCard>
         </div>
         <div className="lg:sticky lg:top-4 lg:self-start">
-          <div className="rounded-xl border border-zinc-800">
+          <div className="border border-zinc-800 bg-zinc-900/40">
             <Preview />
           </div>
         </div>

@@ -8,6 +8,10 @@
     <title>{% block title %}Kinetic Typo Studio{% endblock %}</title>
     <meta name="description" content="음원과 가사로 키네틱 타이포그라피 영상을 만듭니다." />
     <link rel="icon" href="{{ static('favicon.ico') }}" />
+    {#- UI text (Pretendard) and the wordmark (Black Han Sans), both served from static/fonts/ -#}
+    {%- for slug in ["pretendard", "black-han-sans"] %}
+    <link rel="stylesheet" href="{{ static('fonts/' ~ slug ~ '/' ~ slug ~ '.css') }}" />
+    {%- endfor %}
     {% block fonts %}{% endblock %}
     <link rel="stylesheet" href="{{ static('css/studio.css') }}?v={{ v }}" />
     {% block head %}{% endblock %}

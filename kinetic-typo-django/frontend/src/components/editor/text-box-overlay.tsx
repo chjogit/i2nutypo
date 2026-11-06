@@ -360,7 +360,7 @@ export function TextBoxOverlay({
           }
         }}
         style={{ display: "none" }}
-        className={`group pointer-events-auto absolute left-0 top-0 touch-none ${editOnly ? "cursor-text" : "cursor-move"} rounded-sm border border-dashed border-white/30 hover:border-indigo-400 hover:bg-indigo-400/5 focus:border-indigo-400 focus:outline-none`}
+        className={`group pointer-events-auto absolute left-0 top-0 touch-none ${editOnly ? "cursor-text" : "cursor-move"} rounded-sm border border-dashed border-white/30 hover:border-cue-400 hover:bg-cue-400/5 focus:border-cue-400 focus:outline-none`}
       >
         {!editOnly &&
           HANDLES.map((h) => (
@@ -373,13 +373,13 @@ export function TextBoxOverlay({
               onPointerUp={onUp}
               onPointerCancel={onUp}
               onDoubleClick={resetKey(h.kind)}
-              className={`absolute rounded-sm border border-indigo-300 bg-indigo-500 opacity-60 group-hover:opacity-100 ${h.className}`}
+              className={`absolute rounded-sm border border-cue-300 bg-cue-500 opacity-60 group-hover:opacity-100 ${h.className}`}
             />
           ))}
         <span
           ref={badgeRef}
           style={{ display: "none" }}
-          className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-indigo-600 px-1.5 py-0.5 text-[11px] font-medium text-white"
+          className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-cue-600 px-1.5 py-0.5 text-[11px] font-medium text-zinc-950"
         />
       </div>
       {editing && (
@@ -397,7 +397,7 @@ export function TextBoxOverlay({
               if (e.key === "Escape") setEditing(null);
               if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) e.currentTarget.blur();
             }}
-            className="w-full resize-none rounded-md border border-indigo-500 bg-zinc-950/95 p-2 text-sm text-zinc-100 focus:outline-none"
+            className="w-full resize-none rounded-md border border-cue-500 bg-zinc-950/95 p-2 text-sm text-zinc-100 focus:outline-none"
           />
           <p className="rounded bg-zinc-950/90 px-1.5 py-0.5 text-[11px] text-zinc-400">
             Enter: 줄바꿈 · Ctrl+Enter 또는 바깥 클릭: 저장 · Esc: 취소

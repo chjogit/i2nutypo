@@ -3,7 +3,7 @@ import { DEFAULT_PROP_MASK } from "@/lib/render/looks/prop-mask";
 import { Tip } from "@/components/ui/tip";
 import { Fold } from "./fold";
 
-const CHIP_ON = "border-indigo-500 bg-indigo-500/15 text-zinc-100";
+const CHIP_ON = "border-cue-500 bg-cue-500/15 text-zinc-100";
 const CHIP_OFF = "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200";
 
 const SLIDERS: ReadonlyArray<{
@@ -44,7 +44,7 @@ function Chips<T extends string>({
           role="radio"
           aria-checked={value === id}
           onClick={() => onChange(id)}
-          className={`rounded-full border px-2 py-0.5 ${value === id ? CHIP_ON : CHIP_OFF}`}
+          className={`rounded-sm border px-2 py-0.5 ${value === id ? CHIP_ON : CHIP_OFF}`}
         >
           {text}
         </button>
@@ -79,7 +79,7 @@ export function PropMaskFold({
               type="checkbox"
               checked={m.on}
               onChange={(e) => set({ on: e.target.checked })}
-              className="accent-indigo-500"
+              className="accent-cue-500"
             />
             마스킹 사용
           </label>
@@ -124,7 +124,7 @@ export function PropMaskFold({
                 onChange={(e) => set({ [s.key]: Number(e.target.value) })}
                 onDoubleClick={() => set({ [s.key]: DEFAULT_PROP_MASK[s.key] })}
                 aria-label={`마스킹 ${s.label}`}
-                className="min-w-0 flex-1 accent-indigo-500"
+                className="min-w-0 flex-1 accent-cue-500"
               />
               <span className="w-10 text-right font-mono text-zinc-300">{Math.round(m[s.key] * 100)}%</span>
             </label>
@@ -148,7 +148,7 @@ export function PropMaskFold({
               value={m.colorAlpha}
               onChange={(e) => set({ colorAlpha: Number(e.target.value) })}
               aria-label="마스킹 영역 색 진하기"
-              className="min-w-0 flex-1 accent-indigo-500"
+              className="min-w-0 flex-1 accent-cue-500"
             />
             <span className="w-10 text-right font-mono text-zinc-300">
               {m.colorAlpha > 0 ? `${Math.round(m.colorAlpha * 100)}%` : "투명"}

@@ -95,7 +95,7 @@ export function ContextMenuHost() {
               close();
               it.onSelect();
             }}
-            className={`flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left hover:bg-indigo-500/15 focus:bg-indigo-500/20 focus:outline-none disabled:opacity-40 ${it.danger ? "text-red-300" : ""}`}
+            className={`flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left hover:bg-cue-500/15 focus:bg-cue-500/20 focus:outline-none disabled:opacity-40 ${it.danger ? "text-red-300" : ""}`}
           >
             <span className="truncate">{it.label}</span>
             {it.hint && <span className="shrink-0 font-mono text-[11px] text-zinc-400">{it.hint}</span>}

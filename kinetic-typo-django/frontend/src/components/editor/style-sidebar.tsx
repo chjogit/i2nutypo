@@ -74,8 +74,8 @@ const ROLE_HINT: Partial<Record<ElementRole, string>> = {
 
 type Tab = "theme" | "detail" | "finish";
 
-const ON = "border-indigo-500 bg-indigo-500/10 text-zinc-100";
-const OFF = "border-zinc-800 text-zinc-400 hover:border-indigo-500";
+const ON = "border-cue-500 bg-cue-500/10 text-zinc-100";
+const OFF = "border-zinc-800 text-zinc-400 hover:border-cue-500";
 
 function Segmented<T extends string>({
   label,
@@ -97,7 +97,7 @@ function Segmented<T extends string>({
           role="tab"
           aria-selected={value === id}
           onClick={() => onChange(id)}
-          className={`flex-1 px-2.5 py-1 ${value === id ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+          className={`flex-1 px-2.5 py-1 ${value === id ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
         >
           {text}
         </button>
@@ -196,7 +196,7 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
                   className={`relative rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${on ? ON : OFF}`}
                 >
                   {on && (
-                    <span className="absolute right-1.5 top-1.5 rounded-full bg-indigo-600 px-1.5 text-[11px] font-semibold text-white">
+                    <span className="absolute right-1.5 top-1.5 rounded-full bg-cue-600 px-1.5 text-[11px] font-semibold text-zinc-950">
                       {order + 1}
                     </span>
                   )}
@@ -277,7 +277,7 @@ function MoveControls({
             onChange={(e) => onChange({ [m.key]: Number(e.target.value) })}
             onDoubleClick={() => onChange({ [m.key]: m.base ?? 0 })}
             aria-label={`${label} ${m.label}`}
-            className="min-w-0 flex-1 accent-indigo-500"
+            className="min-w-0 flex-1 accent-cue-500"
           />
           <span className="w-10 text-right font-mono text-zinc-300">
             {m.format(state[m.key] ?? m.base ?? 0)}
@@ -287,7 +287,7 @@ function MoveControls({
       <button
         type="button"
         onClick={() => onChange({ x: 0, y: 0, rot: 0, size: 1 })}
-        className="text-xs text-indigo-400 hover:underline"
+        className="text-xs text-cue-400 hover:underline"
       >
         원래 자리로
       </button>
@@ -318,7 +318,7 @@ function ElementRow({
             type="checkbox"
             checked={state.on}
             onChange={(e) => onChange({ on: e.target.checked })}
-            className="accent-indigo-500"
+            className="accent-cue-500"
           />
           {/* Name and role on two lines, so a narrow sidebar never hides the name */}
           <span className="min-w-0 flex-1">
@@ -337,7 +337,7 @@ function ElementRow({
           disabled={!state.on}
           onChange={(e) => onChange({ amount: Number(e.target.value) })}
           aria-label={`${def.label} 적용 정도`}
-          className="w-20 accent-indigo-500 disabled:opacity-30"
+          className="w-20 accent-cue-500 disabled:opacity-30"
         />
         <span className={`w-9 text-right font-mono ${state.on ? "text-zinc-300" : "text-zinc-400"}`}>
           {Math.round(state.amount * 100)}%
@@ -351,8 +351,8 @@ function ElementRow({
             title="위치 · 회전 · 크기"
             className={`w-6 shrink-0 rounded border text-xs ${
               moving || moved
-                ? "border-indigo-500 text-indigo-200"
-                : "border-zinc-800 text-zinc-400 hover:border-indigo-500"
+                ? "border-cue-500 text-cue-200"
+                : "border-zinc-800 text-zinc-400 hover:border-cue-500"
             }`}
           >
             ⌖
@@ -413,15 +413,11 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
       title={p.label}
       right={
         <span className="flex shrink-0 gap-2">
-          <button type="button" onClick={reset} className="text-indigo-400 hover:underline">
+          <button type="button" onClick={reset} className="text-cue-400 hover:underline">
             기본값
           </button>
           {count > 1 && (
-            <button
-              type="button"
-              onClick={() => target.toggle(id)}
-              className="text-indigo-400 hover:underline"
-            >
+            <button type="button" onClick={() => target.toggle(id)} className="text-cue-400 hover:underline">
               빼기
             </button>
           )}
@@ -441,14 +437,10 @@ function ThemeBlock({ id, count, target }: { id: ThemedPresetId; count: number; 
         title={`추가 연출 ${LOOK_ELEMENTS[id].filter((def) => def.extra).length}`}
         right={
           <span className="flex shrink-0 items-center gap-2 text-xs">
-            <button type="button" onClick={() => setExtras(true)} className="text-indigo-400 hover:underline">
+            <button type="button" onClick={() => setExtras(true)} className="text-cue-400 hover:underline">
               모두 켜기
             </button>
-            <button
-              type="button"
-              onClick={() => setExtras(false)}
-              className="text-indigo-400 hover:underline"
-            >
+            <button type="button" onClick={() => setExtras(false)} className="text-cue-400 hover:underline">
               모두 끄기
             </button>
             <Tip>
@@ -503,7 +495,7 @@ function MotionChips({ id, isLyric }: { id: ThemedPresetId; isLyric: boolean }) 
         <button
           type="button"
           onClick={() => save(pickSome(THEME_MOTIONS[id], MOTIONS_PER_SONG, mulberry32(freshSeed())))}
-          className="text-indigo-400 hover:underline"
+          className="text-cue-400 hover:underline"
         >
           섞기
         </button>
@@ -517,7 +509,7 @@ function MotionChips({ id, isLyric }: { id: ThemedPresetId; isLyric: boolean }) 
               type="button"
               aria-pressed={lit}
               onClick={() => save(lit ? on.filter((x) => x !== m) : [...on, m])}
-              className={`rounded-full border px-2 py-0.5 text-xs ${lit ? ON : OFF}`}
+              className={`rounded-sm border px-2 py-0.5 text-xs ${lit ? ON : OFF}`}
             >
               {motionLabel(m)}
             </button>
@@ -609,11 +601,11 @@ function ThemeClipBanner({ clip }: { clip: ThemeClip }) {
           removeThemeClip(clip.id);
           selectThemeClip(null);
         }}
-        className="text-indigo-400 hover:underline"
+        className="text-cue-400 hover:underline"
       >
         현재 구간 삭제
       </button>
-      <button type="button" onClick={() => selectThemeClip(null)} className="text-indigo-400 hover:underline">
+      <button type="button" onClick={() => selectThemeClip(null)} className="text-cue-400 hover:underline">
         전체 테마로
       </button>
     </div>
@@ -648,7 +640,7 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
       className="space-y-2 border-t border-zinc-800/70 pt-3"
       title={clip ? "이 구간 테마 색상" : "테마 색상"}
       right={
-        <button type="button" onClick={reset} className="text-indigo-400 hover:underline">
+        <button type="button" onClick={reset} className="text-cue-400 hover:underline">
           테마 기본 색
         </button>
       }
@@ -682,7 +674,7 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
               type="button"
               aria-pressed={filter.kind === f.kind}
               onClick={() => setStyle({ colorFilter: { ...filter, kind: f.kind } })}
-              className={`px-2 py-1 ${filter.kind === f.kind ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+              className={`px-2 py-1 ${filter.kind === f.kind ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
             >
               {f.label}
             </button>
@@ -698,7 +690,7 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
               value={filter.amount}
               onChange={(e) => setStyle({ colorFilter: { ...filter, amount: Number(e.target.value) } })}
               aria-label="필터 강도"
-              className="w-20 accent-indigo-500"
+              className="w-20 accent-cue-500"
             />
             <span className="w-8 font-mono text-zinc-300">{Math.round(filter.amount * 100)}%</span>
           </label>
@@ -733,7 +725,7 @@ function ElementMotionFold() {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={label}
-        className="min-w-0 flex-1 accent-indigo-500"
+        className="min-w-0 flex-1 accent-cue-500"
       />
       <span className="w-10 text-right font-mono text-zinc-300">{Math.round(value * 100)}%</span>
     </label>
@@ -744,7 +736,7 @@ function ElementMotionFold() {
       title={
         <>
           ✎ 요소 움직임 · 가사 배치
-          <span className="ml-1 font-normal text-indigo-300">
+          <span className="ml-1 font-normal text-cue-300">
             {ELEMENT_MOTIONS.find(([mode]) => mode === em.mode)?.[1] ?? ""}
           </span>
         </>
@@ -759,7 +751,7 @@ function ElementMotionFold() {
             aria-pressed={em.mode === mode}
             title={hint}
             onClick={() => set({ mode: mode as ElementMotionMode })}
-            className={`rounded-full border px-2 py-0.5 text-xs ${em.mode === mode ? ON : OFF}`}
+            className={`rounded-sm border px-2 py-0.5 text-xs ${em.mode === mode ? ON : OFF}`}
           >
             {label}
           </button>
@@ -777,7 +769,7 @@ function ElementMotionFold() {
           type="checkbox"
           checked={style.exitMotion}
           onChange={(e) => setStyle({ exitMotion: e.target.checked })}
-          className="accent-indigo-500"
+          className="accent-cue-500"
         />
         가사가 나갈 때도 움직임
         <Tip>줄이 끝날 때 등장 움직임에 맞춰 날아가거나 접히며 사라집니다. 끄면 흐려지며 사라집니다.</Tip>
@@ -835,14 +827,14 @@ function ThemeTab() {
           onChange={(e) => setStyle({ coverTitle: e.target.value })}
           placeholder="곡 제목"
           aria-label="곡 제목"
-          className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
+          className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-cue-500 focus:outline-none"
         />
         <input
           value={style.coverCredit}
           onChange={(e) => setStyle({ coverCredit: e.target.value })}
           placeholder="크레딧 (예: Vocal 이름 / Mix 이름)"
           aria-label="크레딧"
-          className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-indigo-500 focus:outline-none"
+          className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-cue-500 focus:outline-none"
         />
       </Fold>
     </div>
@@ -887,7 +879,7 @@ function DetailTab() {
         onChange={(e) => setDetail({ [key]: Number(e.target.value) })}
         onDoubleClick={() => setDetail({ [key]: DEFAULT_DETAIL[key] })}
         aria-label={label}
-        className="min-w-0 flex-1 accent-indigo-500"
+        className="min-w-0 flex-1 accent-cue-500"
       />
       <span className="w-11 text-right font-mono text-zinc-300">{format(detail[key])}</span>
     </label>
@@ -927,7 +919,7 @@ function DetailTab() {
                 role="radio"
                 aria-checked={frameStep === v}
                 onClick={() => setStyle({ frameStep: v })}
-                className={`px-2 py-1 ${frameStep === v ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+                className={`px-2 py-1 ${frameStep === v ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
               >
                 {label}
               </button>
@@ -942,7 +934,7 @@ function DetailTab() {
             type="checkbox"
             checked={centerClear}
             onChange={(e) => setStyle({ centerClear: e.target.checked })}
-            className="accent-indigo-500"
+            className="accent-cue-500"
           />
           가운데 비우기
           <Tip>
@@ -963,7 +955,7 @@ function DetailTab() {
             <button
               type="button"
               onClick={() => setDetail({ lyricX: 0, lyricY: 0 })}
-              className="text-indigo-400 hover:underline"
+              className="text-cue-400 hover:underline"
             >
               가운데로
             </button>
@@ -982,7 +974,7 @@ function DetailTab() {
           <button
             type="button"
             onClick={() => setDetail({ subtitleX: 0, subtitleY: 0 })}
-            className="text-indigo-400 hover:underline"
+            className="text-cue-400 hover:underline"
           >
             원래대로
           </button>
