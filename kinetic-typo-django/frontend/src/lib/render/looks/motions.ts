@@ -2,11 +2,12 @@ import type { LyricLine, StyleSettings } from "@/types/project";
 import { mulberry32, pickSome } from "@/lib/random";
 import type { Ctx2D } from "../motifs";
 import { clamp01, hash01, hashSigned } from "./noise";
+import { capture, cloudAt, dotsOf, drawDots, drawShards, shardsOf } from "./pieces";
 import { lyricLookOf, type ThemedPresetId } from "./presets";
 
 // Whole-line lyric motions ("techniques") drawn around a theme's own lyrics:
 // how the line comes in, and how it moves while it is sung. Each theme offers
-// seventeen that suit it, and a song uses six of them (see pickMotions).
+// nineteen that suit it, and a song uses six of them (see pickMotions).
 
 export interface MotionFrame {
   ctx: Ctx2D;
@@ -20,6 +21,11 @@ export interface MotionFrame {
   cx: number;
   cy: number;
   seed: number;
+  /**
+   * Draws the same lyrics, at rest, on another context (with ctx's transform
+   * already copied onto it). Lets a motion break the line into pieces.
+   */
+  capture?: (c: Ctx2D) => void;
 }
 
 interface MotionDef {
@@ -1029,7 +1035,84 @@ export const MOTIONS: readonly MotionDef[] = [
       moved(m, hashSigned(tick, m.seed) * k, hashSigned(tick, m.seed + 5) * k, p * 2, d);
     },
   },
+  {
+    id: "shatter_gather",
+    label: "조각나 흩어졌다 모여 글자 되기",
+    apply: (m, d) => {
+      const cap = m.elapsed < SHARD_SEC && m.capture ? capture(m.ctx, m.capture) : null;
+      if (!cap) return moved(m, 0, 0, inP(m, 0.3), d);
+      const unit = deviceUnit(m);
+      const bx = (cap.box.x0 + cap.box.x1) / 2;
+      const by = (cap.box.y0 + cap.box.y1) / 2;
+      drawShards(m.ctx, cap, shardsOf(cap.box, m.seed), (s) => {
+        const p = easeOut(clamp01((m.elapsed - s.r * 0.35) / 0.55));
+        const far = 1 - p;
+        const [ux, uy] = away(s.mx - bx, s.my - by, s.r);
+        const reach = far * unit * (0.2 + s.r * 0.25);
+        return {
+          p,
+          dx: ux * reach,
+          dy: uy * reach + far * far * unit * 0.08,
+          rot: far * hashSigned(Math.floor(s.r * 1e6), m.seed) * 2.6,
+          scale: 1 - far * 0.35,
+          alpha: p * 2.2,
+        };
+      });
+    },
+  },
+  {
+    id: "dust_gather",
+    label: "흩어진 점이 모여 글자 되기",
+    apply: (m, d) => {
+      const cap = m.elapsed < DUST_SEC && m.capture ? capture(m.ctx, m.capture) : null;
+      if (!cap) return moved(m, 0, 0, inP(m, 0.3), d);
+      const { W, H } = deviceSize(m);
+      const { dots, size } = dotsOf(cap.box, m.seed, deviceUnit(m) * 0.011);
+      drawDots(m.ctx, cap, dots, size, (q) => {
+        const p = easeOut(clamp01((m.elapsed - q.r * 0.4) / 0.7));
+        const [fx, fy] = cloudAt(q.r, W, H, 0);
+        const hx = q.x + size / 2;
+        const hy = q.y + size / 2;
+        // A little sideways on the way in, so the dots swirl rather than fly straight
+        const swirl = Math.sin(p * Math.PI) * deviceUnit(m) * 0.06 * (q.r < 0.5 ? 1 : -1);
+        const vx = hx - fx;
+        const vy = hy - fy;
+        const len = Math.hypot(vx, vy) || 1;
+        return {
+          x: fx + vx * p - (vy / len) * swirl,
+          y: fy + vy * p + (vx / len) * swirl,
+          scale: DOT_FAR + (1 - DOT_FAR) * p,
+          alpha: DOT_FAR_ALPHA + (1 - DOT_FAR_ALPHA) * p,
+        };
+      });
+    },
+  },
 ];
+
+/** How long the pieces take to come together; after that the line is drawn as it is. */
+const SHARD_SEC = 0.35 + 0.55;
+const DUST_SEC = 0.4 + 0.7;
+/** How small and faint a dot is while it waits in the cloud between lines. */
+const DOT_FAR = 0.4;
+const DOT_FAR_ALPHA = 0.35;
+
+/** The frame's shorter side in device pixels (the pieces are placed there). */
+function deviceUnit(m: MotionFrame): number {
+  const t = m.ctx.getTransform();
+  return minSide(m) * Math.hypot(t.a, t.b);
+}
+
+function deviceSize(m: MotionFrame): { W: number; H: number } {
+  const canvas = (m.ctx as CanvasRenderingContext2D).canvas as { width: number; height: number } | undefined;
+  const k = Math.hypot(m.ctx.getTransform().a, m.ctx.getTransform().b);
+  return { W: canvas?.width ?? m.W * k, H: canvas?.height ?? m.H * k };
+}
+
+/** A unit direction mostly away from the line's middle, turned a little by r. */
+function away(dx: number, dy: number, r: number): [number, number] {
+  const a = Math.atan2(dy * 2.2, dx) + (r - 0.5) * 1.4;
+  return [Math.cos(a), Math.sin(a)];
+}
 
 export const MOTION_BY_ID = new Map(MOTIONS.map((x) => [x.id, x]));
 
@@ -1087,6 +1170,45 @@ const EXITS: Record<string, ExitFn> = {
     m.ctx.restore();
   },
   flatten: (m, d, p) => about(m, 1, Math.max(0.02, 1 - p), 0, d),
+  shatterOut: (m, d, p) => {
+    const cap = m.capture ? capture(m.ctx, m.capture) : null;
+    if (!cap) return EXITS.fade(m, d, p);
+    const unit = deviceUnit(m);
+    const bx = (cap.box.x0 + cap.box.x1) / 2;
+    const by = (cap.box.y0 + cap.box.y1) / 2;
+    drawShards(m.ctx, cap, shardsOf(cap.box, m.seed + 1), (s) => {
+      const q = clamp01(p * 1.25 - s.r * 0.25);
+      const [ux, uy] = away(s.mx - bx, s.my - by, s.r);
+      const reach = q * unit * (0.12 + s.r * 0.18);
+      return {
+        p: 1 - q,
+        dx: ux * reach,
+        dy: uy * reach + q * q * unit * 0.22,
+        rot: q * hashSigned(Math.floor(s.r * 1e6), m.seed + 1) * 2.2,
+        scale: 1 - q * 0.3,
+        alpha: 1 - q,
+      };
+    });
+  },
+  dustOut: (m, d, p) => {
+    const cap = m.capture ? capture(m.ctx, m.capture) : null;
+    if (!cap) return EXITS.fade(m, d, p);
+    const { W, H } = deviceSize(m);
+    const { dots, size } = dotsOf(cap.box, m.seed + 1, deviceUnit(m) * 0.011);
+    drawDots(m.ctx, cap, dots, size, (q) => {
+      const k = clamp01(p * 1.3 - q.r * 0.3);
+      const e = k * k * (3 - 2 * k);
+      const [tx, ty] = cloudAt(q.r, W, H, 0);
+      const hx = q.x + size / 2;
+      const hy = q.y + size / 2;
+      return {
+        x: hx + (tx - hx) * e,
+        y: hy + (ty - hy) * e,
+        scale: 1 - (1 - DOT_FAR) * e,
+        alpha: 1 - (1 - DOT_FAR_ALPHA) * e,
+      };
+    });
+  },
 };
 
 const EXIT_OF: Record<string, keyof typeof EXITS> = {
@@ -1140,6 +1262,8 @@ const EXIT_OF: Record<string, keyof typeof EXITS> = {
   stagger_rows: "slideOut",
   elastic_snap: "shrink",
   rough_in: "glitchOut",
+  shatter_gather: "shatterOut",
+  dust_gather: "dustOut",
 };
 
 /** The exit that goes with a motion. */
@@ -1169,7 +1293,7 @@ export function applyMotion(
 }
 export const motionLabel = (id: string): string => MOTION_BY_ID.get(id)?.label ?? id;
 
-/** The seventeen motions that suit each theme, best first. */
+/** The nineteen motions that suit each theme, best first. */
 export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
   album_jacket: [
     "slide_side",
@@ -1189,6 +1313,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_center",
     "stagger_wave",
     "stagger_rows",
+    "shatter_gather",
+    "dust_gather",
   ],
   pop_cutout: [
     "stamp",
@@ -1208,6 +1334,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "elastic_snap",
     "stagger_edges",
     "stagger_random",
+    "shatter_gather",
+    "dust_gather",
   ],
   tint_panels: [
     "wipe_side",
@@ -1227,6 +1355,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_rows",
     "stagger_center",
     "stagger_random",
+    "shatter_gather",
+    "dust_gather",
   ],
   ballad_hud: [
     "blur_in",
@@ -1246,6 +1376,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_center",
     "stagger_wave",
     "stagger_rows",
+    "shatter_gather",
+    "dust_gather",
   ],
   cinematic_fantasy: [
     "blur_in",
@@ -1265,6 +1397,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_center",
     "stagger_wave",
     "stagger_edges",
+    "shatter_gather",
+    "dust_gather",
   ],
   digital_crt: [
     "glitch_slices",
@@ -1284,6 +1418,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_random",
     "rough_in",
     "stagger_rows",
+    "shatter_gather",
+    "dust_gather",
   ],
   dark_glitch: [
     "glitch_slices",
@@ -1303,6 +1439,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "rough_in",
     "stagger_random",
     "stagger_rows",
+    "shatter_gather",
+    "dust_gather",
   ],
   summer_film: [
     "slide_side",
@@ -1322,6 +1460,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_wave",
     "stagger_center",
     "elastic_snap",
+    "shatter_gather",
+    "dust_gather",
   ],
   flat_type: [
     "stamp",
@@ -1341,6 +1481,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_edges",
     "stagger_rows",
     "elastic_snap",
+    "shatter_gather",
+    "dust_gather",
   ],
   eclipse_nebula: [
     "iris",
@@ -1360,6 +1502,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_center",
     "stagger_wave",
     "stagger_random",
+    "shatter_gather",
+    "dust_gather",
   ],
   mono_accent: [
     "wipe_side",
@@ -1379,6 +1523,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_rows",
     "stagger_edges",
     "rough_in",
+    "shatter_gather",
+    "dust_gather",
   ],
   vintage_paper: [
     "blur_in",
@@ -1398,6 +1544,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "rough_in",
     "stagger_center",
     "stagger_wave",
+    "shatter_gather",
+    "dust_gather",
   ],
   pastel_dream: [
     "pop_bounce",
@@ -1417,6 +1565,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_wave",
     "elastic_snap",
     "stagger_center",
+    "shatter_gather",
+    "dust_gather",
   ],
   crimson_ink: [
     "wipe_side",
@@ -1436,6 +1586,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "rough_in",
     "stagger_edges",
     "stagger_random",
+    "shatter_gather",
+    "dust_gather",
   ],
   sakura_breeze: [
     "drift",
@@ -1455,6 +1607,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_wave",
     "stagger_center",
     "stagger_edges",
+    "shatter_gather",
+    "dust_gather",
   ],
   snow_night: [
     "blur_in",
@@ -1474,6 +1628,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_edges",
     "stagger_wave",
     "stagger_center",
+    "shatter_gather",
+    "dust_gather",
   ],
   rain_window: [
     "wipe_down",
@@ -1493,6 +1649,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_edges",
     "stagger_wave",
     "stagger_random",
+    "shatter_gather",
+    "dust_gather",
   ],
   manga_panel: [
     "stamp",
@@ -1512,6 +1670,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "elastic_snap",
     "rough_in",
     "stagger_edges",
+    "shatter_gather",
+    "dust_gather",
   ],
   deep_sea: [
     "drift",
@@ -1531,6 +1691,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_wave",
     "stagger_center",
     "stagger_random",
+    "shatter_gather",
+    "dust_gather",
   ],
   neon_sign: [
     "strobe",
@@ -1550,6 +1712,8 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "stagger_random",
     "rough_in",
     "stagger_wave",
+    "shatter_gather",
+    "dust_gather",
   ],
 };
 

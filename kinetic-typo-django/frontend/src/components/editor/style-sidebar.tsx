@@ -37,7 +37,12 @@ import { COLOR_FILTERS } from "@/lib/render/looks/color-filter";
 import { AutoComposeBox } from "./auto-compose-box";
 import { Fold } from "./fold";
 import { Tip } from "@/components/ui/tip";
-import { AutoContrastControl, LyricOrientationControl, NoVibrationToggle } from "./readability-controls";
+import {
+  AutoContrastControl,
+  LyricOrientationControl,
+  LyricSurfaceControl,
+  NoVibrationToggle,
+} from "./readability-controls";
 import { ELEMENT_MOTIONS } from "@/lib/timeline-fx/defs";
 import type { BgPattern, ElementMotionMode } from "@/types/project";
 import { BG_PATTERN_LABELS, BG_PATTERNS } from "@/lib/render/looks/generative-bg";
@@ -963,6 +968,7 @@ function DetailTab() {
         }
       >
         <LyricOrientationControl />
+        <LyricSurfaceControl />
         {slider("lyricX", "가로", -0.5, 0.5, signedPct)}
         {slider("lyricY", "세로", -0.5, 0.5, signedPct)}
       </Fold>

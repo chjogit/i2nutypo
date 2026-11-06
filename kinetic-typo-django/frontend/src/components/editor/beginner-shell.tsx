@@ -13,6 +13,7 @@ import {
   AutoContrastControl,
   ElementMotionToggle,
   LyricOrientationControl,
+  LyricSurfaceControl,
   NoVibrationToggle,
 } from "./readability-controls";
 import { ExportPanel } from "./export-panel";
@@ -208,6 +209,7 @@ function LyricLook() {
         </span>
       </label>
       <LyricOrientationControl />
+      <LyricSurfaceControl />
       <AutoContrastControl />
       <ElementMotionToggle />
       <NoVibrationToggle />

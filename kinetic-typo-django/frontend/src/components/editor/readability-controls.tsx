@@ -4,6 +4,7 @@ import { contrastFor } from "@/lib/render/looks/theme-contrast";
 import { DEFAULT_ELEMENT_MOTION } from "@/lib/timeline-fx/defs";
 import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
+import { LYRIC_GLASS } from "@/lib/render/looks/lyric-surface";
 
 const MODES: ReadonlyArray<readonly [AutoContrast, string]> = [
   ["color", "색 맞추기"],
@@ -192,5 +193,65 @@ export function NoVibrationToggle() {
         className="h-4 w-4 accent-indigo-500"
       />
     </label>
+  );
+}
+
+/** What the lyrics sit on: a glass pane behind each line, and how far the line stands out in depth. */
+export function LyricSurfaceControl() {
+  const glass = useProjectStore((s) => s.style.lyricGlass ?? "off");
+  const depth = useProjectStore((s) => s.style.lyricDepth ?? 0);
+  const setStyle = useProjectStore((s) => s.setStyle);
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
+        <span className="inline-flex items-center gap-1.5">
+          유리판
+          <Tip>
+            줄마다 가사 뒤에 둥근 유리판을 깝니다. 판 가장자리가 렌즈처럼 뒤 그림을 휘게 하고, 위쪽 테두리에
+            빛이 맺힙니다. 맑은 유리는 뒤가 비쳐 보이고, 젖빛 유리는 뒤를 흐리게 가려 글자가 더 잘 읽힙니다.
+          </Tip>
+        </span>
+        <span
+          role="radiogroup"
+          aria-label="유리판"
+          className="flex overflow-hidden rounded-md border border-zinc-800"
+        >
+          {LYRIC_GLASS.map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={glass === id}
+              onClick={() => setStyle({ lyricGlass: id })}
+              className={`px-2 py-1 ${glass === id ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </span>
+      </div>
+      <label className="flex items-center gap-2 text-xs text-zinc-400">
+        <span className="inline-flex w-14 shrink-0 items-center gap-1">
+          깊이감
+          <Tip>
+            가사를 공간에 놓인 카드처럼 보이게 합니다. 줄이 시작될 때 멀리서 기울어진 채 다가와 자리를 잡고,
+            부르는 동안 천천히 흔들리며 조금씩 가까워집니다. 뒤 배경은 초점이 빠진 것처럼 흐려집니다. 0%면
+            평평한 원래 모습입니다.
+          </Tip>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={depth}
+          onChange={(e) => setStyle({ lyricDepth: Number(e.target.value) })}
+          onDoubleClick={() => setStyle({ lyricDepth: 0 })}
+          aria-label="가사 깊이감"
+          className="min-w-0 flex-1 accent-indigo-500"
+        />
+        <span className="w-10 text-right font-mono text-zinc-300">{Math.round(depth * 100)}%</span>
+      </label>
+    </div>
   );
 }

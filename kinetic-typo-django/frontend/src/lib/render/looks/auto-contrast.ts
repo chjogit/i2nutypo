@@ -138,6 +138,8 @@ export function drawReadable(
   mode: AutoContrast,
   draw: (c: Ctx2D) => Box | null,
   amount = 0.5,
+  /** What the lyrics will land on, when ctx is a clear layer of its own (same size as ctx's canvas). */
+  background?: CanvasImageSource,
 ): Box | null {
   const canvas = (ctx as CanvasRenderingContext2D).canvas as HTMLCanvasElement | undefined;
   if (
@@ -174,7 +176,7 @@ export function drawReadable(
     y1: Math.min(H, Math.ceil(box.y1)),
   };
   const textPx = clip.x1 > clip.x0 && clip.y1 > clip.y0 ? sample(layer, clip) : null;
-  const bgPx = textPx ? sample(canvas, clip) : null;
+  const bgPx = textPx ? sample(background ?? canvas, clip) : null;
   const target = readableAt(amount);
   const spots = textPx && bgPx ? poorSpots(textPx, bgPx, target) : null;
   const fix = spots ? contrastFix(spots.text, spots.bg, target) : null;

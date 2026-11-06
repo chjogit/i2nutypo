@@ -120,6 +120,8 @@ export const DEFAULT_STYLE: StyleSettings = {
   lyricRoam: 0,
   themeContrast: {},
   lyricOrientation: "auto",
+  lyricGlass: "off",
+  lyricDepth: 0,
   bgPattern: "auto",
   noVibration: false,
   snapToBeats: false,
@@ -325,6 +327,9 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
         p.style?.lyricOrientation === "horizontal" || p.style?.lyricOrientation === "vertical"
           ? p.style.lyricOrientation
           : "auto",
+      lyricGlass:
+        p.style?.lyricGlass === "clear" || p.style?.lyricGlass === "frost" ? p.style.lyricGlass : "off",
+      lyricDepth: sanitizeUnit(p.style?.lyricDepth, 0),
       bgPattern: sanitizeBgPattern(p.style?.bgPattern),
       snapToBeats: p.style?.snapToBeats === true,
       sectionKinds: restoreSectionKinds(p.style?.sectionKinds),

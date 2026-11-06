@@ -426,6 +426,10 @@ export interface StyleSettings {
   noVibration: boolean;
   /** Lyrics set across or in columns over the whole video; "auto" keeps each theme's own. */
   lyricOrientation: LyricOrientation;
+  /** A pane of liquid glass behind each line: clear, frosted, or none. */
+  lyricGlass?: "off" | "clear" | "frost";
+  /** 0..1: how far each line stands out in 2.5D (a tilted card coming forward, the picture behind softened). */
+  lyricDepth?: number;
   /** Which generated pattern the theme's "pattern" element draws. */
   bgPattern?: BgPattern;
   /** Timeline clips also snap to the analysed beats while dragged. */
