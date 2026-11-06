@@ -40,6 +40,14 @@ import { Fold } from "./fold";
 import { Tip } from "@/components/ui/tip";
 import {
   AutoContrastControl,
+  FIELD_LABEL,
+  FIELD_ROW,
+  FIELD_ROW_WIDE,
+  SEGMENTS,
+  SLIDER_CELL,
+  SLIDER_VALUE,
+  SWATCH,
+  segmentClass,
   LyricOrientationControl,
   LyricSurfaceControl,
   NoVibrationToggle,
@@ -640,60 +648,69 @@ function ThemeColorsFold({ target }: { target: ThemeTarget }) {
       className="space-y-2 border-t border-zinc-800/70 pt-3"
       title={clip ? "이 구간 테마 색상" : "테마 색상"}
       right={
-        <button type="button" onClick={reset} className="text-tide-400 hover:underline">
+        <button type="button" onClick={reset} className="shrink-0 text-xs text-tide-400 hover:underline">
           테마 기본 색
         </button>
       }
     >
-      <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+      {/* Four same-size swatches in one row, each with its name under it */}
+      <div className="grid grid-cols-4 gap-2">
         {COLOR_FIELDS.map((c) => (
-          <label key={c.key} className="inline-flex items-center gap-1.5">
+          <label
+            key={c.key}
+            className="flex min-w-0 flex-col items-stretch gap-1 text-center text-xs text-zinc-400"
+          >
             <input
               type="color"
               value={value(c.key)}
               onChange={(e) => set(c.key, e.target.value)}
               aria-label={`테마 ${c.label} 색`}
-              className="h-6 w-8 cursor-pointer rounded border border-zinc-800 bg-zinc-950"
+              className={SWATCH}
             />
-            {c.label}
+            <span className="truncate">{c.label}</span>
           </label>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-        <span className="inline-flex items-center gap-1.5">
+      <div className={FIELD_ROW}>
+        <span className={FIELD_LABEL}>
           필터
           <Tip>
             위 색은 배경·가사 글자·장식에 쓰고, 하단 자막 색은 아래 자막 칸에서 따로 정합니다. 필터는 영상
             전체에 걸리고, 하단 자막에는 걸리지 않습니다.
           </Tip>
         </span>
-        <div className="grid grid-cols-4 overflow-hidden rounded-md border border-zinc-800">
+        <div role="group" aria-label="색 필터" className={`${SEGMENTS} grid-cols-4`}>
           {COLOR_FILTERS.map((f) => (
             <button
               key={f.kind}
               type="button"
               aria-pressed={filter.kind === f.kind}
               onClick={() => setStyle({ colorFilter: { ...filter, kind: f.kind } })}
-              className={`px-2 py-1 ${filter.kind === f.kind ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
+              className={segmentClass(filter.kind === f.kind)}
             >
               {f.label}
             </button>
           ))}
         </div>
         {filter.kind !== "none" && (
-          <label className="flex items-center gap-1.5">
-            <input
-              type="range"
-              min={0.1}
-              max={1}
-              step={0.05}
-              value={filter.amount}
-              onChange={(e) => setStyle({ colorFilter: { ...filter, amount: Number(e.target.value) } })}
-              aria-label="필터 강도"
-              className="w-20 accent-tide-500"
-            />
-            <span className="w-8 font-mono text-zinc-300">{Math.round(filter.amount * 100)}%</span>
-          </label>
+          <>
+            <label htmlFor="color-filter-amount" className={FIELD_LABEL}>
+              강도
+            </label>
+            <div className={SLIDER_CELL}>
+              <input
+                id="color-filter-amount"
+                type="range"
+                min={0.1}
+                max={1}
+                step={0.05}
+                value={filter.amount}
+                onChange={(e) => setStyle({ colorFilter: { ...filter, amount: Number(e.target.value) } })}
+                className="min-w-0 flex-1 accent-tide-500"
+              />
+              <span className={SLIDER_VALUE}>{Math.round(filter.amount * 100)}%</span>
+            </div>
+          </>
         )}
       </div>
       <AutoContrastControl preset={clip ? lyricLookOf(clip) : undefined} />
@@ -711,24 +728,26 @@ function ElementMotionFold() {
   const setStyle = useProjectStore((s) => s.setStyle);
   const em = style.elementMotion;
   const set = (patch: Partial<typeof em>) => setStyle({ elementMotion: { ...em, ...patch } });
-  const row = (label: string, value: number, onChange: (v: number) => void, tip?: string) => (
-    <label className="flex items-center gap-2 text-xs text-zinc-400">
-      <span className="inline-flex w-28 shrink-0 items-center gap-1">
-        {label}
+  const row = (id: string, label: string, value: number, onChange: (v: number) => void, tip?: string) => (
+    <>
+      <span className={FIELD_LABEL}>
+        <label htmlFor={id}>{label}</label>
         {tip && <Tip>{tip}</Tip>}
       </span>
-      <input
-        type="range"
-        min={0}
-        max={1}
-        step={0.01}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        aria-label={label}
-        className="min-w-0 flex-1 accent-tide-500"
-      />
-      <span className="w-10 text-right font-mono text-zinc-300">{Math.round(value * 100)}%</span>
-    </label>
+      <div className={SLIDER_CELL}>
+        <input
+          id={id}
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="min-w-0 flex-1 accent-tide-500"
+        />
+        <span className={SLIDER_VALUE}>{Math.round(value * 100)}%</span>
+      </div>
+    </>
   );
   return (
     <Fold
@@ -743,37 +762,44 @@ function ElementMotionFold() {
       }
       defaultOpen={false}
     >
-      <div className="flex flex-wrap gap-1">
-        {ELEMENT_MOTIONS.map(([mode, label, hint]) => (
+      {/* Five modes on a six-column grid: three across, then two wider ones, so both rows are full */}
+      <div role="group" aria-label="요소 움직임" className="grid grid-cols-6 gap-1 text-xs">
+        {ELEMENT_MOTIONS.map(([mode, label, hint], i) => (
           <button
             key={mode}
             type="button"
             aria-pressed={em.mode === mode}
             title={hint}
             onClick={() => set({ mode: mode as ElementMotionMode })}
-            className={`rounded-sm border px-2 py-0.5 text-xs ${em.mode === mode ? ON : OFF}`}
+            className={`h-8 rounded-md border ${i < 3 ? "col-span-2" : "col-span-3"} ${segmentClass(em.mode === mode)} ${em.mode === mode ? "border-zinc-100" : "border-zinc-800"}`}
           >
             {label}
           </button>
         ))}
       </div>
-      {em.mode !== "still" && row("움직임 크기", em.amount, (amount) => set({ amount }))}
-      {row(
-        "가사 자리 옮기기",
-        style.lyricRoam,
-        (lyricRoam) => setStyle({ lyricRoam }),
-        "줄이 바뀔 때마다 가사가 화면의 다른 자리에 놓입니다. 0이면 늘 같은 자리입니다.",
-      )}
-      <label className="flex items-center gap-2 text-xs text-zinc-200">
-        <input
-          type="checkbox"
-          checked={style.exitMotion}
-          onChange={(e) => setStyle({ exitMotion: e.target.checked })}
-          className="accent-tide-500"
-        />
-        가사가 나갈 때도 움직임
+      <div className={FIELD_ROW_WIDE}>
+        {em.mode !== "still" &&
+          row("element-motion-amount", "움직임 크기", em.amount, (amount) => set({ amount }))}
+        {row(
+          "lyric-roam",
+          "가사 자리 옮기기",
+          style.lyricRoam,
+          (lyricRoam) => setStyle({ lyricRoam }),
+          "줄이 바뀔 때마다 가사가 화면의 다른 자리에 놓입니다. 0이면 늘 같은 자리입니다.",
+        )}
+      </div>
+      <div className="flex h-8 items-center gap-2 text-xs text-zinc-200">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={style.exitMotion}
+            onChange={(e) => setStyle({ exitMotion: e.target.checked })}
+            className="h-4 w-4 accent-tide-500"
+          />
+          가사가 나갈 때도 움직임
+        </label>
         <Tip>줄이 끝날 때 등장 움직임에 맞춰 날아가거나 접히며 사라집니다. 끄면 흐려지며 사라집니다.</Tip>
-      </label>
+      </div>
     </Fold>
   );
 }

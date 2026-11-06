@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { AutoContrast, LookPresetId, LyricOrientation, ThemeContrast } from "@/types/project";
 import { getLookPreset, lyricLookOf } from "@/lib/render/looks/presets";
 import { contrastFor } from "@/lib/render/looks/theme-contrast";
@@ -5,6 +6,24 @@ import { DEFAULT_ELEMENT_MOTION } from "@/lib/timeline-fx/defs";
 import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
 import { LYRIC_GLASS } from "@/lib/render/looks/lyric-surface";
+
+// Shared row layout for the theme color panel: a fixed label column, then the
+// control, so every label and every control starts on the same line. Controls
+// are 32px tall like the auto-compose box.
+const ROW = "grid items-center gap-x-2 gap-y-2 text-xs";
+export const FIELD_ROW = `${ROW} grid-cols-[3.5rem_minmax(0,1fr)]`;
+/** The same row with room for longer labels such as "가사 자리 옮기기". */
+export const FIELD_ROW_WIDE = `${ROW} grid-cols-[6.5rem_minmax(0,1fr)]`;
+export const FIELD_LABEL = "inline-flex min-w-0 items-center gap-1 text-zinc-400";
+export const SEGMENTS = "grid h-8 overflow-hidden rounded-md border border-zinc-800";
+export const segmentClass = (on: boolean) =>
+  `min-w-0 truncate px-1 focus-visible:relative focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-tide-400 ${
+    on ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100"
+  }`;
+export const SLIDER_CELL = "flex h-8 min-w-0 items-center gap-2";
+export const SLIDER_VALUE = "w-10 shrink-0 text-right font-mono tabular-nums text-zinc-300";
+export const SWATCH =
+  "h-8 w-full cursor-pointer rounded-md border border-zinc-800 bg-zinc-950 p-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-tide-400";
 
 const MODES: ReadonlyArray<readonly [AutoContrast, string]> = [
   ["color", "색 맞추기"],
@@ -23,6 +42,7 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
   const theme = preset ?? lyricLookOf(style);
   const { mode, amount } = contrastFor(style, theme);
   const own = style.themeContrast?.[theme] !== undefined;
+  const amountId = useId();
   const set = (patch: Partial<ThemeContrast>) =>
     setStyle({ themeContrast: { ...style.themeContrast, [theme]: { mode, amount, ...patch } } });
   const reset = () => {
@@ -31,11 +51,11 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
     setStyle({ themeContrast: next });
   };
   return (
-    <div className="space-y-1.5">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
-        <span className="inline-flex items-center gap-1.5">
-          글자 자동 대비
-          <span className="text-xs text-zinc-400">· {getLookPreset(theme).label}</span>
+    <div className="space-y-2">
+      <div className="flex min-w-0 items-center justify-between gap-2 text-xs text-zinc-400">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0 text-zinc-300">글자 자동 대비</span>
+          <span className="truncate">· {getLookPreset(theme).label}</span>
           <Tip>
             배경(그림·영상·테마 색)을 읽어서 가사가 묻힐 때만 가사 색을 밝게 또는 어둡게 바꾸거나(색 맞추기),
             반대색 테두리를 둘러(테두리) 잘 보이게 합니다. 잘 보이는 장면에서는 고른 색 그대로입니다. 테마마다
@@ -43,17 +63,16 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
             있고(빛나는 글자는 테두리, 단색 포스터형은 끄기), &apos;테마 기본&apos;으로 되돌립니다. 투명
             배경으로 내보낼 때는 적용되지 않습니다.
           </Tip>
-          {own && (
-            <button type="button" onClick={reset} className="text-xs text-tide-400 hover:underline">
-              테마 기본
-            </button>
-          )}
         </span>
-        <span
-          role="radiogroup"
-          aria-label="글자 자동 대비"
-          className="flex overflow-hidden rounded-md border border-zinc-800"
-        >
+        {own && (
+          <button type="button" onClick={reset} className="shrink-0 text-xs text-tide-400 hover:underline">
+            테마 기본
+          </button>
+        )}
+      </div>
+      <div className={FIELD_ROW}>
+        <span className={FIELD_LABEL}>방식</span>
+        <div role="radiogroup" aria-label="글자 자동 대비" className={`${SEGMENTS} grid-cols-3`}>
           {MODES.map(([id, label]) => (
             <button
               key={id}
@@ -61,35 +80,38 @@ export function AutoContrastControl({ preset }: { preset?: LookPresetId }) {
               role="radio"
               aria-checked={mode === id}
               onClick={() => set({ mode: id })}
-              className={`px-2 py-1 ${mode === id ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
+              className={segmentClass(mode === id)}
             >
               {label}
             </button>
           ))}
-        </span>
+        </div>
+        {mode !== "off" && (
+          <>
+            <span className={FIELD_LABEL}>
+              <label htmlFor={amountId}>세기</label>
+              <Tip>
+                높일수록 배경과 더 확실히 구분되게 바꿉니다(색 맞추기는 더 밝게·어둡게, 테두리는 더 굵게).
+                50%가 기본이고, 0%면 바꾸지 않습니다.
+              </Tip>
+            </span>
+            <div className={SLIDER_CELL}>
+              <input
+                id={amountId}
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={amount}
+                onChange={(e) => set({ amount: Number(e.target.value) })}
+                aria-label="글자 자동 대비 세기"
+                className="min-w-0 flex-1 accent-tide-500"
+              />
+              <span className={SLIDER_VALUE}>{Math.round(amount * 100)}%</span>
+            </div>
+          </>
+        )}
       </div>
-      {mode !== "off" && (
-        <label className="flex items-center gap-2 text-xs text-zinc-400">
-          <span className="inline-flex w-14 shrink-0 items-center gap-1">
-            세기
-            <Tip>
-              높일수록 배경과 더 확실히 구분되게 바꿉니다(색 맞추기는 더 밝게·어둡게, 테두리는 더 굵게). 50%가
-              기본이고, 0%면 바꾸지 않습니다.
-            </Tip>
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={amount}
-            onChange={(e) => set({ amount: Number(e.target.value) })}
-            aria-label="글자 자동 대비 세기"
-            className="min-w-0 flex-1 accent-tide-500"
-          />
-          <span className="w-10 text-right font-mono text-zinc-300">{Math.round(amount * 100)}%</span>
-        </label>
-      )}
     </div>
   );
 }
