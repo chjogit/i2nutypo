@@ -47,11 +47,7 @@ export function MotionStyleControl({ compact = false }: { compact?: boolean }) {
           붙습니다.
         </Tip>
       </div>
-      <div
-        role="radiogroup"
-        aria-label="모션 스타일"
-        className={`grid gap-1.5 ${compact ? "grid-cols-1" : "grid-cols-2"}`}
-      >
+      <div role="radiogroup" aria-label="모션 스타일" className="flex w-full flex-col gap-1.5">
         {STYLE_CHOICES.map((c) => (
           <button
             key={c.id}
@@ -60,7 +56,7 @@ export function MotionStyleControl({ compact = false }: { compact?: boolean }) {
             aria-checked={current === c.id}
             title={c.hint}
             onClick={() => setStyle({ motionStyle: c.id })}
-            className={`rounded-md border px-2.5 py-2 text-left ${current === c.id ? ON : OFF}`}
+            className={`block w-full rounded-md border px-2.5 py-2 text-left ${current === c.id ? ON : OFF}`}
           >
             <span className="block text-sm font-semibold">{c.label}</span>
             {!compact && (
@@ -87,7 +83,7 @@ export function MotionStyleControl({ compact = false }: { compact?: boolean }) {
                   aria-checked={(style.kineticReveal ?? "sung") === id}
                   title={hint}
                   onClick={() => setStyle({ kineticReveal: id })}
-                  className={`px-2 py-1 ${(style.kineticReveal ?? "sung") === id ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+                  className={`px-2 py-1 ${(style.kineticReveal ?? "sung") === id ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
                 >
                   {label}
                 </button>
@@ -113,7 +109,7 @@ export function MotionStyleControl({ compact = false }: { compact?: boolean }) {
                   aria-checked={bg === b.id}
                   title={b.hint}
                   onClick={() => setStyle({ kineticBg: b.id as KineticBackground })}
-                  className={`rounded-full border px-2.5 py-0.5 text-xs ${bg === b.id ? ON : OFF}`}
+                  className={`rounded-sm border px-2.5 py-0.5 text-xs ${bg === b.id ? ON : OFF}`}
                 >
                   {b.label}
                 </button>
