@@ -299,6 +299,16 @@ export interface ThemeClip {
 /** Theme colors (not the subtitles', which the subtitle panel sets). */
 export type ThemeColors = Pick<StyleSettings, "bgColor" | "textColor" | "accentColor" | "secondaryColor">;
 
+/**
+ * How the lyrics move and are set, apart from their colors (lib/render/kinetic):
+ * "theme" lets each theme draw them its own way.
+ */
+export type MotionStyleId = "theme" | "smooth_reveal" | "hype_pop" | "editorial_blur" | "highlight_box";
+/** Background drawn from the user's colors instead of the theme's ("theme" keeps the theme's). */
+export type KineticBackground = "theme" | "solid" | "spotlight" | "aurora";
+/** When a motion style brings words in: as each is sung, or the whole line at its start in a wave. */
+export type KineticReveal = "sung" | "line";
+
 /** Lyrics across (horizontal) or in columns (vertical); auto: as the theme sets them. */
 export type LyricOrientation = "auto" | "horizontal" | "vertical";
 /** Generated background pattern drawn by a theme's "pattern" element; "auto" uses the theme's own. */
@@ -430,6 +440,16 @@ export interface StyleSettings {
   lyricGlass?: "off" | "clear" | "frost";
   /** 0..1: how far each line stands out in 2.5D (a tilted card coming forward, the picture behind softened). */
   lyricDepth?: number;
+  /** Motion style of the kinetic lyric engine; missing means the default (smooth reveal). */
+  motionStyle?: MotionStyleId;
+  /** Background made from the user's colors; missing means the theme's own. */
+  kineticBg?: KineticBackground;
+  /** When the motion style brings the words in; missing means as they are sung. */
+  kineticReveal?: KineticReveal;
+  /** Virtual camera: slow drift zoom and a punch on marked words (off with noVibration too). */
+  kineticCamera?: boolean;
+  /** Faint film grain and vignette over the frame, unless the finish tab already adds them. */
+  cinematicBase?: boolean;
   /** Which generated pattern the theme's "pattern" element draws. */
   bgPattern?: BgPattern;
   /** Timeline clips also snap to the analysed beats while dragged. */

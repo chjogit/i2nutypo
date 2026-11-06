@@ -132,7 +132,13 @@ describe("theme mixing", () => {
   });
 
   it("can draw the lyrics with another picked theme", () => {
-    const base = { ...DEFAULT_STYLE, lookPreset: "summer_film" as const, mixLooks: ["dark_glitch" as const] };
+    // Only when the themes draw the lyrics themselves; a motion style draws them the same over any theme
+    const base = {
+      ...DEFAULT_STYLE,
+      motionStyle: "theme" as const,
+      lookPreset: "summer_film" as const,
+      mixLooks: ["dark_glitch" as const],
+    };
     expect(draw({ ...base, lyricLook: "dark_glitch" })).not.toBe(draw(base));
   });
 

@@ -33,6 +33,13 @@ export const LYRIC_FONTS: readonly LyricFont[] = [
     note: "기본 자막용 고딕",
     weights: [400, 700, 900],
   },
+  {
+    family: "Pretendard",
+    label: "프리텐다드",
+    lang: "ko",
+    note: "모션 스타일 기본, 촘촘한 제목 조판",
+    weights: [400, 500, 700, 800, 900],
+  },
   { family: "Black Han Sans", label: "검은고딕", lang: "ko", note: "굵고 강한 제목", weights: [400] },
   { family: "Do Hyeon", label: "도현", lang: "ko", note: "각진 예능 자막", weights: [400] },
   { family: "Jua", label: "주아", lang: "ko", note: "둥글고 귀여운 자막", weights: [400] },
@@ -189,16 +196,14 @@ function addSheet(font: LyricFont): Promise<void> {
  * draws with it instead of the fallback. Pass the lyrics as sample so every subset they need
  * is fetched up front. Resolves anyway if the network is down.
  */
-export async function ensureLyricFont(family: string, sample = "가あA"): Promise<void> {
+export async function ensureLyricFont(family: string, sample = "가あA", allWeights = false): Promise<void> {
   const font = findLyricFont(family);
   if (!font || typeof document === "undefined") return;
   await addSheet(font);
   const heaviest = Math.max(...font.weights);
+  const weights = allWeights ? font.weights : [400, heaviest];
   try {
-    await Promise.all([
-      document.fonts.load(`400 32px '${font.family}'`, sample),
-      document.fonts.load(`${heaviest} 32px '${font.family}'`, sample),
-    ]);
+    await Promise.all(weights.map((w) => document.fonts.load(`${w} 32px '${font.family}'`, sample)));
   } catch {
     // Offline or blocked: the fallback fonts draw instead
   }

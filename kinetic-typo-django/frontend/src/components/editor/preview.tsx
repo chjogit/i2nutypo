@@ -13,6 +13,8 @@ import { previewVideoFrame } from "@/lib/media/video-bg";
 import { beatGridPulse } from "@/lib/beats/detect";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
+import { ensureKineticFonts, kineticFontsReady } from "@/lib/render/kinetic/fonts";
+import { motionStyleOf } from "@/lib/render/kinetic/styles";
 import { IllustrationOverlay } from "./illustration-overlay";
 import { ElementOverlay } from "./element-overlay";
 import { MiniPreview, useMiniPreviewEnabled } from "./mini-preview";
@@ -63,6 +65,12 @@ export function Preview() {
         return;
       }
       const project = useProjectStore.getState();
+      // A motion style draws only once its fonts are in, so no fallback face ever flashes
+      if (motionStyleOf(project.style) && !kineticFontsReady()) {
+        void ensureKineticFonts(project.lyricsText, project.style.lyricFont);
+        raf = requestAnimationFrame(tick);
+        return;
+      }
       const el = playback.audioEl;
       let t = playback.currentTime;
 

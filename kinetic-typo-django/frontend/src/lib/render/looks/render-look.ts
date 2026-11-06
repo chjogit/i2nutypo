@@ -5,7 +5,7 @@ import { balladHud } from "./ballad-hud";
 import { cinematicFantasy } from "./cinematic-fantasy";
 import { darkGlitch } from "./dark-glitch";
 import { digitalCrt } from "./digital-crt";
-import type { LookFrame, LookRenderer } from "./frame";
+import { drawIllustration, type LookFrame, type LookRenderer } from "./frame";
 import type { Ctx2D } from "../motifs";
 import { eclipseNebula } from "./eclipse-nebula";
 import { flatType } from "./flat-type";
@@ -38,6 +38,13 @@ import { drawInterlude } from "./interlude";
 import { capture } from "./pieces";
 import { clamp01 } from "./noise";
 import { transformScale } from "../logical-blur";
+import { applyCamera } from "../kinetic/camera";
+import { derivePalette } from "../kinetic/color";
+import { drawKineticBackground } from "../kinetic/background";
+import { drawCinematicBase } from "../kinetic/post";
+import { drawKineticLyrics, hasBoxes, type KineticPart } from "../kinetic/renderer";
+import { motionStyleOf, sanitizeKineticBg } from "../kinetic/styles";
+import { effectiveOrientation } from "./orientation";
 import {
   blurBehind,
   cardContext,
@@ -121,6 +128,7 @@ export function renderLookFrame(
     ctx.clearRect(0, 0, f.W, f.H);
     ctx.save();
     ctx.translate(f.frameShake.x, f.frameShake.y);
+    if (f.camera) applyCamera(ctx, f.camera, f.W, f.H);
     if (showsKineticLyrics(f.subtitles)) drawAccentMark(lyr.f, drawLyrics(lyr.r, lyr.f, false));
     // The title card is type too, so it goes with the lyrics on the clear layer
     drawThemeTitleCard(lyr.f);
@@ -133,7 +141,10 @@ export function renderLookFrame(
     ctx.fillRect(0, 0, f.W, f.H);
     ctx.save();
     ctx.translate(f.frameShake.x, f.frameShake.y);
-    drawScene(r, f);
+    if (f.camera) applyCamera(ctx, f.camera, f.W, f.H);
+    const kineticBg = sanitizeKineticBg(f.style.kineticBg);
+    if (kineticBg === "theme") drawScene(r, f);
+    else drawUserBackground(f, kineticBg);
     for (const m of mixes) {
       m.r.decor?.(m.f);
       mixedExtra(ctx, () => THEME_EXTRAS[m.f.preset]?.back?.(m.f));
@@ -152,6 +163,7 @@ export function renderLookFrame(
     ctx.restore();
     r.overlay(f);
     for (const m of mixes) m.r.overlay(m.f);
+    drawCinematicBase(ctx, f.style, f.timeSec);
   }
   // Everything so far gets the color filter; the subtitles below keep their colors
   applyColorFilter(ctx, f.style.colorFilter);
@@ -178,6 +190,21 @@ export function renderLookFrame(
     ctx.restore();
   }
   ctx.restore();
+}
+
+/**
+ * The background made from the user's colors (kinetic/background.ts) in place
+ * of the theme's scene. A background picture or video still shows, laid over
+ * it with the deep edges of the palette kept around it.
+ */
+function drawUserBackground(f: LookFrame, mode: "solid" | "spotlight" | "aurora"): void {
+  drawKineticBackground(f.ctx, mode, derivePalette(f.style), f.timeSec, f.W, f.H);
+  if (f.images.background) {
+    f.ctx.save();
+    f.ctx.globalAlpha *= 0.85;
+    drawIllustration(f, { x: 0, y: 0, w: f.W, h: f.H });
+    f.ctx.restore();
+  }
 }
 
 /**
@@ -215,19 +242,23 @@ function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): Box | nu
   const contrast = contrastFor(f.style, f.preset);
   const mode = overPicture ? contrast.mode : "off";
   // The theme's own lyrics for frame h, without the line's motion
-  const atRest = (h: LookFrame) => {
-    const lyrics = orientedLyrics(r, h);
+  // A motion style with boxed words: the contrast check sees the plain words only, and the boxed
+  // ones (already readable on their own box) are drawn after it, unchanged
+  const kdef = kineticDraws(f) ? motionStyleOf(f.style) : null;
+  const split = !!kdef && hasBoxes(kdef) && mode !== "off";
+  const atRest = (h: LookFrame, part: KineticPart = "all") => {
+    const lyrics = kineticOr(r, h, part);
     const wrap = THEME_EXTRAS[h.preset]?.lyrics;
     return wrap ? () => wrap(h, () => lyrics(h)) : () => lyrics(h);
   };
-  const lyricsOn = (target: Ctx2D, background?: CanvasImageSource) =>
-    drawReadable(
+  const lyricsOn = (target: Ctx2D, background?: CanvasImageSource) => {
+    const box = drawReadable(
       target,
       mode,
       (c) => {
         // Only the lyric theme's text counts; mixed themes' decor and overlay are drawn elsewhere
         const g = c === f.ctx ? f : { ...f, ctx: c };
-        const draw = withMotion(g, atRest);
+        const draw = withMotion(g, (h) => atRest(h, split ? "plain" : "all"));
         // The readability check needs the box of the copy it draws on its own layer
         if (measure || c !== f.ctx) return recordTextBounds(g.ctx, draw);
         draw();
@@ -236,6 +267,17 @@ function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): Box | nu
       contrast.amount,
       background,
     );
+    if (!split || !kdef) return box;
+    const g = target === f.ctx ? f : { ...f, ctx: target };
+    const boxed = recordTextBounds(target, () => drawKineticLyrics(g, kdef, "boxed"));
+    if (!box || !boxed) return box ?? boxed;
+    return {
+      x0: Math.min(box.x0, boxed.x0),
+      y0: Math.min(box.y0, boxed.y0),
+      x1: Math.max(box.x1, boxed.x1),
+      y1: Math.max(box.y1, boxed.y1),
+    };
+  };
   const box = surface ? drawOnSurface(f, surface, atRest, lyricsOn, overPicture) : lyricsOn(f.ctx);
   if (f.textBounds) f.textBounds.lyrics = box;
   f.ctx.restore();
@@ -302,11 +344,24 @@ function drawOnSurface(
   return box ? projectedBox(box, cx, cy, focalFor(main.width, main.height), pose) : null;
 }
 
+/** True when a motion style draws this frame's line (across; columns stay with the theme). */
+function kineticDraws(f: LookFrame): boolean {
+  return !!motionStyleOf(f.style) && effectiveOrientation(f.preset, f.style, f.line) === "horizontal";
+}
+
+/** The motion style's lyrics, or the theme's own (in the direction picked) when none draws them. */
+function kineticOr(r: LookRenderer, f: LookFrame, part: KineticPart = "all"): (g: LookFrame) => void {
+  const def = motionStyleOf(f.style);
+  if (!def || !kineticDraws(f)) return orientedLyrics(r, f);
+  return (g) => drawKineticLyrics(g, def, part);
+}
+
 /** The line's lyric motion (see motions.ts) wrapped around the theme's own lyrics. */
 function withMotion(f: LookFrame, make: (g: LookFrame) => () => void): () => void {
   const draw = make(f);
   const line = f.line;
-  if (!line) return draw;
+  // A motion style moves each piece itself, coming in and leaving; no whole-line motion over it
+  if (!line || kineticDraws(f)) return draw;
   const motion = motionForLine(f.style, line);
   const exits = f.style.exitMotion !== false;
   if (!motion && !exits) return draw;
