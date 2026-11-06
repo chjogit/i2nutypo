@@ -14,9 +14,9 @@ import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
 import { Fold } from "./fold";
 
-const ON = "border-indigo-500 bg-indigo-500/10 text-zinc-100";
-const OFF = "border-zinc-800 text-zinc-400 hover:border-indigo-500";
-const RESET = "text-xs font-normal text-indigo-400 hover:underline";
+const ON = "border-tide-500 bg-tide-500/10 text-zinc-100";
+const OFF = "border-zinc-800 text-zinc-400 hover:border-tide-500";
+const RESET = "text-xs font-normal text-tide-400 hover:underline";
 
 const BASIC: Array<{ key: BasicKey; label: string; left: string; right: string }> = [
   { key: "exposure", label: "밝기", left: "어둡게", right: "밝게" },
@@ -82,7 +82,7 @@ function Slider({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         onDoubleClick={() => onChange(reset)}
-        className="min-w-0 flex-1 accent-indigo-500"
+        className="min-w-0 flex-1 accent-tide-500"
       />
       <span className="w-10 text-right font-mono text-zinc-300">{format(value)}</span>
     </label>
@@ -153,7 +153,7 @@ function Wheel({
           }
           onChange({ ...value, x, y });
         }}
-        className="relative h-16 w-16 cursor-crosshair touch-none rounded-full border border-zinc-700 opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        className="relative h-16 w-16 cursor-crosshair touch-none rounded-full border border-zinc-700 opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-tide-400"
         style={{ background: WHEEL_BG }}
       >
         <span
@@ -171,7 +171,7 @@ function Wheel({
         aria-label={`${label} 밝기`}
         onChange={(e) => onChange({ ...value, l: Number(e.target.value) })}
         onDoubleClick={() => onChange({ ...value, l: 0 })}
-        className="w-16 accent-indigo-500"
+        className="w-16 accent-tide-500"
       />
       <span className="text-[11px] text-zinc-400">{label}</span>
     </div>
@@ -411,7 +411,7 @@ export function FinishPanel() {
                 type="button"
                 aria-pressed={finish.mask.kind === kind}
                 onClick={() => update({ mask: { ...finish.mask, kind } })}
-                className={`rounded-full border px-2 py-0.5 text-xs ${finish.mask.kind === kind ? ON : OFF}`}
+                className={`rounded-sm border px-2 py-0.5 text-xs ${finish.mask.kind === kind ? ON : OFF}`}
               >
                 {label}
               </button>
@@ -432,7 +432,7 @@ export function FinishPanel() {
                   type="checkbox"
                   checked={finish.mask.invert}
                   onChange={(e) => update({ mask: { ...finish.mask, invert: e.target.checked } })}
-                  className="accent-indigo-500"
+                  className="accent-tide-500"
                 />
                 바깥쪽에 적용
               </label>
@@ -540,7 +540,7 @@ export function FinishPanel() {
                     type="checkbox"
                     checked={on}
                     onChange={(e) => setFilter(def.id, e.target.checked, amount)}
-                    className="accent-indigo-500"
+                    className="accent-tide-500"
                   />
                   <span className="min-w-0 flex-1 truncate">{def.label}</span>
                 </label>
@@ -554,7 +554,7 @@ export function FinishPanel() {
                   disabled={!on}
                   aria-label={`${def.label} 강도`}
                   onChange={(e) => setFilter(def.id, true, Number(e.target.value))}
-                  className="w-20 accent-indigo-500 disabled:opacity-30"
+                  className="w-20 accent-tide-500 disabled:opacity-30"
                 />
               </div>
             );

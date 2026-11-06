@@ -67,9 +67,7 @@ export function ThemeLane({ pps, timeAt }: { pps: number; timeAt: (clientX: numb
   const selectedId = usePropUiStore((s) => s.themeClip);
   const selectThemeClip = usePropUiStore((s) => s.selectThemeClip);
   const label = (c: (typeof clips)[number]) =>
-    [c.lookPreset, ...c.mixLooks]
-      .map((id) => getLookPreset(id).label)
-      .join(" + ");
+    [c.lookPreset, ...c.mixLooks].map((id) => getLookPreset(id).label).join(" + ");
 
   return (
     <ClipLane

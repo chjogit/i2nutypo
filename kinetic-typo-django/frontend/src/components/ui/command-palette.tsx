@@ -113,7 +113,7 @@ export function CommandPalette() {
                   disabled={off}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => void run(a)}
-                  className={`flex w-full items-center gap-3 px-4 py-1.5 text-left text-xs ${i === active ? "bg-indigo-500/20 text-zinc-50" : "text-zinc-300"} disabled:text-zinc-600`}
+                  className={`flex w-full items-center gap-3 px-4 py-1.5 text-left text-xs ${i === active ? "bg-tide-500/20 text-zinc-50" : "text-zinc-300"} disabled:text-zinc-600`}
                 >
                   <span className="w-16 shrink-0 text-[11px] text-zinc-400">{a.group}</span>
                   <span className="min-w-0 flex-1 truncate">{a.label}</span>

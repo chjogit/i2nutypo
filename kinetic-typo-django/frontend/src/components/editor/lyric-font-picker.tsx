@@ -72,7 +72,7 @@ export function LyricFontPicker() {
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="rounded-md border border-zinc-800 px-2 py-1 text-zinc-300 hover:border-indigo-500 hover:text-zinc-100"
+          className="rounded-md border border-zinc-800 px-2 py-1 text-zinc-300 hover:border-tide-500 hover:text-zinc-100"
         >
           {open ? "닫기" : "글씨체 바꾸기"}
         </button>
@@ -88,8 +88,8 @@ export function LyricFontPicker() {
                 aria-pressed={l === lang}
                 className={`rounded-md border px-2 py-1 text-xs ${
                   l === lang
-                    ? "border-indigo-500 bg-indigo-500/10 text-zinc-100"
-                    : "border-zinc-800 text-zinc-400 hover:border-indigo-500"
+                    ? "border-tide-500 bg-tide-500/10 text-zinc-100"
+                    : "border-zinc-800 text-zinc-400 hover:border-tide-500"
                 }`}
               >
                 {FONT_LANGUAGE_LABEL[l]}
@@ -101,8 +101,8 @@ export function LyricFontPicker() {
               aria-pressed={lang === "mine"}
               className={`rounded-md border px-2 py-1 text-xs ${
                 lang === "mine"
-                  ? "border-indigo-500 bg-indigo-500/10 text-zinc-100"
-                  : "border-zinc-800 text-zinc-400 hover:border-indigo-500"
+                  ? "border-tide-500 bg-tide-500/10 text-zinc-100"
+                  : "border-zinc-800 text-zinc-400 hover:border-tide-500"
               }`}
             >
               내 글꼴
@@ -113,8 +113,8 @@ export function LyricFontPicker() {
               aria-pressed={!picked && !mine}
               className={`ml-auto rounded-md border px-2 py-1 text-xs ${
                 !picked && !mine
-                  ? "border-indigo-500 bg-indigo-500/10 text-zinc-100"
-                  : "border-zinc-800 text-zinc-400 hover:border-indigo-500"
+                  ? "border-tide-500 bg-tide-500/10 text-zinc-100"
+                  : "border-zinc-800 text-zinc-400 hover:border-tide-500"
               }`}
             >
               테마 기본
@@ -122,7 +122,7 @@ export function LyricFontPicker() {
           </div>
           {lang === "mine" ? (
             <div className="space-y-1.5">
-              <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-zinc-700 px-2 py-2 text-xs text-zinc-300 hover:border-indigo-500">
+              <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-zinc-700 px-2 py-2 text-xs text-zinc-300 hover:border-tide-500">
                 + 글꼴 파일 올리기 (.ttf .otf .woff .woff2)
                 <input
                   type="file"
@@ -146,7 +146,7 @@ export function LyricFontPicker() {
                       onClick={() => setStyle({ lyricFont: f.family })}
                       aria-pressed={on}
                       className={`rounded-md border px-2 py-1.5 text-left ${
-                        on ? "border-indigo-500 bg-indigo-500/10" : "border-zinc-800 hover:border-indigo-500"
+                        on ? "border-tide-500 bg-tide-500/10" : "border-zinc-800 hover:border-tide-500"
                       }`}
                     >
                       <span
@@ -180,7 +180,7 @@ export function LyricFontPicker() {
                     aria-pressed={on}
                     title={f.note}
                     className={`rounded-md border px-2 py-1.5 text-left ${
-                      on ? "border-indigo-500 bg-indigo-500/10" : "border-zinc-800 hover:border-indigo-500"
+                      on ? "border-tide-500 bg-tide-500/10" : "border-zinc-800 hover:border-tide-500"
                     }`}
                   >
                     <span
@@ -200,7 +200,8 @@ export function LyricFontPicker() {
               무료 글꼴(OFL·Apache) · 상업 사용 가능
               <Tip>
                 모두 무료 글꼴(SIL OFL, 일부 Apache-2.0)이라 영상에 상업적으로 써도 됩니다. 글꼴 파일만 따로
-                팔거나 나눠 주지는 마세요. 이 사이트에서 고른 글씨체만 받아오고, 다른 곳으로는 요청하지 않습니다.
+                팔거나 나눠 주지는 마세요. 이 사이트에서 고른 글씨체만 받아오고, 다른 곳으로는 요청하지
+                않습니다.
               </Tip>
             </p>
           )}

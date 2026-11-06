@@ -66,11 +66,11 @@ export function ProjectFile() {
         <button
           type="button"
           onClick={save}
-          className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:border-indigo-500"
+          className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:border-tide-500"
         >
           JSON으로 저장
         </button>
-        <label className="cursor-pointer rounded-md border border-zinc-700 px-3 py-1.5 text-center text-xs text-zinc-200 hover:border-indigo-500">
+        <label className="cursor-pointer rounded-md border border-zinc-700 px-3 py-1.5 text-center text-xs text-zinc-200 hover:border-tide-500">
           JSON 열기
           <input
             type="file"

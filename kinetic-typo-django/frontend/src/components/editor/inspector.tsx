@@ -14,7 +14,7 @@ import { usePlaybackStore } from "@/store/playback-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
 
 const FIELD =
-  "w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 focus:border-indigo-500 focus:outline-none";
+  "w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 focus:border-tide-500 focus:outline-none";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -52,7 +52,7 @@ function Slider({
         value={value}
         aria-label={label}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="min-w-0 flex-1 accent-indigo-500"
+        className="min-w-0 flex-1 accent-tide-500"
       />
       <span className="w-10 text-right font-mono text-zinc-300">{format(value)}</span>
     </span>
@@ -108,7 +108,7 @@ export function Inspector() {
         <button
           type="button"
           onClick={() => seek(Math.max(0, clip.start - 0.5))}
-          className="font-mono text-[11px] text-zinc-400 hover:text-indigo-300"
+          className="font-mono text-[11px] text-zinc-400 hover:text-tide-300"
           title="이 구간 조금 앞으로 이동"
         >
           {formatLrcTime(clip.start)} – {formatLrcTime(clip.end)}
@@ -170,7 +170,7 @@ export function Inspector() {
                     type="button"
                     aria-pressed={tr.color === id}
                     onClick={() => patchTransitions({ color: id as TransitionColor })}
-                    className={`rounded-full border px-2 py-0.5 text-xs ${tr.color === id ? "border-indigo-500 bg-indigo-500/15 text-zinc-100" : "border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
+                    className={`rounded-sm border px-2 py-0.5 text-xs ${tr.color === id ? "border-tide-500 bg-tide-500/15 text-zinc-100" : "border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
                   >
                     {label}
                   </button>

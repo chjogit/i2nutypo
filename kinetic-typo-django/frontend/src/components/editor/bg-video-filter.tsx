@@ -9,7 +9,7 @@ import { COLOR_FILTERS } from "@/lib/render/looks/color-filter";
 import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
 
-const CHIP_ON = "border-indigo-500 bg-indigo-500/15 text-zinc-100";
+const CHIP_ON = "border-tide-500 bg-tide-500/15 text-zinc-100";
 const CHIP_OFF = "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200";
 
 type NumberKey = Exclude<keyof BgVideoFilter, "tint">;
@@ -49,7 +49,7 @@ export function BgVideoFilterControls() {
           <button
             type="button"
             onClick={() => setStyle({ bgVideoFilter: NEUTRAL_BG_FILTER })}
-            className="ml-auto text-indigo-300 hover:underline"
+            className="ml-auto text-tide-300 hover:underline"
           >
             원본으로
           </button>
@@ -62,7 +62,7 @@ export function BgVideoFilterControls() {
             type="button"
             aria-pressed={same(filter, p.filter)}
             onClick={() => setStyle({ bgVideoFilter: p.filter })}
-            className={`rounded-full border px-2 py-0.5 text-xs ${same(filter, p.filter) ? CHIP_ON : CHIP_OFF}`}
+            className={`rounded-sm border px-2 py-0.5 text-xs ${same(filter, p.filter) ? CHIP_ON : CHIP_OFF}`}
           >
             {p.label}
           </button>
@@ -82,7 +82,7 @@ export function BgVideoFilterControls() {
               onChange={(e) => set({ [s.key]: Number(e.target.value) })}
               onDoubleClick={() => set({ [s.key]: NEUTRAL_BG_FILTER[s.key] })}
               aria-label={`배경 영상 ${s.label}`}
-              className="min-w-0 flex-1 accent-indigo-500"
+              className="min-w-0 flex-1 accent-tide-500"
             />
             <span className="w-10 text-right font-mono text-zinc-300">{s.format(filter[s.key])}</span>
           </label>
@@ -96,7 +96,7 @@ export function BgVideoFilterControls() {
             type="button"
             aria-pressed={filter.tint === c.kind}
             onClick={() => set({ tint: c.kind })}
-            className={`rounded-full border px-2 py-0.5 ${filter.tint === c.kind ? CHIP_ON : CHIP_OFF}`}
+            className={`rounded-sm border px-2 py-0.5 ${filter.tint === c.kind ? CHIP_ON : CHIP_OFF}`}
           >
             {c.label}
           </button>
@@ -110,7 +110,7 @@ export function BgVideoFilterControls() {
             value={filter.tintAmount}
             onChange={(e) => set({ tintAmount: Number(e.target.value) })}
             aria-label="배경 영상 색 세기"
-            className="min-w-0 flex-1 accent-indigo-500"
+            className="min-w-0 flex-1 accent-tide-500"
           />
         )}
       </div>

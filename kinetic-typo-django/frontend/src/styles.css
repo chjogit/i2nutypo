@@ -2,8 +2,79 @@
 /* The page templates (intro, base, header) use the same stylesheet */
 @source "../../templates";
 
+/*
+ * Editor palette, from the navy / teal / sky blue / beige reference:
+ *   navy #2F4156 · teal #567C8D · sky blue #C8D9E6 · beige #F5EFEB · white
+ * The zinc scale is replaced by navy-tinted neutrals that end in beige, so
+ * every existing zinc class follows. One accent scale, "tide", runs from sky
+ * blue (light fills and accent text) down to teal and navy. Solid tide fills
+ * carry dark navy text. Red stays for the playhead and destructive actions.
+ * The indigo scale points at tide too, so any class not yet renamed follows.
+ */
+@theme {
+  --font-sans: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-display: "Black Han Sans", "Pretendard", sans-serif;
+
+  --color-zinc-50: #fbf8f6;
+  --color-zinc-100: #f5efeb;
+  --color-zinc-200: #e2e6e9;
+  --color-zinc-300: #c8d9e6;
+  --color-zinc-400: #9fb2c2;
+  --color-zinc-500: #7a8ea0;
+  --color-zinc-600: #5a6e82;
+  --color-zinc-700: #3e5268;
+  --color-zinc-800: #2b3a4c;
+  --color-zinc-900: #1e2a38;
+  --color-zinc-950: #16202b;
+
+  --color-tide-50: #f4f8fb;
+  --color-tide-100: #e6eff5;
+  --color-tide-200: #d6e4ee;
+  --color-tide-300: #c8d9e6;
+  --color-tide-400: #b4ccdc;
+  --color-tide-500: #9dbbcf;
+  --color-tide-600: #87a9bf;
+  --color-tide-700: #567c8d;
+  --color-tide-800: #46677a;
+  --color-tide-900: #2f4156;
+  --color-tide-950: #223142;
+
+  --color-indigo-50: var(--color-tide-50);
+  --color-indigo-100: var(--color-tide-100);
+  --color-indigo-200: var(--color-tide-200);
+  --color-indigo-300: var(--color-tide-300);
+  --color-indigo-400: var(--color-tide-400);
+  --color-indigo-500: var(--color-tide-500);
+  --color-indigo-600: var(--color-tide-600);
+  --color-indigo-700: var(--color-tide-700);
+  --color-indigo-800: var(--color-tide-800);
+  --color-indigo-900: var(--color-tide-900);
+  --color-indigo-950: var(--color-tide-950);
+
+  /* Tool-like corners: small controls barely round, panels a little more */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+}
+
 body {
-  font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  font-family: var(--font-sans);
+  /* Korean wraps between words, never inside one */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  letter-spacing: -0.005em;
+}
+/* Times and numbers in controls line up as they change */
+.font-mono,
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+::selection {
+  background: rgb(157 187 207 / 0.35);
 }
 
 /* Dark, thin scrollbars everywhere: a faint thumb on a clear track, so lists blend into the editor */
@@ -12,10 +83,10 @@ body {
 }
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(82 82 91 / 0.55) transparent;
+  scrollbar-color: rgb(90 110 130 / 0.6) transparent;
 }
 *:hover {
-  scrollbar-color: rgb(113 113 122 / 0.8) transparent;
+  scrollbar-color: rgb(122 142 160 / 0.85) transparent;
 }
 ::-webkit-scrollbar {
   width: 8px;
@@ -26,11 +97,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(82 82 91 / 0.55);
+  background: rgb(90 110 130 / 0.6);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(129 140 248 / 0.6);
+  background: rgb(157 187 207 / 0.6);
 }
 
 /*
@@ -38,22 +109,22 @@ body {
  * stronger or softer everywhere at once. Utilities read these variables.
  */
 html[data-contrast="high"] {
-  --color-zinc-300: oklch(0.92 0.004 286.32);
-  --color-zinc-400: oklch(0.82 0.008 286.2);
-  --color-zinc-500: oklch(0.7 0.014 286.07);
-  --color-zinc-600: oklch(0.58 0.016 285.9);
-  --color-zinc-700: oklch(0.47 0.015 285.8);
-  --color-zinc-800: oklch(0.36 0.01 285.9);
-  --color-zinc-950: oklch(0.1 0.004 285.8);
+  --color-zinc-300: #dde8f0;
+  --color-zinc-400: #bccbd8;
+  --color-zinc-500: #98aaba;
+  --color-zinc-600: #788c9f;
+  --color-zinc-700: #5a6e84;
+  --color-zinc-800: #3f5166;
+  --color-zinc-950: #0f161e;
 }
 html[data-contrast="dim"] {
-  --color-zinc-50: oklch(0.9 0.003 286.3);
-  --color-zinc-100: oklch(0.88 0.003 286.3);
-  --color-zinc-200: oklch(0.83 0.005 286.3);
-  --color-zinc-300: oklch(0.77 0.008 286.2);
-  --color-zinc-800: oklch(0.29 0.006 286);
-  --color-zinc-900: oklch(0.23 0.006 285.9);
-  --color-zinc-950: oklch(0.18 0.005 285.8);
+  --color-zinc-50: #e4e0dc;
+  --color-zinc-100: #dcd7d3;
+  --color-zinc-200: #cdd2d6;
+  --color-zinc-300: #b6c4cf;
+  --color-zinc-800: #2a3747;
+  --color-zinc-900: #212c39;
+  --color-zinc-950: #1b2530;
 }
 
 /* Rendered Markdown on the docs page (templates/docs/_*.html from docs/*.md) */
@@ -70,7 +141,7 @@ html[data-contrast="dim"] {
   @apply font-semibold text-zinc-100;
 }
 .doc a {
-  @apply text-indigo-300 underline;
+  @apply text-tide-300 underline underline-offset-2;
 }
 .doc ul {
   @apply list-disc space-y-1.5 pl-5;
@@ -85,7 +156,7 @@ html[data-contrast="dim"] {
   @apply rounded bg-zinc-800 px-1 py-0.5 font-mono text-[0.85em] text-zinc-100;
 }
 .doc table {
-  @apply block w-full overflow-x-auto rounded-lg border border-zinc-800 text-left;
+  @apply block w-full overflow-x-auto rounded-md border border-zinc-800 text-left;
 }
 .doc thead {
   @apply bg-zinc-900 text-xs text-zinc-400;
@@ -101,7 +172,7 @@ html[data-contrast="dim"] {
 
 /* Keyboard focus: one visible ring everywhere, even where a component removed the default outline */
 :focus-visible {
-  outline: 2px solid rgb(129 140 248) !important;
+  outline: 2px solid #c8d9e6 !important;
   outline-offset: 2px;
 }
 input[type="range"]:focus-visible {
@@ -117,5 +188,32 @@ input[type="range"]:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * First page headline: each line fills left to right like a lyric being sung,
+ * once, from dim navy to beige. Reduced motion shows the filled line at once.
+ */
+.sung-line {
+  color: transparent;
+  background-image: linear-gradient(90deg, var(--color-zinc-100) 0 50%, var(--color-zinc-700) 50% 100%);
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: sung-fill 0.85s cubic-bezier(0.45, 0.05, 0.35, 1) var(--sung-delay, 0s) forwards;
+}
+@keyframes sung-fill {
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sung-line {
+    animation: none;
+    background-position: 0 0;
   }
 }

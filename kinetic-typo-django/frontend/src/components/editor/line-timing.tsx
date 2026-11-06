@@ -12,8 +12,8 @@ import {
 import { usePlaybackStore } from "@/store/playback-store";
 import { Tip } from "@/components/ui/tip";
 
-const BTN = "rounded-md border border-zinc-800 px-1.5 py-1 text-zinc-300 hover:border-indigo-500";
-const ON = "border-indigo-400 bg-indigo-500/20 text-indigo-100";
+const BTN = "rounded-md border border-zinc-800 px-1.5 py-1 text-zinc-300 hover:border-tide-500";
+const ON = "border-tide-400 bg-tide-500/20 text-tide-100";
 
 /**
  * The selected line's detail timeline: one mark per word or per character at
@@ -158,7 +158,7 @@ export function LineTimingRow({
         </div>
         {tapAt === null ? (
           <button type="button" onClick={startTapping} className={BTN} disabled={labels.length === 0}>
-            ⏺ 탭으로 찍기
+            탭으로 찍기
           </button>
         ) : (
           <>
@@ -218,9 +218,7 @@ export function LineTimingRow({
         ))}
         {marks.map((v, i) => (
           <div key={i} className="pointer-events-none absolute inset-y-0" style={{ left: `${v * 100}%` }}>
-            <div
-              className={`absolute inset-y-0 w-px ${firsts.has(i) ? "bg-indigo-400" : "bg-indigo-400/40"}`}
-            />
+            <div className={`absolute inset-y-0 w-px ${firsts.has(i) ? "bg-tide-400" : "bg-tide-400/40"}`} />
             <button
               type="button"
               aria-label={`${i + 1}번째 ${unit === "word" ? "단어" : "글자"} ${labels[i]} ${(v * span).toFixed(2)}초`}
@@ -239,8 +237,8 @@ export function LineTimingRow({
                 tapAt !== null && i === tapAt
                   ? "bg-rose-500 text-white"
                   : firsts.has(i)
-                    ? "bg-indigo-500/80 text-white hover:bg-indigo-400"
-                    : "bg-indigo-900/90 text-indigo-100 hover:bg-indigo-700"
+                    ? "bg-tide-500/80 text-zinc-950 hover:bg-tide-400"
+                    : "bg-tide-900/90 text-tide-100 hover:bg-tide-700"
               } ${i % 2 === 0 ? "top-1" : "top-7"}`}
             >
               {labels[i]}

@@ -4,8 +4,8 @@ import { css, derivePalette } from "@/lib/render/kinetic/color";
 import { DEFAULT_MOTION_STYLE, KINETIC_BACKGROUNDS, MOTION_STYLES } from "@/lib/render/kinetic/styles";
 import { Tip } from "@/components/ui/tip";
 
-const ON = "border-indigo-500 bg-indigo-500/10 text-zinc-100";
-const OFF = "border-zinc-800 text-zinc-400 hover:border-indigo-500";
+const ON = "border-tide-500 bg-tide-500/10 text-zinc-100";
+const OFF = "border-zinc-800 text-zinc-400 hover:border-tide-500";
 
 const STYLE_CHOICES: readonly { id: MotionStyleId; label: string; hint: string }[] = [
   ...MOTION_STYLES.map(({ id, label, hint }) => ({ id, label, hint })),
@@ -83,7 +83,7 @@ export function MotionStyleControl({ compact = false }: { compact?: boolean }) {
                   aria-checked={(style.kineticReveal ?? "sung") === id}
                   title={hint}
                   onClick={() => setStyle({ kineticReveal: id })}
-                  className={`px-2 py-1 ${(style.kineticReveal ?? "sung") === id ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
+                  className={`px-2 py-1 ${(style.kineticReveal ?? "sung") === id ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
                 >
                   {label}
                 </button>
@@ -115,17 +115,21 @@ export function MotionStyleControl({ compact = false }: { compact?: boolean }) {
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1" aria-label="고른 색에서 계산한 색">
-              {swatches.map(([color, label]) => (
-                <span
-                  key={label}
-                  title={label}
-                  className="h-4 w-6 rounded-sm border border-zinc-700"
-                  style={{ background: color }}
-                />
-              ))}
-              <span className="ml-1 text-[11px] text-zinc-400">고른 색에서 계산</span>
-            </div>
+            {/* The colors the style works out from the user's own, as one even strip with a caption */}
+            <figure className="space-y-1 pt-0.5">
+              <div
+                role="img"
+                aria-label={`고른 색에서 계산한 색: ${swatches.map(([, label]) => label).join(", ")}`}
+                className="flex h-3 w-full overflow-hidden rounded-sm border border-zinc-700"
+              >
+                {swatches.map(([color, label]) => (
+                  <span key={label} title={label} className="h-full flex-1" style={{ background: color }} />
+                ))}
+              </div>
+              <figcaption className="text-[11px] text-zinc-400">
+                고른 색에서 계산한 배경·빛·글자 색
+              </figcaption>
+            </figure>
           </div>
 
           <label className="flex items-center gap-2 text-xs text-zinc-200">
@@ -133,7 +137,7 @@ export function MotionStyleControl({ compact = false }: { compact?: boolean }) {
               type="checkbox"
               checked={style.kineticCamera !== false}
               onChange={(e) => setStyle({ kineticCamera: e.target.checked })}
-              className="accent-indigo-500"
+              className="accent-tide-500"
             />
             가상 카메라
             <Tip>
@@ -147,7 +151,7 @@ export function MotionStyleControl({ compact = false }: { compact?: boolean }) {
               type="checkbox"
               checked={style.cinematicBase !== false}
               onChange={(e) => setStyle({ cinematicBase: e.target.checked })}
-              className="accent-indigo-500"
+              className="accent-tide-500"
             />
             필름 그레인 · 비네팅 바탕
             <Tip>

@@ -208,7 +208,7 @@ function CommitInput({
           e.currentTarget.blur();
         }
       }}
-      className={`rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-zinc-100 focus:border-indigo-500 focus:outline-none ${className ?? ""}`}
+      className={`rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-zinc-100 focus:border-tide-500 focus:outline-none ${className ?? ""}`}
     />
   );
 }
@@ -626,19 +626,19 @@ export function Timeline() {
         }}
         title="끌어서 타임라인 높이 조절 (두 번 클릭하면 원래 높이)"
         onDoubleClick={() => setHeight(null)}
-        className="group flex h-2.5 shrink-0 cursor-ns-resize touch-none items-center justify-center hover:bg-indigo-500/10 focus:bg-indigo-500/10 focus:outline-none"
+        className="group flex h-2.5 shrink-0 cursor-ns-resize touch-none items-center justify-center hover:bg-tide-500/10 focus:bg-tide-500/10 focus:outline-none"
       >
-        <span className="h-1 w-12 rounded-full bg-zinc-700 group-hover:bg-indigo-400 group-focus:bg-indigo-400" />
+        <span className="h-1 w-12 rounded-full bg-zinc-700 group-hover:bg-tide-400 group-focus:bg-tide-400" />
       </div>
-      <div className="flex shrink-0 items-center gap-3 px-4 pt-1 text-xs">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 whitespace-nowrap px-4 pt-1 text-xs">
         <button
           type="button"
           onClick={togglePlay}
-          className="w-16 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+          className="w-16 shrink-0 rounded-md bg-tide-500 px-3 py-1.5 text-sm font-semibold text-zinc-950 hover:bg-tide-400 active:bg-tide-600"
         >
           {isPlaying ? "정지" : "재생"}
         </button>
-        <span ref={clockRef} className="w-40 whitespace-nowrap font-mono text-zinc-300" />
+        <span ref={clockRef} className="w-40 whitespace-nowrap font-mono text-[13px] text-zinc-200" />
         <Tip label="타임라인 조작법">
           빈 곳 클릭: 이동 · 구간 끌기: 옮기기 · 양 끝 끌기: 시작/끝 조정 · 오른쪽 클릭: 바로 할 일 메뉴 ·
           효과 카드를 레인에 끌어 놓기 · Space: 재생 · Delete: 고른 구간 지우기 · Ctrl(⌘)+K: 빠른 작업
@@ -652,7 +652,7 @@ export function Timeline() {
               type="checkbox"
               checked={snapToLyrics}
               onChange={(e) => setStyle({ snapToLyrics: e.target.checked })}
-              className="accent-indigo-500"
+              className="accent-tide-500"
             />
             자막에 붙이기
           </label>
@@ -671,7 +671,7 @@ export function Timeline() {
             onChange={(e) => setStyle({ fontScale: Number(e.target.value) })}
             onDoubleClick={() => setStyle({ fontScale: 1 })}
             aria-label="전체 글자 크기"
-            className="w-24 accent-indigo-500"
+            className="w-24 accent-tide-500"
           />
           <span className="w-10 font-mono text-zinc-300">{fontScale.toFixed(2)}×</span>
         </label>
@@ -685,7 +685,7 @@ export function Timeline() {
             value={pps}
             onChange={(e) => setPps(Number(e.target.value))}
             aria-label="타임라인 확대"
-            className="w-28 accent-indigo-500"
+            className="w-28 accent-tide-500"
           />
         </label>
       </div>
@@ -767,24 +767,27 @@ export function Timeline() {
                       isSel
                         ? line.overlap
                           ? "border-violet-400 bg-violet-500/15"
-                          : "border-indigo-400 bg-indigo-500/15"
+                          : "border-tide-400 bg-tide-500/15"
                         : line.overlap
                           ? "border-violet-800/80 bg-violet-950/30 hover:border-violet-400/70"
-                          : "border-zinc-700 bg-zinc-900/40 hover:border-indigo-400/70"
+                          : "border-zinc-700 bg-zinc-900/40 hover:border-tide-400/70"
                     }`}
                     style={{ left: start * pps, width: Math.max(6, (end - start) * pps) }}
                     title={`${formatLrcTime(start)} ~ ${formatLrcTime(end)}`}
                   >
                     <span className="truncate text-xs font-semibold text-zinc-100">
                       {line.lineStyle.lock ? (
-                        <span title="잠근 줄 (자동 구성이 바꾸지 않음)" className="mr-1">
-                          🔒
+                        <span
+                          title="잠근 줄 (자동 구성이 바꾸지 않음)"
+                          className="mr-1 font-medium text-tide-300"
+                        >
+                          잠금
                         </span>
                       ) : null}
                       {(line.offsetX !== 0 ||
                         line.offsetY !== 0 ||
                         Object.keys(line.lineStyle).some((k) => !MOTION_KEYS.includes(k))) && (
-                        <span title="따로 조정한 줄" className="mr-1 text-indigo-200">
+                        <span title="따로 조정한 줄" className="mr-1 text-tide-200">
                           ⌖
                         </span>
                       )}
@@ -799,12 +802,12 @@ export function Timeline() {
                     <span
                       aria-hidden
                       onPointerDown={(e) => onSegmentDown(e, i, "start")}
-                      className="absolute inset-y-0 left-0 w-2 cursor-ew-resize hover:bg-indigo-300/50"
+                      className="absolute inset-y-0 left-0 w-2 cursor-ew-resize hover:bg-tide-300/50"
                     />
                     <span
                       aria-hidden
                       onPointerDown={(e) => onSegmentDown(e, i, "end")}
-                      className="absolute inset-y-0 right-0 w-2 cursor-ew-resize hover:bg-indigo-300/50"
+                      className="absolute inset-y-0 right-0 w-2 cursor-ew-resize hover:bg-tide-300/50"
                     />
                   </div>
                 );
@@ -871,7 +874,7 @@ export function Timeline() {
                           title="커서 자리에 줄 나눔(/n)을 넣습니다. Enter로 저장"
                           className={SMALL_BTN}
                         >
-                          ↵ 줄 나눔
+                          줄 나눔
                         </button>
                       </label>
                       <label className="flex items-center gap-2 text-zinc-400">
@@ -925,9 +928,9 @@ export function Timeline() {
                           stopAtRef.current = selLine.endTime;
                           void play();
                         }}
-                        className="ml-2 rounded-md bg-indigo-600 px-2 py-1 font-semibold text-white hover:bg-indigo-500"
+                        className="ml-2 rounded-md bg-tide-600 px-2 py-1 font-semibold text-zinc-950 hover:bg-tide-500"
                       >
-                        ▶ 구간 재생
+                        구간 재생
                       </button>
                       <button
                         type="button"
@@ -982,7 +985,7 @@ export function Timeline() {
   );
 }
 
-const SMALL_BTN = "rounded-md border border-zinc-800 px-1.5 py-1 text-zinc-300 hover:border-indigo-500";
+const SMALL_BTN = "rounded-md border border-zinc-800 px-1.5 py-1 text-zinc-300 hover:border-tide-500";
 
 /** Keys a style change touched: those whose value differs between before and after. */
 function changedKeys(before: LineStyle, after: LineStyle): Array<keyof LineStyle> {
@@ -1038,7 +1041,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
   return (
     <>
       <div className="flex flex-wrap items-center justify-center gap-2 text-zinc-300">
-        <span className="font-semibold text-indigo-200">{picked.length}줄 선택</span>
+        <span className="font-semibold text-tide-200">{picked.length}줄 선택</span>
         <span className="text-zinc-400">
           {formatLrcTime(from)} ~ {formatLrcTime(to)}
         </span>
@@ -1048,7 +1051,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
           className={SMALL_BTN}
           title="고른 줄을 모두 0.1초 앞으로"
         >
-          ◀ 0.1초
+          −0.1초
         </button>
         <button
           type="button"
@@ -1056,7 +1059,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
           className={SMALL_BTN}
           title="고른 줄을 모두 0.1초 뒤로"
         >
-          0.1초 ▶
+          +0.1초
         </button>
         {FEATURES_NOW.themeMix && (
           <button
@@ -1114,16 +1117,16 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
             type="checkbox"
             checked={all("lock")}
             onChange={(e) => toggle("lock", e.target.checked)}
-            className="accent-indigo-500"
+            className="accent-tide-500"
           />
-          🔒 모두 잠금
+          모두 잠금
         </label>
         <label className="flex items-center gap-1">
           <input
             type="checkbox"
             checked={all("flash")}
             onChange={(e) => toggle("flash", e.target.checked)}
-            className="accent-indigo-500"
+            className="accent-tide-500"
           />
           모두 번쩍
         </label>
@@ -1189,7 +1192,7 @@ function PositionRow({
               aria-pressed={on}
               title={name}
               onClick={() => onChange(Number(x.toFixed(2)), Number(y.toFixed(2)))}
-              className={`h-3.5 w-5 rounded-sm border ${on ? "border-indigo-300 bg-indigo-500" : "border-zinc-700 hover:border-indigo-500"}`}
+              className={`h-3.5 w-5 rounded-sm border ${on ? "border-tide-300 bg-tide-500" : "border-zinc-700 hover:border-tide-500"}`}
             />
           );
         })}
@@ -1204,7 +1207,7 @@ function PositionRow({
           value={Math.round(offsetX * 100)}
           onChange={(e) => onChange(Number(e.target.value) / 100, offsetY)}
           aria-label="이 줄 가로 위치"
-          className="w-28 accent-indigo-500"
+          className="w-28 accent-tide-500"
         />
         <span className="w-10 font-mono text-zinc-300">{pct(offsetX)}</span>
       </label>
@@ -1218,7 +1221,7 @@ function PositionRow({
           value={Math.round(offsetY * 100)}
           onChange={(e) => onChange(offsetX, Number(e.target.value) / 100)}
           aria-label="이 줄 세로 위치"
-          className="w-28 accent-indigo-500"
+          className="w-28 accent-tide-500"
         />
         <span className="w-10 font-mono text-zinc-300">{pct(offsetY)}</span>
       </label>
@@ -1276,9 +1279,9 @@ function LineMotionRow({
           type="checkbox"
           checked={Boolean(line.lineStyle.lock)}
           onChange={(e) => toggle("lock", e.target.checked)}
-          className="accent-indigo-500"
+          className="accent-tide-500"
         />
-        🔒 잠금
+        잠금
       </label>
       <label
         className="flex items-center gap-1"
@@ -1288,7 +1291,7 @@ function LineMotionRow({
           type="checkbox"
           checked={Boolean(line.lineStyle.flash)}
           onChange={(e) => toggle("flash", e.target.checked)}
-          className="accent-indigo-500"
+          className="accent-tide-500"
         />
         번쩍
       </label>
@@ -1366,7 +1369,7 @@ function LineStyleRow({ value, onChange }: { value: LineStyle; onChange: (next: 
             role="radio"
             aria-checked={value.orient === v}
             onClick={() => set("orient", v)}
-            className={`rounded-md border px-1.5 py-0.5 ${value.orient === v ? "border-indigo-500 bg-indigo-500/20 text-indigo-100" : "border-zinc-800 text-zinc-400 hover:border-indigo-500"}`}
+            className={`rounded-md border px-1.5 py-0.5 ${value.orient === v ? "border-tide-500 bg-tide-500/20 text-tide-100" : "border-zinc-800 text-zinc-400 hover:border-tide-500"}`}
           >
             {label}
           </button>
@@ -1382,7 +1385,7 @@ function LineStyleRow({ value, onChange }: { value: LineStyle; onChange: (next: 
                 checked={own !== undefined}
                 onChange={(e) => set(c.key, e.target.checked ? c.initial : undefined)}
                 aria-label={`이 줄만 ${c.label} 따로`}
-                className="accent-indigo-500"
+                className="accent-tide-500"
               />
               {c.label}
             </label>
@@ -1396,7 +1399,7 @@ function LineStyleRow({ value, onChange }: { value: LineStyle; onChange: (next: 
                   value={own}
                   onChange={(e) => set(c.key, Number(e.target.value))}
                   aria-label={`이 줄 ${c.label}`}
-                  className="w-24 accent-indigo-500"
+                  className="w-24 accent-tide-500"
                 />
                 <span className="w-10 font-mono text-zinc-300">{c.format(own)}</span>
               </>

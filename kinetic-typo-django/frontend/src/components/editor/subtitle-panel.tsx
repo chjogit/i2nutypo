@@ -34,7 +34,7 @@ export function SubtitlePanel() {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         aria-label={label}
-        className="w-28 accent-indigo-500"
+        className="w-28 accent-tide-500"
       />
       <span className="w-10 text-right font-mono text-zinc-300">{value}px</span>
     </span>
@@ -59,7 +59,7 @@ export function SubtitlePanel() {
             type="checkbox"
             checked={sub.enabled}
             onChange={(e) => setSubtitles({ enabled: e.target.checked })}
-            className="accent-indigo-500"
+            className="accent-tide-500"
           />
           하단 자막 표시
         </label>
@@ -84,7 +84,7 @@ export function SubtitlePanel() {
                   aria-checked={sub.display === value}
                   title={hint}
                   onClick={() => setSubtitles({ display: value })}
-                  className={`px-2 py-1.5 ${sub.display === value ? "bg-indigo-500/10 text-indigo-200" : "text-zinc-400 hover:text-zinc-100"}`}
+                  className={`px-2 py-1.5 ${sub.display === value ? "bg-tide-500/10 text-tide-200" : "text-zinc-400 hover:text-zinc-100"}`}
                 >
                   {label}
                 </button>
@@ -157,7 +157,7 @@ export function SubtitlePanel() {
                     type="button"
                     aria-pressed={sub.position === pos}
                     onClick={() => setSubtitles({ position: pos })}
-                    className={`px-3 py-1 ${sub.position === pos ? "bg-indigo-500/10 text-indigo-200" : "text-zinc-400 hover:text-zinc-100"}`}
+                    className={`px-3 py-1 ${sub.position === pos ? "bg-tide-500/10 text-tide-200" : "text-zinc-400 hover:text-zinc-100"}`}
                   >
                     {pos === "bottom" ? "아래" : "위"}
                   </button>
@@ -173,7 +173,7 @@ export function SubtitlePanel() {
                   value={sub.bottomOffset}
                   onChange={(e) => setSubtitles({ bottomOffset: Number(e.target.value) })}
                   aria-label="가장자리 여백"
-                  className="w-28 accent-indigo-500"
+                  className="w-28 accent-tide-500"
                 />
                 <span className="w-10 text-right font-mono text-zinc-300">{sub.bottomOffset}px</span>
               </span>
@@ -183,7 +183,7 @@ export function SubtitlePanel() {
                 type="checkbox"
                 checked={sub.bgBox}
                 onChange={(e) => setSubtitles({ bgBox: e.target.checked })}
-                className="accent-indigo-500"
+                className="accent-tide-500"
               />
               반투명 배경 박스
             </label>

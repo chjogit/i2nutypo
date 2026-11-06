@@ -31,9 +31,9 @@ const TABS: ReadonlyArray<readonly [Tab, string]> = [
 ];
 
 const CARD =
-  "rounded-md border border-zinc-800 bg-zinc-900/40 text-left hover:border-indigo-500 focus:border-indigo-500 focus:outline-none";
+  "rounded-md border border-zinc-800 bg-zinc-900/40 text-left hover:border-tide-500 focus:border-tide-500 focus:outline-none";
 const SMALL =
-  "rounded-md border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:border-indigo-500 disabled:opacity-40";
+  "rounded-md border border-zinc-800 px-2 py-1 text-xs text-zinc-300 hover:border-tide-500 disabled:opacity-40";
 
 const now = () => usePlaybackStore.getState().currentTime;
 
@@ -104,7 +104,7 @@ export function EffectsPanel() {
       </div>
       {open && (
         <>
-          <div role="tablist" aria-label="효과 종류" className="grid grid-cols-3 gap-1 text-xs">
+          <div role="tablist" aria-label="효과 종류" className="flex overflow-hidden rounded-md border border-zinc-800 text-xs">
             {TABS.map(([id, label]) => (
               <button
                 key={id}
@@ -112,7 +112,7 @@ export function EffectsPanel() {
                 role="tab"
                 aria-selected={tab === id}
                 onClick={() => setTab(id)}
-                className={`rounded-md border px-1.5 py-1 ${tab === id ? "border-indigo-500 bg-indigo-500/15 text-zinc-100" : "border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}
+                className={`min-w-0 flex-1 whitespace-nowrap px-1 py-1 ${tab === id ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"}`}
               >
                 {label}
               </button>
@@ -174,7 +174,7 @@ function PacksTab() {
             <button
               type="button"
               onClick={() => flash(applyPack(p))}
-              className="min-w-0 flex-1 text-left text-xs font-semibold text-zinc-100 hover:text-indigo-200"
+              className="min-w-0 flex-1 text-left text-xs font-semibold text-zinc-100 hover:text-tide-200"
             >
               {p.label}
               {p.on === "bars" && !hasBeats && (
@@ -197,8 +197,8 @@ function TransitionPreview({ kind, playing }: { kind: TransitionKind; playing: b
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     const style = {
-      accentColor: "#818cf8",
-      bgColor: "#18181b",
+      accentColor: "#c8d9e6",
+      bgColor: "#16202b",
       textColor: "#fff",
       transitions: [{ id: `preview-${kind}`, start: 0.2, end: 1, kind, color: "accent" }],
       adjustClips: [],
@@ -208,10 +208,8 @@ function TransitionPreview({ kind, playing }: { kind: TransitionKind; playing: b
     const paint = (now: number) => {
       const t = playing ? ((now - t0) / 1000) % 1.4 : 0.85;
       const b = t >= 0.6;
-      const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      g.addColorStop(0, b ? "#f59e0b" : "#4338ca");
-      g.addColorStop(1, b ? "#be123c" : "#0e7490");
-      ctx.fillStyle = g;
+      // Two flat frames that read apart at a glance: navy A, teal B
+      ctx.fillStyle = b ? "#567c8d" : "#2f4156";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.font = "900 26px sans-serif";
@@ -251,7 +249,7 @@ function TransitionCard({ def }: { def: TransitionDef }) {
         if (id) selectFx({ lane: "transition", id });
       }}
       title={`${def.label}: ${def.hint} (누르면 재생 위치에, 끌어서 전환 줄에)`}
-      className={`${CARD} overflow-hidden ${last === def.id ? "border-indigo-500/70" : ""}`}
+      className={`${CARD} overflow-hidden ${last === def.id ? "border-tide-500/70" : ""}`}
     >
       <TransitionPreview kind={def.id} playing={hover} />
       <span className="block truncate px-1.5 py-1 text-[11px] text-zinc-300">{def.label}</span>
@@ -374,7 +372,7 @@ function BeatsTab() {
               setBusy(false);
             }
           }}
-          className="rounded-md bg-indigo-600 px-2.5 py-1 font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
+          className="rounded-md bg-tide-600 px-2.5 py-1 font-semibold text-zinc-950 hover:bg-tide-500 disabled:opacity-40"
         >
           {busy ? "분석 중…" : beats ? "다시 분석" : "비트 분석하기"}
         </button>
@@ -397,7 +395,7 @@ function BeatsTab() {
               type="checkbox"
               checked={snapToBeats}
               onChange={(e) => setStyle({ snapToBeats: e.target.checked })}
-              className="accent-indigo-500"
+              className="accent-tide-500"
             />
             구간을 끌 때 비트에 붙이기
           </label>

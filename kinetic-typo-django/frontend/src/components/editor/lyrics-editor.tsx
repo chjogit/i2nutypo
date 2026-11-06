@@ -68,7 +68,7 @@ export function LyricsEditor({
               setDraft(null);
               setLyricsCollapsed(false);
             }}
-            className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-indigo-500 hover:text-zinc-100"
+            className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:border-tide-500 hover:text-zinc-100"
           >
             가사 수정
           </button>
@@ -98,7 +98,7 @@ export function LyricsEditor({
             rows={9}
             spellCheck={false}
             aria-label="가사 입력"
-            className="w-full resize-y rounded-md border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs leading-relaxed text-zinc-100 focus:border-indigo-500 focus:outline-none"
+            className="w-full resize-y rounded-md border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs leading-relaxed text-zinc-100 focus:border-tide-500 focus:outline-none"
             placeholder={PLACEHOLDER}
           />
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -106,7 +106,7 @@ export function LyricsEditor({
               type="button"
               onClick={finish}
               disabled={!text.trim()}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+              className="rounded-md bg-tide-600 px-3 py-1.5 font-semibold text-zinc-950 hover:bg-tide-500 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
             >
               가사 입력 완료
             </button>

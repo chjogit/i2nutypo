@@ -271,7 +271,7 @@ export function ExportPanel() {
     running && video.progress > 0.02 ? (elapsed / video.progress) * (1 - video.progress) : null;
 
   const chip = (active: boolean) =>
-    `px-2 py-1 ${active ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"} disabled:opacity-50`;
+    `px-2 py-1 ${active ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"} disabled:opacity-50`;
 
   return (
     <section aria-label="내보내기" className="space-y-4 px-4 py-4">
@@ -377,7 +377,7 @@ export function ExportPanel() {
               checked={range !== null}
               disabled={running}
               onChange={(e) => setRange(e.target.checked ? { start: 0, end: duration } : null)}
-              className="accent-indigo-500"
+              className="accent-tide-500"
             />
             일부 구간만
           </label>
@@ -388,7 +388,7 @@ export function ExportPanel() {
                 checked={withAudio}
                 disabled={running || !hasAudio}
                 onChange={(e) => setWithAudio(e.target.checked)}
-                className="accent-indigo-500"
+                className="accent-tide-500"
               />
               음원 넣기
             </label>
@@ -438,7 +438,7 @@ export function ExportPanel() {
               type="checkbox"
               checked={saveWhile}
               onChange={(e) => setSaveWhile(e.target.checked)}
-              className="accent-indigo-500"
+              className="accent-tide-500"
             />
             저장할 곳을 먼저 고르고 만들면서 바로 저장
             <Tip label="바로 저장">
@@ -464,7 +464,7 @@ export function ExportPanel() {
               className="h-2 overflow-hidden rounded-full bg-zinc-800"
             >
               <div
-                className="h-full bg-indigo-500 transition-[width]"
+                className="h-full bg-tide-500 transition-[width]"
                 style={{ width: `${video.progress * 100}%` }}
               />
             </div>
@@ -490,7 +490,7 @@ export function ExportPanel() {
             type="button"
             disabled={lineCount === 0}
             onClick={() => void startVideo()}
-            className="w-full rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+            className="w-full rounded-md bg-tide-600 px-3 py-2 text-sm font-medium text-zinc-950 hover:bg-tide-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
           >
             {lineCount === 0
               ? "가사를 넣으면 영상을 만들 수 있어요"
@@ -510,7 +510,7 @@ export function ExportPanel() {
             <a
               href={video.url}
               download={video.fileName}
-              className="shrink-0 rounded-md bg-indigo-600 px-2.5 py-1 font-medium text-white hover:bg-indigo-500"
+              className="shrink-0 rounded-md bg-tide-600 px-2.5 py-1 font-medium text-zinc-950 hover:bg-tide-500"
             >
               저장
             </a>
@@ -557,7 +557,7 @@ export function ExportPanel() {
                   type="checkbox"
                   checked={rows[key]}
                   onChange={(e) => setRows({ ...rows, [key]: e.target.checked })}
-                  className="accent-indigo-500"
+                  className="accent-tide-500"
                 />
                 {label}
               </label>
@@ -567,7 +567,7 @@ export function ExportPanel() {
             type="button"
             disabled={cueCount === 0}
             onClick={saveSubtitles}
-            className="w-full rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:border-indigo-500 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-200 hover:border-tide-500 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {cueCount === 0 ? "저장할 자막이 없어요" : `${format.toUpperCase()} 자막 저장 (${cueCount}줄)`}
           </button>

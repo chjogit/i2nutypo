@@ -170,7 +170,7 @@ export function Preview() {
             type="checkbox"
             checked={miniEnabled}
             onChange={(e) => setMiniEnabled(e.target.checked)}
-            className="accent-indigo-500"
+            className="accent-tide-500"
           />
           작은 창
         </label>
@@ -185,7 +185,7 @@ export function Preview() {
               setLayout({ previewQuality: Number(e.target.value) as (typeof PREVIEW_QUALITIES)[number] })
             }
             aria-label="미리보기 화질"
-            className="rounded-md border border-zinc-800 bg-zinc-950 px-1 py-0.5 text-xs text-zinc-200 focus:border-indigo-500 focus:outline-none"
+            className="rounded-md border border-zinc-800 bg-zinc-950 px-1 py-0.5 text-xs text-zinc-200 focus:border-tide-500 focus:outline-none"
           >
             {PREVIEW_QUALITIES.map((q) => (
               <option key={q} value={q}>
@@ -201,7 +201,7 @@ export function Preview() {
               key={r}
               type="button"
               onClick={() => setStyle({ aspectRatio: r })}
-              className={`px-2 py-1 ${r === aspectRatio ? "bg-indigo-600 text-white" : "text-zinc-400 hover:text-zinc-100"}`}
+              className={`px-2 py-1 ${r === aspectRatio ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
             >
               {r}
             </button>
