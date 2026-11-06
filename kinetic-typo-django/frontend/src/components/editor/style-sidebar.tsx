@@ -35,6 +35,7 @@ import { freshSeed, mulberry32, pickSome } from "@/lib/random";
 import { FEATURES_NOW } from "@/lib/mode/mode";
 import { COLOR_FILTERS } from "@/lib/render/looks/color-filter";
 import { AutoComposeBox } from "./auto-compose-box";
+import { MotionStyleControl } from "./motion-style-control";
 import { Fold } from "./fold";
 import { Tip } from "@/components/ui/tip";
 import {
@@ -203,9 +204,7 @@ function ThemeGrid({ target }: { target: ThemeTarget }) {
                     <ThemeSwatch id={p.id} className="mr-1.5" />
                     {p.label}
                   </span>
-                  <span className="block truncate text-xs leading-snug text-zinc-400">
-                    {p.description}
-                  </span>
+                  <span className="block truncate text-xs leading-snug text-zinc-400">{p.description}</span>
                 </button>
               );
             })}
@@ -797,6 +796,10 @@ function ThemeTab() {
     <div className="space-y-3">
       {target.clip && <ThemeClipBanner clip={target.clip} />}
       {!target.clip && FEATURES_NOW.themeMix && <AutoComposeBox />}
+      {/* The motion style is one setting for the whole video, like the element motion below */}
+      <Fold className="space-y-2 border-t border-zinc-800/70 pt-3" title="가사 모션 스타일">
+        <MotionStyleControl />
+      </Fold>
       {/* Element motion is one setting for the whole video, so it stays here even while a theme clip is picked */}
       <ElementMotionFold />
       <ThemeGrid target={target} />

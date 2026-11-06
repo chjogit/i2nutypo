@@ -23,6 +23,9 @@ import { propCellsAt, type PropLayer } from "./looks/props";
 import { themeAt } from "./theme-clips";
 import { renderLookFrame, type FrameLayer } from "./looks/render-look";
 import { applyFinish } from "./finish/gl-finish";
+import { cameraAt } from "./kinetic/camera";
+import { css, derivePalette } from "./kinetic/color";
+import { motionStyleOf } from "./kinetic/styles";
 import { sanitizeFinish } from "./finish/settings";
 import { hashSigned } from "./looks/noise";
 import { hopClock, type HopClock } from "./looks/element-motion";
@@ -293,12 +296,22 @@ function drawFrame(input: FrameInput): void {
         subtitleShift,
         textBounds: input.bounds,
         hop,
+        camera: cameraAt(
+          style,
+          [activeLine, activeLine ? (lines[lines.indexOf(activeLine) - 1] ?? null) : null],
+          timeSec,
+          W,
+          H,
+        ),
       },
       layer,
     );
     if (flash > 0 && layer !== "front") {
       ctx.save();
-      ctx.fillStyle = `rgba(255,255,255,${(flash * 0.85).toFixed(3)})`;
+      // With a motion style the flash is the user's text color, not plain white
+      ctx.fillStyle = motionStyleOf(style)
+        ? css(derivePalette(style).text, flash * 0.85)
+        : `rgba(255,255,255,${(flash * 0.85).toFixed(3)})`;
       ctx.fillRect(0, 0, W, H);
       ctx.restore();
     }

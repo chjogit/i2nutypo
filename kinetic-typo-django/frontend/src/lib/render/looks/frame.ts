@@ -1,6 +1,7 @@
 import type { CueEffect, LookPresetId, LyricLine, StyleSettings, SubtitleSettings } from "@/types/project";
 import type { Ctx2D } from "../motifs";
 import type { TextBounds } from "../text-bounds";
+import type { CameraPose } from "../kinetic/camera";
 import {
   drawCharacter,
   drawImageRect,
@@ -65,6 +66,8 @@ export interface LookFrame {
   hop?: HopClock;
   /** Between lines: when the last line ended (or -1 before the first) and when the next one starts. */
   gap?: { from: number; to: number } | null;
+  /** Virtual camera of the motion styles (kinetic/camera.ts); missing or identity means none. */
+  camera?: CameraPose;
   /** Drawn once right before the character (theme extras that belong behind it); see render-look. */
   beforeCharacter?: () => void;
 }

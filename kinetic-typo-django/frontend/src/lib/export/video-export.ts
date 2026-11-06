@@ -17,6 +17,8 @@ import {
 } from "mediabunny";
 import { filterBackground } from "@/lib/render/bg-filter";
 import type { Project } from "@/types/project";
+import { ensureKineticFonts } from "@/lib/render/kinetic/fonts";
+import { motionStyleOf } from "@/lib/render/kinetic/styles";
 import { CANVAS_SIZE } from "@/lib/render/canvas-size";
 import { createParticles } from "@/lib/render/particles";
 import { bpmPulseEnergy, renderFrame, steppedTime } from "@/lib/render/render-frame";
@@ -241,6 +243,8 @@ export async function exportVideo(project: Project, options: VideoExportOptions)
     o = { ...o, saveTo: undefined };
   }
 
+  // The motion styles' type (Pretendard, Inter, Noto) is loaded for every glyph of the lyrics first
+  if (motionStyleOf(project.style)) await ensureKineticFonts(project.lyricsText, project.style.lyricFont);
   await document.fonts.ready;
   const images = await loadImages(project, o.signal);
   const props = resolvePropLayers(project.props);

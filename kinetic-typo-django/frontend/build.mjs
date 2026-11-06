@@ -115,7 +115,7 @@ async function writeNotices(results) {
   if (existsSync(`${fontsDir}fonts.json`)) {
     const fonts = JSON.parse(await readFile(`${fontsDir}fonts.json`, "utf8"));
     for (const f of fonts) {
-      parts.push("=".repeat(72), `Font: ${f.family} (${f.license}), via Fontsource ${f.version}`, "=".repeat(72));
+      parts.push("=".repeat(72), `Font: ${f.family} (${f.license}), via ${f.source ?? `Fontsource ${f.version}`}`, "=".repeat(72));
       if (existsSync(`${fontsDir}${f.slug}/LICENSE`)) parts.push((await readFile(`${fontsDir}${f.slug}/LICENSE`, "utf8")).trim());
       parts.push("");
     }

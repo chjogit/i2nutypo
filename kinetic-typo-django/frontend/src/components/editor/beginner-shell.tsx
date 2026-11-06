@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { MotionStyleControl } from "./motion-style-control";
 import type { LookPresetId } from "@/types/project";
 import { BEGINNER_THEMES } from "@/lib/mode/mode";
 import { getLookPreset } from "@/lib/render/looks/presets";
@@ -104,9 +105,7 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
       {rec && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/5 px-3 py-2 text-xs">
           <span className="min-w-0 flex-1 break-keep text-zinc-300">
-            <span className="font-semibold text-indigo-200">
-              추천: {getLookPreset(rec.lookPreset).label}
-            </span>{" "}
+            <span className="font-semibold text-indigo-200">추천: {getLookPreset(rec.lookPreset).label}</span>{" "}
             <span className="text-zinc-400">
               가사와 템포를 보면 {rec.tags.slice(0, 2).join(" · ")} 느낌이 어울려요.
             </span>
@@ -147,7 +146,11 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
                   fontFamily: p.palette.mainFont,
                 }}
               >
-                가사<span className="ml-2 inline-block h-1.5 w-8 rounded-full" style={{ background: p.palette.accentColor }} />
+                가사
+                <span
+                  className="ml-2 inline-block h-1.5 w-8 rounded-full"
+                  style={{ background: p.palette.accentColor }}
+                />
               </span>
               <span className="block text-sm font-bold text-zinc-100">
                 {p.label}
@@ -208,6 +211,7 @@ function LyricLook() {
           <span className="w-10 text-right font-mono text-zinc-300">{Math.round(fontScale * 100)}%</span>
         </span>
       </label>
+      <MotionStyleControl compact />
       <LyricOrientationControl />
       <LyricSurfaceControl />
       <AutoContrastControl />

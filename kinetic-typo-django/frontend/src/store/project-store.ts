@@ -1,4 +1,10 @@
 import { create } from "zustand";
+import {
+  DEFAULT_MOTION_STYLE,
+  sanitizeKineticBg,
+  sanitizeKineticReveal,
+  sanitizeMotionStyle,
+} from "@/lib/render/kinetic/styles";
 import { sanitizeThemeContrast } from "@/lib/render/looks/theme-contrast";
 import { sanitizeBgPattern } from "@/lib/render/looks/generative-bg";
 import { NEUTRAL_BG_FILTER, sanitizeBgFilter } from "@/lib/render/bg-filter";
@@ -122,6 +128,11 @@ export const DEFAULT_STYLE: StyleSettings = {
   lyricOrientation: "auto",
   lyricGlass: "off",
   lyricDepth: 0,
+  motionStyle: DEFAULT_MOTION_STYLE,
+  kineticBg: "theme",
+  kineticReveal: "sung",
+  kineticCamera: true,
+  cinematicBase: true,
   bgPattern: "auto",
   noVibration: false,
   snapToBeats: false,
@@ -330,6 +341,11 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
       lyricGlass:
         p.style?.lyricGlass === "clear" || p.style?.lyricGlass === "frost" ? p.style.lyricGlass : "off",
       lyricDepth: sanitizeUnit(p.style?.lyricDepth, 0),
+      motionStyle: sanitizeMotionStyle(p.style?.motionStyle),
+      kineticBg: sanitizeKineticBg(p.style?.kineticBg),
+      kineticReveal: sanitizeKineticReveal(p.style?.kineticReveal),
+      kineticCamera: p.style?.kineticCamera !== false,
+      cinematicBase: p.style?.cinematicBase !== false,
       bgPattern: sanitizeBgPattern(p.style?.bgPattern),
       snapToBeats: p.style?.snapToBeats === true,
       sectionKinds: restoreSectionKinds(p.style?.sectionKinds),

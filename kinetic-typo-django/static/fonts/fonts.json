@@ -184,5 +184,12 @@
     "slug": "jetbrains-mono",
     "license": "OFL-1.1",
     "version": "5.3.0"
+  },
+  {
+    "family": "Pretendard",
+    "slug": "pretendard",
+    "license": "OFL-1.1",
+    "version": "1.3.9",
+    "source": "the pretendard package 1.3.9"
   }
 ]
