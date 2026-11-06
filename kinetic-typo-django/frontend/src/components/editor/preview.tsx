@@ -25,6 +25,9 @@ import { applyOverride, TextBoxOverlay, type LineOverride } from "./text-box-ove
  * loaded, the player in the audio section is the clock; the transport is the
  * subtitle timeline at the bottom.
  */
+/** How often a paused preview with nothing new is drawn anyway. */
+const IDLE_REDRAW_MS = 250;
+
 export function Preview() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   /** Where the last frame drew its lyrics, and a text box drag not yet saved. */
@@ -47,11 +50,18 @@ export function Preview() {
     const particles = createParticles();
     let raf = 0;
     let last = performance.now();
+    // What the last drawn frame was made from, so a paused preview with nothing new is not drawn again
+    let drawn: { t: number; project: unknown; override: unknown; width: number; at: number } | null = null;
 
     const tick = (now: number) => {
       const dt = (now - last) / 1000;
       last = now;
       const playback = usePlaybackStore.getState();
+      if (playback.exporting) {
+        drawn = null;
+        raf = requestAnimationFrame(tick);
+        return;
+      }
       const project = useProjectStore.getState();
       const el = playback.audioEl;
       let t = playback.currentTime;
@@ -65,6 +75,22 @@ export function Preview() {
         if (t >= project.duration) t = 0;
         playback.setCurrentTime(t);
       }
+
+      // Paused and unchanged: redraw only a few times a second, to pick up pictures and video frames
+      // that finish loading on their own
+      const still =
+        !playback.isPlaying &&
+        drawn !== null &&
+        drawn.t === t &&
+        drawn.project === project &&
+        drawn.override === overrideRef.current &&
+        drawn.width === canvas.width &&
+        now - drawn.at < IDLE_REDRAW_MS;
+      if (still) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      drawn = { t, project, override: overrideRef.current, width: canvas.width, at: now };
 
       const images = resolveIllustrationImages(project.images);
       const video = previewVideoFrame(project.bgVideo, t, playback.isPlaying);

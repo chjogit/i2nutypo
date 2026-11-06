@@ -13,6 +13,7 @@ import {
   exportVideo,
   isVideoKind,
   outputSize,
+  VIDEO_QUALITIES,
   type EncodeLevel,
   type ExportKind,
   type VideoFps,
@@ -31,6 +32,8 @@ type VideoState =
   | { kind: "idle" }
   | { kind: "running"; progress: number; startedAt: number; stage: string | null }
   | { kind: "done"; url: string; fileName: string; sizeMb: number; note: string }
+  /** Written straight into a file the user picked; nothing left to save. */
+  | { kind: "saved"; fileName: string; note: string }
   | { kind: "error"; message: string };
 
 /** Base name for saved files: the cover title, else the song's file name. */
@@ -40,6 +43,17 @@ function baseName(): string {
   const name = (style.coverTitle || fromAudio || "kinetic-typo").trim();
   return name.replace(/[\\/:*?"<>|]+/g, "_").slice(0, 80) || "kinetic-typo";
 }
+
+interface SaveFilePickerWindow {
+  showSaveFilePicker?: (o: {
+    suggestedName: string;
+    types: Array<{ description: string; accept: Record<string, string[]> }>;
+  }) => Promise<{ name: string; createWritable: () => Promise<FileSystemWritableFileStream> }>;
+}
+
+/** Chrome and Edge can write a file while it is being made (File System Access). */
+const canSaveWhileEncoding = (): boolean =>
+  typeof window !== "undefined" && typeof (window as SaveFilePickerWindow).showSaveFilePicker === "function";
 
 function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -123,12 +137,18 @@ export function ExportPanel() {
   const [video, setVideo] = useState<VideoState>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
   const [supported, setSupported] = useState(true);
+  const [streamable, setStreamable] = useState(false);
+  /** Write the video into a file as it is made, instead of holding it in memory first. */
+  const [saveWhile, setSaveWhile] = useState(true);
 
   const [format, setFormat] = useState<SubtitleFormat>("srt");
   const [rows, setRows] = useState<SubtitleRows>({ main: true, pron: true, trans: true });
 
   // Checked after mount so the first paint matches the server HTML
-  useEffect(() => setSupported(canExportVideo()), []);
+  useEffect(() => {
+    setSupported(canExportVideo());
+    setStreamable(canSaveWhileEncoding());
+  }, []);
 
   // Stop a running export and free a finished file when the panel goes away
   const doneUrl = video.kind === "done" ? video.url : null;
@@ -142,8 +162,26 @@ export function ExportPanel() {
 
   const startVideo = async () => {
     usePlaybackStore.getState().pause();
+    // Asked first, while the click still counts as the user's: where the MP4 goes
+    let saveTo: FileSystemWritableFileStream | undefined;
+    let savedName = "";
+    if (isVideoKind(kind) && streamable && saveWhile) {
+      const suffix = kind === "video" ? "" : `-${kind}`;
+      try {
+        const handle = await (window as SaveFilePickerWindow).showSaveFilePicker!({
+          suggestedName: `${baseName()}${suffix}.mp4`,
+          types: [{ description: "MP4 영상", accept: { "video/mp4": [".mp4"] } }],
+        });
+        saveTo = await handle.createWritable();
+        savedName = handle.name;
+      } catch (e) {
+        // Closing the dialog cancels; any other failure falls back to saving at the end
+        if (e instanceof DOMException && e.name === "AbortError") return;
+      }
+    }
     const controller = new AbortController();
     abortRef.current = controller;
+    usePlaybackStore.getState().setExporting(true);
     const startedAt = performance.now();
     let stage: string | null = null;
     let progress = 0;
@@ -158,6 +196,7 @@ export function ExportPanel() {
         range: range ?? undefined,
         signal: controller.signal,
         sequence,
+        saveTo,
         onProgress: (p) => {
           progress = p;
           setVideo({ kind: "running", progress, startedAt, stage });
@@ -174,6 +213,14 @@ export function ExportPanel() {
             ? "-prores4444xq"
             : `-${kind === "png" ? "alpha" : kind}${sequence === "png" ? "" : `-${sequence}`}`;
       const fileName = `${baseName()}${suffix}.${result.extension}`;
+      if (!result.blob) {
+        setVideo({
+          kind: "saved",
+          fileName: savedName || fileName,
+          note: `${result.width}×${result.height} MP4`,
+        });
+        return;
+      }
       setVideo({
         kind: "done",
         url: URL.createObjectURL(result.blob),
@@ -189,10 +236,12 @@ export function ExportPanel() {
                 : `${result.width}×${result.height} WebM (이 브라우저는 MP4 인코딩을 지원하지 않아 WebM으로 저장)`,
       });
     } catch (e) {
+      await saveTo?.abort().catch(() => undefined);
       if (controller.signal.aborted) setVideo({ kind: "idle" });
       else setVideo({ kind: "error", message: e instanceof Error ? e.message : String(e) });
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
+      usePlaybackStore.getState().setExporting(false);
     }
   };
 
@@ -276,7 +325,7 @@ export function ExportPanel() {
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-zinc-400">해상도</span>
           <div className="flex rounded-md border border-zinc-800">
-            {([720, 1080] as const).map((q) => (
+            {VIDEO_QUALITIES.map((q) => (
               <button
                 key={q}
                 type="button"
@@ -284,7 +333,7 @@ export function ExportPanel() {
                 onClick={() => setQuality(q)}
                 className={chip(q === quality)}
               >
-                {q}p
+                {q === 2160 ? "4K" : `${q}p`}
               </button>
             ))}
           </div>
@@ -383,6 +432,24 @@ export function ExportPanel() {
           </p>
         )}
 
+        {isVideoKind(kind) && streamable && !running && (
+          <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <input
+              type="checkbox"
+              checked={saveWhile}
+              onChange={(e) => setSaveWhile(e.target.checked)}
+              className="accent-indigo-500"
+            />
+            저장할 곳을 먼저 고르고 만들면서 바로 저장
+            <Tip label="바로 저장">
+              영상을 다 만든 뒤 한꺼번에 저장하지 않고, 만드는 동안 고른 파일에 조금씩 씁니다. 긴 곡이나
+              1440p·4K도 메모리가 모자라 멈추지 않습니다. 끄면 다 만든 뒤 저장 버튼이 나옵니다.
+            </Tip>
+          </label>
+        )}
+        {isVideoKind(kind) && quality >= 1440 && (
+          <p className="text-xs text-zinc-400">1440p·4K는 1080p보다 2~4배 오래 걸립니다.</p>
+        )}
         {!supported ? (
           <p className="text-xs text-amber-400">
             이 브라우저는 영상 인코딩(WebCodecs)을 지원하지 않습니다. 최신 Chrome이나 Edge에서 열어 주세요.
@@ -448,6 +515,11 @@ export function ExportPanel() {
               저장
             </a>
           </div>
+        )}
+        {video.kind === "saved" && (
+          <p className="rounded-md border border-zinc-800 px-3 py-2 text-xs text-zinc-300">
+            {video.note} · <span className="text-zinc-100">{video.fileName}</span>에 저장했습니다.
+          </p>
         )}
         {video.kind === "error" && (
           <p className="text-xs text-red-400">영상을 만들지 못했습니다: {video.message}</p>

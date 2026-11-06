@@ -14,6 +14,9 @@ interface PlaybackStore {
   isPlaying: boolean;
   currentTime: number;
   audioEl: HTMLAudioElement | null;
+  /** A video export is drawing frames; the preview stops drawing so the export has the machine. */
+  exporting: boolean;
+  setExporting: (exporting: boolean) => void;
   setPlaying: (isPlaying: boolean) => void;
   setCurrentTime: (currentTime: number) => void;
   setAudioElement: (el: HTMLAudioElement | null) => void;
@@ -26,6 +29,8 @@ export const usePlaybackStore = create<PlaybackStore>()((set, get) => ({
   isPlaying: false,
   currentTime: 0,
   audioEl: null,
+  exporting: false,
+  setExporting: (exporting) => set({ exporting }),
   setPlaying: (isPlaying) => set({ isPlaying }),
   setCurrentTime: (currentTime) => set({ currentTime }),
   setAudioElement: (audioEl) => set({ audioEl, isPlaying: false, currentTime: 0 }),

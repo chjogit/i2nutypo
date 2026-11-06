@@ -73,7 +73,7 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 
 가운데 열 아래 "내보내기" 칸에서 저장합니다. 모두 브라우저 안에서 처리되고 서버로 올라가지 않습니다.
 
-- 완성 영상: 미리보기와 같은 렌더러로 곡 전체를 프레임마다 그려 WebCodecs(mediabunny)로 인코딩합니다. 720p/1080p, 30/60fps. Chrome·Edge에서는 MP4(H.264+AAC), 인코더가 없는 브라우저에서는 VP9/Opus나 WebM으로 대신 저장합니다.
+- 완성 영상: 미리보기와 같은 렌더러로 곡 전체를 프레임마다 그려 WebCodecs(mediabunny)로 인코딩합니다. 720p/1080p/1440p/4K, 24/30/60fps. 프레임은 BT.709 리미티드 YUV로 바꿔 넣고, Chrome·Edge에서는 고른 파일에 바로 씁니다(File System Access). 입자·글로우·흐림은 시간과 논리 단위 기준이라 미리보기와 결과가 같습니다. Chrome·Edge에서는 MP4(H.264+AAC), 인코더가 없는 브라우저에서는 VP9/Opus나 WebM으로 대신 저장합니다.
 - 자막 파일: SRT, VTT, ASS(글꼴·색·크기 포함), LRC. 원문·발음·뜻 중 담을 줄을 고릅니다.
 - 코드: `frontend/src/lib/export/`, `frontend/src/components/editor/export-panel.tsx`
 

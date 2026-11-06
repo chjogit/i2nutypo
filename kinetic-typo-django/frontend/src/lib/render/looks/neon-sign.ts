@@ -1,3 +1,5 @@
+import { drawSoftLayer } from "./soft-layer";
+import type { Ctx2D } from "../motifs";
 import { amt, drawCharacterLayer, drawVignette, minSide, type LookFrame, type LookRenderer } from "./frame";
 import { drawBackdrop, drawWordLyrics, gradientFallback, washFrame } from "./kit";
 import { hash01, withAlpha } from "./noise";
@@ -30,14 +32,32 @@ function drawTube(f: LookFrame, amount: number): void {
   const { ctx, W, H, style } = f;
   const s = minSide(f);
   const inset = s * 0.05;
+  const tube = (c: Ctx2D, alpha: number) => {
+    c.strokeStyle = withAlpha(style.secondaryColor, alpha);
+    c.lineWidth = s * 0.008;
+    c.beginPath();
+    c.roundRect(inset, inset, W - inset * 2, H - inset * 2, s * 0.04);
+    c.stroke();
+  };
+  // The glow is a blurred copy of the tube drawn at quarter size (a frame-wide shadow blur is slow),
+  // then the sharp tube on top
+  drawSoftLayer(
+    ctx,
+    W,
+    H,
+    "neon-tube",
+    0.25,
+    (c) => {
+      // In logical units like everything else; the soft layer's own scale shrinks it to its pixels
+      c.filter = `blur(${(s * (0.03 + f.energy * 0.02) * 0.5).toFixed(2)}px)`;
+      tube(c, 0.9 * amount);
+      tube(c, 0.9 * amount);
+      c.filter = "none";
+    },
+    "lighter",
+  );
   ctx.save();
-  ctx.strokeStyle = withAlpha(style.secondaryColor, 0.9 * amount);
-  ctx.shadowColor = style.secondaryColor;
-  ctx.shadowBlur = s * (0.03 + f.energy * 0.02);
-  ctx.lineWidth = s * 0.008;
-  ctx.beginPath();
-  ctx.roundRect(inset, inset, W - inset * 2, H - inset * 2, s * 0.04);
-  ctx.stroke();
+  tube(ctx, 0.9 * amount);
   ctx.restore();
 }
 

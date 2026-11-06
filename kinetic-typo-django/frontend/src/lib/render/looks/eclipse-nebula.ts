@@ -1,3 +1,4 @@
+import { drawSoftLayer } from "./soft-layer";
 import { fitGlyphRows, lineGlyphs } from "./glyphs";
 import {
   amt,
@@ -34,19 +35,28 @@ function drawNebula(f: LookFrame): void {
   const nebula = amt(f, "nebula");
   if (nebula <= 0) return;
   const { ctx, W, H, style } = f;
-  ctx.save();
-  ctx.globalCompositeOperation = "screen";
-  for (let i = 0; i < 4; i++) {
-    const cx = W * (0.2 + hash01(i, 1) * 0.6) + Math.sin(f.timeSec * 0.05 + i) * W * 0.05;
-    const cy = H * (0.2 + hash01(i, 2) * 0.6) + Math.cos(f.timeSec * 0.04 + i) * H * 0.05;
-    const r = Math.max(W, H) * (0.3 + hash01(i, 3) * 0.25);
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    g.addColorStop(0, withAlpha(i % 2 ? style.accentColor : style.secondaryColor, 0.22 * nebula));
-    g.addColorStop(1, withAlpha(style.accentColor, 0));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-  }
-  ctx.restore();
+  // Four soft clouds: painted at quarter size, they look the same and fill a sixteenth of the pixels
+  drawSoftLayer(
+    ctx,
+    W,
+    H,
+    "nebula",
+    0.25,
+    (c) => {
+      c.globalCompositeOperation = "screen";
+      for (let i = 0; i < 4; i++) {
+        const cx = W * (0.2 + hash01(i, 1) * 0.6) + Math.sin(f.timeSec * 0.05 + i) * W * 0.05;
+        const cy = H * (0.2 + hash01(i, 2) * 0.6) + Math.cos(f.timeSec * 0.04 + i) * H * 0.05;
+        const r = Math.max(W, H) * (0.3 + hash01(i, 3) * 0.25);
+        const g = c.createRadialGradient(cx, cy, 0, cx, cy, r);
+        g.addColorStop(0, withAlpha(i % 2 ? style.accentColor : style.secondaryColor, 0.22 * nebula));
+        g.addColorStop(1, withAlpha(style.accentColor, 0));
+        c.fillStyle = g;
+        c.fillRect(0, 0, W, H);
+      }
+    },
+    "screen",
+  );
 }
 
 function drawStars(f: LookFrame): void {

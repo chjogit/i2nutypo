@@ -1,7 +1,9 @@
 import {
   AudioBufferSource,
   BufferTarget,
-  CanvasSource,
+  StreamTarget,
+  VideoSample,
+  VideoSampleSource,
   getFirstEncodableAudioCodec,
   getFirstEncodableVideoCodec,
   Mp4OutputFormat,
@@ -16,12 +18,13 @@ import {
 import { filterBackground } from "@/lib/render/bg-filter";
 import type { Project } from "@/types/project";
 import { CANVAS_SIZE } from "@/lib/render/canvas-size";
-import { stepParticles, createParticles } from "@/lib/render/particles";
+import { createParticles } from "@/lib/render/particles";
 import { bpmPulseEnergy, renderFrame, steppedTime } from "@/lib/render/render-frame";
 import type { FrameLayer } from "@/lib/render/looks/render-look";
 import { resolveIllustrationImages, resolvePropLayers } from "@/lib/render/looks/image-cache";
 import type { IllustrationImages } from "@/lib/render/looks/illustration";
 import { bassLevels, mixDown } from "./beat-envelope";
+import { BT709_LIMITED, rgbaToI420Bt709 } from "./yuv";
 import { ZipWriter } from "./zip";
 import { encodeSgi, encodeTga, SEQUENCE_EXT, type SequenceFormat } from "./image-formats";
 import { openProResWriter, type ProResWriter } from "./prores";
@@ -29,7 +32,9 @@ import { openPropVideoReaders } from "@/lib/media/prop-video";
 import { openVideoReader, type VideoFrameReader } from "@/lib/media/video-bg";
 import { beatGridPulse } from "@/lib/beats/detect";
 
-export type VideoQuality = 720 | 1080;
+export type VideoQuality = 720 | 1080 | 1440 | 2160;
+/** Every output size, short side in pixels. */
+export const VIDEO_QUALITIES: readonly VideoQuality[] = [720, 1080, 1440, 2160];
 export type VideoFps = 24 | 30 | 60;
 /** Encoder bitrate step: 표준, 높음, 최고. */
 export type EncodeLevel = "standard" | "high" | "best";
@@ -59,10 +64,17 @@ export interface VideoExportOptions {
   signal: AbortSignal;
   /** 0..1 */
   onProgress: (done: number) => void;
+  /**
+   * A file the user picked to save into (video kinds). The video is written
+   * there as it is encoded instead of being held in memory, so long songs at
+   * high sizes do not run the tab out of memory. The result's blob is then null.
+   */
+  saveTo?: FileSystemWritableFileStream;
 }
 
 export interface VideoExportResult {
-  blob: Blob;
+  /** The file, or null when it was written straight into `saveTo`. */
+  blob: Blob | null;
   extension: "mp4" | "webm" | "zip" | "mov";
   width: number;
   height: number;
@@ -75,9 +87,6 @@ const LEVEL_QUALITY = { standard: QUALITY_MEDIUM, high: QUALITY_HIGH, best: QUAL
 const KEY_COLOR = { green: "#00b140", black: "#000000" } as const;
 
 export const isVideoKind = (k: ExportKind): boolean => k === "video" || k === "green" || k === "black";
-
-/** The preview draws at 60 fps and moves particles one step per frame. */
-const PREVIEW_FPS = 60;
 
 /** Whether this browser can encode video at all (WebCodecs). */
 export const canExportVideo = (): boolean =>
@@ -211,7 +220,8 @@ const canvasPng = (canvas: HTMLCanvasElement): Promise<Uint8Array<ArrayBuffer>> 
  * WebCodecs via mediabunny, MP4 (H.264 + AAC) when the browser can, otherwise
  * WebM. PNG kinds are written into a ZIP.
  */
-export async function exportVideo(project: Project, o: VideoExportOptions): Promise<VideoExportResult> {
+export async function exportVideo(project: Project, options: VideoExportOptions): Promise<VideoExportResult> {
+  let o = options;
   const { width, height, scale, base } = outputSize(project.style.aspectRatio, o.quality);
   const song = await decodeSong(project);
   const songEnd = song?.duration ?? project.duration;
@@ -224,6 +234,12 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
     throw new Error(
       "이 브라우저는 영상 인코딩(WebCodecs)을 지원하지 않습니다. 최신 Chrome이나 Edge에서 시도해 주세요.",
     );
+
+  // The picked file is an .mp4; when this browser can only make WebM, the video is kept in memory instead
+  if (o.saveTo && codecs?.extension !== "mp4") {
+    await o.saveTo.abort().catch(() => undefined);
+    o = { ...o, saveTo: undefined };
+  }
 
   await document.fonts.ready;
   const images = await loadImages(project, o.signal);
@@ -253,7 +269,6 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         songFrames,
       )
     : null;
-  const extraSteps = Math.max(0, Math.round(PREVIEW_FPS / o.fps) - 1);
   const { style } = project;
   const firstFrame = Math.floor(from * o.fps);
   const frames = Math.max(1, Math.ceil(to * o.fps) - firstFrame);
@@ -291,10 +306,6 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
     return sequence === "tga" ? encodeTga(data, width, height) : encodeSgi(data, width, height);
   };
   let prores: ProResWriter | null = null;
-  const step = (energy: number) => {
-    for (let s = 0; s < extraSteps; s++)
-      stepParticles(job.particles, project.fx.particleBeatDrift ? energy * 1.4 : 0);
-  };
   const tick = async (i: number) => {
     if (o.signal.aborted) throw new DOMException("Export cancelled", "AbortError");
     if (i % 15 === 0) {
@@ -322,7 +333,6 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         ctx.clearRect(0, 0, width, height);
         drawAt(job, t, energy, "front");
         await prores.add(await canvasPng(canvas));
-        step(energy);
       }
       o.onStage?.("MOV 파일 마무리 중");
       const blob = await prores.finish();
@@ -348,7 +358,6 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         }
         drawAt(job, t, energy, "front");
         zip.add(`${o.kind === "layers" ? "front/" : ""}${pad(i)}.${ext}`, await frameFile());
-        step(energy);
       }
       o.onProgress(1);
       return { blob: zip.finish(), extension: "zip", width, height, frames };
@@ -367,16 +376,39 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
 
   async function encode(): Promise<VideoExportResult> {
     if (!codecs || !outCtx) throw new Error("영상 인코더를 찾지 못했습니다.");
+    const mp4 = codecs.extension === "mp4";
     const output = new Output({
-      format:
-        codecs.extension === "mp4" ? new Mp4OutputFormat({ fastStart: "in-memory" }) : new WebMOutputFormat(),
-      target: new BufferTarget(),
+      // Written to a file as it goes, the index goes at the end; held in memory, it goes first for quick playback
+      format: mp4
+        ? new Mp4OutputFormat({ fastStart: o.saveTo ? false : "in-memory" })
+        : new WebMOutputFormat(),
+      target: o.saveTo ? new StreamTarget(o.saveTo, { chunked: true }) : new BufferTarget(),
     });
-    const videoSource = new CanvasSource(out, { codec: codecs.video, quality: LEVEL_QUALITY[o.level] });
+    // Frames go to the encoder as BT.709 limited-range YUV, the form players, editors and upload sites
+    // expect; a canvas frame would be tagged full range with an sRGB curve
+    const videoSource = new VideoSampleSource({ codec: codecs.video, quality: LEVEL_QUALITY[o.level] });
     output.addVideoTrack(videoSource, { frameRate: o.fps });
     const audioSource =
       audio && codecs.audio ? new AudioBufferSource({ codec: codecs.audio, quality: QUALITY_HIGH }) : null;
     if (audioSource) output.addAudioTrack(audioSource);
+    let yuv: Uint8Array | undefined;
+    const addFrame = async (i: number) => {
+      const rgba = outCtx.getImageData(0, 0, width, height).data;
+      yuv = rgbaToI420Bt709(rgba, width, height, yuv);
+      const sample = new VideoSample(yuv, {
+        format: "I420",
+        codedWidth: width,
+        codedHeight: height,
+        timestamp: i / o.fps,
+        duration: 1 / o.fps,
+        colorSpace: BT709_LIMITED,
+      });
+      try {
+        await videoSource.add(sample);
+      } finally {
+        sample.close();
+      }
+    };
     try {
       await output.start();
       // The song goes in one-second pieces just ahead of the frames, so the two tracks interleave as they are written
@@ -408,8 +440,7 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
         } else {
           drawAt(job, t, energy, "full");
         }
-        step(energy);
-        await videoSource.add(i / o.fps, 1 / o.fps);
+        await addFrame(i);
       }
       await feedAudio(Infinity);
       audioSource?.close();
@@ -420,10 +451,11 @@ export async function exportVideo(project: Project, o: VideoExportOptions): Prom
       throw e;
     }
     o.onProgress(1);
-    const buffer = output.target.buffer;
+    if (o.saveTo) return { blob: null, extension: codecs.extension, width, height, frames };
+    const buffer = (output.target as BufferTarget).buffer;
     if (!buffer) throw new Error("영상 데이터가 비어 있습니다.");
     return {
-      blob: new Blob([buffer], { type: codecs.extension === "mp4" ? "video/mp4" : "video/webm" }),
+      blob: new Blob([buffer], { type: mp4 ? "video/mp4" : "video/webm" }),
       extension: codecs.extension,
       width,
       height,
