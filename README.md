@@ -21,7 +21,11 @@
 
 - 테마 20종 중 최대 3개를 골라 섞어 씁니다. 가사와 템포에 맞는 조합을 추천받을 수도 있습니다.
 - 테마 요소의 위치·회전·크기·강도를 조절합니다.
-- 자막 움직임 45종, 가로쓰기·세로쓰기를 줄마다 고를 수 있습니다.
+- 가사 움직임 67종, 가로쓰기·세로쓰기를 줄마다 고를 수 있습니다.
+- 가사 모션 스타일 4종(스무스 리빌, 하이프 팝인, 에디토리얼 블러, 하이라이트 박스)으로 색은 테마대로 두고 움직임과 조판만 바꿉니다.
+- 천천히 다가가는 가상 카메라와 강조 단어의 튕김, 고른 색에서 계산한 배경(단색·스포트라이트·오로라)과 글자 대비를 씁니다.
+- 글자가 조각나 흩어졌다 모이는 움직임과 흩어진 점이 모여 글자가 되는 움직임이 있습니다.
+- 가사 뒤에 유리판(맑게·젖빛)을 깔거나, 가사를 기울어진 카드처럼 띄우는 2.5D 깊이감을 줍니다.
 - `*단어*`로 표시한 곳만 강조색과 강조 연출이 들어갑니다.
 - 오프닝·엔딩 제목 카드, 비트에 맞춘 빛남, 간주 카운트다운을 넣습니다.
 
@@ -43,7 +47,8 @@
 
 ![내보내기 칸](kinetic-typo-django/docs/images/export.png)
 
-- 영상: MP4 또는 WebM, 720p·1080p, 30·60fps
+- 영상: MP4 또는 WebM, 720p·1080p·1440p·4K, 24·30·60fps
+- Chrome·Edge에서는 만들면서 바로 파일에 저장해 긴 영상도 메모리를 덜 씁니다.
 - 합성용: ProRes, 투명 배경 이미지 시퀀스(PNG·TGA·SGI)
 - 자막 파일: SRT, VTT, ASS, LRC (원문·발음·뜻 중 고르기)
 
@@ -86,13 +91,13 @@ Kinetic Typo Studio의 코드(아래 제3자 구성 요소를 뺀 부분)는 **C
 
 서버 쪽은 Django 5.2.18(BSD-3-Clause)과 Jinja2 3.1.6(BSD-3-Clause)을 씁니다.
 
-### 글꼴 (31종)
+### 글꼴 (32종)
 
-모두 [Google Fonts](https://fonts.google.com)에 공개된 무료 글꼴을 [Fontsource](https://fontsource.org) 패키지에서 받아 `static/fonts/`에 넣어 이 사이트에서 직접 내보냅니다. 각 폴더에 라이선스 원문이 들어 있습니다.
+[Google Fonts](https://fonts.google.com)에 공개된 무료 글꼴 31종은 [Fontsource](https://fontsource.org) 패키지에서, 기본 가사 글꼴 Pretendard는 `pretendard` 패키지(1.3.9)에서 받아 `static/fonts/`에 넣고 이 사이트에서 직접 내보냅니다. 각 폴더에 라이선스 원문이 들어 있습니다.
 
 | 라이선스 | 글꼴 |
 | --- | --- |
-| SIL Open Font License 1.1 | 한국어: Noto Sans KR, Black Han Sans, Do Hyeon, Jua, Nanum Gothic, Gothic A1, Gowun Dodum, Nanum Myeongjo, Gowun Batang, Nanum Pen Script<br>일본어: Noto Sans JP, M PLUS 1, M PLUS Rounded 1c, Zen Maru Gothic, Dela Gothic One, RocknRoll One, DotGothic16, Shippori Mincho, Klee One<br>영문: Montserrat, Poppins, Inter, Anton, Bebas Neue, Oswald, Raleway, Nunito, Playfair Display, JetBrains Mono |
+| SIL Open Font License 1.1 | 한국어: Pretendard, Noto Sans KR, Black Han Sans, Do Hyeon, Jua, Nanum Gothic, Gothic A1, Gowun Dodum, Nanum Myeongjo, Gowun Batang, Nanum Pen Script<br>일본어: Noto Sans JP, M PLUS 1, M PLUS Rounded 1c, Zen Maru Gothic, Dela Gothic One, RocknRoll One, DotGothic16, Shippori Mincho, Klee One<br>영문: Montserrat, Poppins, Inter, Anton, Bebas Neue, Oswald, Raleway, Nunito, Playfair Display, JetBrains Mono |
 | Apache License 2.0 | Kosugi Maru, Permanent Marker |
 
 ### 쓸 때 내려받는 파일
