@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_PREVIEW_HEIGHT, readPreviewHeight } from "@/lib/ui/preview-size";
 
 /**
  * Per-browser workspace settings: which layout the editor uses, its contrast,
@@ -14,6 +15,8 @@ interface LayoutStore {
   preset: LayoutPreset;
   contrast: Contrast;
   previewQuality: PreviewQuality;
+  /** Tallest the preview is shown, in CSS px; the user drags it under the preview. */
+  previewHeight: number;
   leftWidth: number;
   rightWidth: number;
   leftOpen: boolean;
@@ -33,6 +36,7 @@ const SAVED: Array<keyof LayoutStore> = [
   "preset",
   "contrast",
   "previewQuality",
+  "previewHeight",
   "leftWidth",
   "rightWidth",
   "leftOpen",
@@ -43,6 +47,7 @@ export const useLayoutStore = create<LayoutStore>()((set, get) => ({
   preset: "standard",
   contrast: "normal",
   previewQuality: 720,
+  previewHeight: DEFAULT_PREVIEW_HEIGHT,
   leftWidth: DEFAULT_LEFT,
   rightWidth: DEFAULT_RIGHT,
   leftOpen: true,
@@ -70,6 +75,7 @@ export const useLayoutStore = create<LayoutStore>()((set, get) => ({
         previewQuality: PREVIEW_QUALITIES.includes(raw.previewQuality as PreviewQuality)
           ? (raw.previewQuality as PreviewQuality)
           : 720,
+        previewHeight: readPreviewHeight(raw.previewHeight),
         leftWidth: clamp(raw.leftWidth ?? (oldLeft > 0 ? oldLeft : undefined), LEFT_RANGE, DEFAULT_LEFT),
         rightWidth: clamp(raw.rightWidth, RIGHT_RANGE, DEFAULT_RIGHT),
         leftOpen: raw.leftOpen !== false,

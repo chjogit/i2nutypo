@@ -1,20 +1,36 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 import { usePlaybackStore } from "@/store/playback-store";
-
-/** Widths of the small window, in CSS px. */
-const SIZES = [240, 360, 480] as const;
-const SIZE_LABELS = ["작게", "보통", "크게"] as const;
+import {
+  clampTo,
+  keyResize,
+  MINI_PRESET_LABELS,
+  MINI_PRESETS,
+  MINI_WIDTH_BIG_STEP,
+  MINI_WIDTH_RANGE,
+  MINI_WIDTH_STEP,
+  nearestMiniPreset,
+  nextMiniPreset,
+  readMiniWidth,
+} from "@/lib/ui/preview-size";
 const EDGE = 12;
 const SETTINGS_KEY = "kinetic-typo-mini-preview";
 const AUTO_KEY = "kinetic-typo-mini-preview-auto";
 
 interface MiniSettings {
+  /** Width in CSS px (older saves kept a step index here). */
   size: number;
   /** Top-left corner, or null for the top-right default. */
   pos: { x: number; y: number } | null;
 }
 
-const DEFAULTS: MiniSettings = { size: 0, pos: null };
+const DEFAULTS: MiniSettings = { size: MINI_PRESETS[0], pos: null };
 
 function loadSettings(): MiniSettings {
   try {
@@ -22,7 +38,7 @@ function loadSettings(): MiniSettings {
     if (!raw) return DEFAULTS;
     const v = JSON.parse(raw) as Partial<MiniSettings>;
     return {
-      size: typeof v.size === "number" && SIZES[v.size] ? v.size : DEFAULTS.size,
+      size: readMiniWidth(v.size),
       pos: v.pos && Number.isFinite(v.pos.x) && Number.isFinite(v.pos.y) ? { x: v.pos.x, y: v.pos.y } : null,
     };
   } catch {
@@ -44,7 +60,8 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
  * A small floating copy of the preview, shown while the real preview is
  * scrolled out of view so changes made further down stay visible. It copies
  * the preview canvas each frame from a RAF loop (no re-render while playing),
- * can be dragged by its title bar, resized in three steps and closed.
+ * can be dragged by its title bar, resized from its corner (or in three steps
+ * with the size button) and closed.
  */
 export function MiniPreview({
   sourceRef,
@@ -64,6 +81,14 @@ export function MiniPreview({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const gripRef = useRef<{
+    x: number;
+    w: number;
+    left: number;
+    right: number;
+    top: number;
+    next: number;
+  } | null>(null);
 
   // Read after mount so the server HTML matches the first paint
   useEffect(() => setSettings(loadSettings()), []);
@@ -94,7 +119,7 @@ export function MiniPreview({
   }, [frameRef]);
 
   const visible = enabled && offscreen && !dismissed;
-  const width = SIZES[settings.size];
+  const width = settings.size;
 
   // Copy the preview canvas while shown
   useEffect(() => {
@@ -164,6 +189,60 @@ export function MiniPreview({
     update({ pos: { x: Math.round(r.left), y: Math.round(r.top) } });
   };
 
+  // Corner grip, on the side facing the middle of the screen: the opposite edge stays put
+  // and the window grows toward the pointer
+  const gripSide: "left" | "right" =
+    settings.pos && settings.pos.x + width / 2 < window.innerWidth / 2 ? "right" : "left";
+  const onGripDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const el = boxRef.current;
+    if (e.button !== 0 || !el) return;
+    e.stopPropagation();
+    const r = el.getBoundingClientRect();
+    el.style.left = `${r.left}px`;
+    el.style.top = `${r.top}px`;
+    el.style.right = "auto";
+    gripRef.current = { x: e.clientX, w: r.width, left: r.left, right: r.right, top: r.top, next: r.width };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onGripMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const g = gripRef.current;
+    const el = boxRef.current;
+    if (!g || !el) return;
+    const dx = e.clientX - g.x;
+    const wanted = gripSide === "right" ? g.w + dx : g.w - dx;
+    const room = gripSide === "right" ? window.innerWidth - g.left - EDGE : g.right - EDGE;
+    g.next = clampTo(Math.min(wanted, room), MINI_WIDTH_RANGE);
+    // Only the box's CSS size moves while dragging; the copy loop picks the new size up after
+    el.style.width = `${g.next}px`;
+    if (gripSide === "left") el.style.left = `${g.right - g.next}px`;
+  };
+  const onGripUp = () => {
+    const g = gripRef.current;
+    if (!g) return;
+    gripRef.current = null;
+    const left = gripSide === "left" ? g.right - g.next : g.left;
+    update({ size: g.next, pos: { x: Math.round(left), y: Math.round(g.top) } });
+  };
+  const onGripKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const next = keyResize(
+      e.key,
+      e.shiftKey,
+      width,
+      MINI_WIDTH_RANGE,
+      { step: MINI_WIDTH_STEP, big: MINI_WIDTH_BIG_STEP },
+      [gripSide === "right" ? "ArrowRight" : "ArrowLeft", "ArrowDown"],
+      [gripSide === "right" ? "ArrowLeft" : "ArrowRight", "ArrowUp"],
+    );
+    if (next === null) return;
+    e.preventDefault();
+    // A window on the left keeps its left edge; one on the right keeps its right edge
+    const el = boxRef.current;
+    if (gripSide === "left" && settings.pos && el) {
+      const r = el.getBoundingClientRect();
+      update({ size: next, pos: { x: Math.max(EDGE, Math.round(r.right - next)), y: settings.pos.y } });
+    } else update({ size: next });
+  };
+
   const jumpToPreview = () => frameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   const btn = "rounded px-1.5 py-0.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100";
 
@@ -200,11 +279,11 @@ export function MiniPreview({
         </button>
         <button
           type="button"
-          onClick={() => update({ size: (settings.size + 1) % SIZES.length })}
-          title="창 크기 바꾸기"
+          onClick={() => update({ size: nextMiniPreset(width) })}
+          title="창 크기 바꾸기 (아래 모서리를 끌어도 됩니다)"
           className={btn}
         >
-          {SIZE_LABELS[settings.size]}
+          {MINI_PRESET_LABELS[nearestMiniPreset(width)]}
         </button>
         <button type="button" onClick={jumpToPreview} title="원래 미리보기로 이동" className={btn}>
           ↑
@@ -224,6 +303,28 @@ export function MiniPreview({
         title="두 번 클릭: 원래 미리보기로 이동"
         className="block h-auto w-full"
       />
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="작은 미리보기 크기 조절"
+        aria-valuenow={width}
+        aria-valuemin={MINI_WIDTH_RANGE[0]}
+        aria-valuemax={MINI_WIDTH_RANGE[1]}
+        aria-valuetext={`폭 ${width}픽셀`}
+        tabIndex={0}
+        onPointerDown={onGripDown}
+        onPointerMove={onGripMove}
+        onPointerUp={onGripUp}
+        onPointerCancel={onGripUp}
+        onKeyDown={onGripKey}
+        onDoubleClick={() => update({ size: MINI_PRESETS[0] })}
+        title="끌어서 창 크기 조절 (두 번 클릭하면 작게)"
+        className={`group absolute bottom-0 flex h-5 w-5 touch-none items-end p-1 focus:outline-none ${gripSide === "right" ? "right-0 cursor-nwse-resize justify-end" : "left-0 cursor-nesw-resize justify-start"}`}
+      >
+        <span
+          className={`h-2.5 w-2.5 border-b-2 border-zinc-500 ${gripSide === "right" ? "border-r-2" : "border-l-2"} group-hover:border-tide-300 group-focus:border-tide-300`}
+        />
+      </div>
     </div>
   );
 }
