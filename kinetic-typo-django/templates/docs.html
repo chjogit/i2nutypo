@@ -11,7 +11,7 @@
     <p class="mb-2 {{ 'mt-6' if not loop.first }} text-xs font-semibold tracking-wide text-zinc-400"><a href="#{{ s.id }}" class="hover:text-zinc-100">{{ s.title }}</a></p>
     <ul class="space-y-1.5 border-l border-zinc-800">
       {% for hid, text in s.headings %}
-      <li><a href="#{{ hid }}" class="-ml-px block border-l border-transparent pl-3 text-zinc-400 hover:border-cue-400 hover:text-zinc-100">{{ text|safe }}</a></li>
+      <li><a href="#{{ hid }}" class="-ml-px block border-l border-transparent pl-3 text-zinc-400 hover:border-tide-400 hover:text-zinc-100">{{ text|safe }}</a></li>
       {% endfor %}
     </ul>
     {% endfor %}
@@ -21,9 +21,9 @@
   <main class="min-w-0 flex-1 space-y-16">
     <div class="flex flex-wrap gap-2 lg:hidden">
       {% for s in sections %}
-      <a href="#{{ s.id }}" class="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 hover:border-cue-500">{{ s.title }}</a>
+      <a href="#{{ s.id }}" class="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 hover:border-tide-500">{{ s.title }}</a>
       {% endfor %}
-      <a href="{{ url('licenses') }}" class="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 hover:border-cue-500">오픈소스·라이선스</a>
+      <a href="{{ url('licenses') }}" class="rounded-md border border-zinc-700 px-3 py-1 text-xs text-zinc-300 hover:border-tide-500">오픈소스·라이선스</a>
     </div>
     {% for s in sections %}
     <section id="{{ s.id }}" class="scroll-mt-6">
@@ -34,7 +34,7 @@
     </section>
     {% endfor %}
     <p class="text-center">
-      <a href="{{ url('landing') }}" class="inline-block rounded-md bg-cue-600 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-cue-500">영상 만들러 가기</a>
+      <a href="{{ url('landing') }}" class="inline-block rounded-md bg-tide-600 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-tide-500">영상 만들러 가기</a>
     </p>
   </main>
 </div>

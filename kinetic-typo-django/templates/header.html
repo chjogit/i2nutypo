@@ -19,7 +19,7 @@
     <a
       href="{{ url(m.id) }}"
       {% if m.id == mode %}aria-current="page"{% endif %}
-      class="rounded-sm px-3 py-1 {{ 'bg-zinc-200 font-semibold text-zinc-950' if m.id == mode else 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100' }}"
+      class="rounded-sm px-3 py-1 {{ 'bg-zinc-100 font-semibold text-zinc-950' if m.id == mode else 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100' }}"
       >{{ m.label }}</a
     >
     {% endfor %}

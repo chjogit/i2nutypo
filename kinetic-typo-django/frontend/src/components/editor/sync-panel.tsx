@@ -277,7 +277,7 @@ export function SyncPanel() {
               separateTouchedRef.current = true;
               setSeparate(e.target.checked);
             }}
-            className="mt-0.5 accent-cue-500"
+            className="mt-0.5 accent-tide-500"
           />
           <span>
             <span className="font-semibold text-zinc-200">보컬만 분리해서 인식</span>{" "}
@@ -304,7 +304,7 @@ export function SyncPanel() {
                   onClick={() => setSepModel(m.id)}
                   className={`rounded-md border px-2 py-1.5 text-left disabled:opacity-40 ${
                     sepModel === m.id
-                      ? "border-cue-500 bg-cue-600/15 text-zinc-100"
+                      ? "border-tide-500 bg-tide-600/15 text-zinc-100"
                       : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
                   }`}
                 >
@@ -333,7 +333,7 @@ export function SyncPanel() {
                   }}
                   className={`rounded-md border px-2 py-1.5 text-center ${
                     mode === m.id
-                      ? "border-cue-500 bg-cue-600/30 text-zinc-100"
+                      ? "border-tide-500 bg-tide-600/30 text-zinc-100"
                       : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-600"
                   }`}
                 >
@@ -373,7 +373,7 @@ export function SyncPanel() {
             type="button"
             onClick={run}
             disabled={audio.kind !== "upload" || busy || lines.length === 0}
-            className="rounded-md bg-cue-600 px-3 py-1.5 font-semibold text-zinc-950 hover:bg-cue-500 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+            className="rounded-md bg-tide-600 px-3 py-1.5 font-semibold text-zinc-950 hover:bg-tide-500 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
           >
             {done ? "다시 인식" : "음성 인식으로 싱크"}
           </button>
@@ -401,7 +401,7 @@ export function SyncPanel() {
           <div className="space-y-2">
             <p className="text-zinc-300">
               평균 일치율{" "}
-              <span className="font-semibold text-cue-200">{Math.round(averageMatch * 100)}%</span>
+              <span className="font-semibold text-tide-200">{Math.round(averageMatch * 100)}%</span>
               {done.separated ? " (보컬 분리 후 인식)" : " (원곡 그대로 인식)"}.{" "}
               {result?.alignments.length ?? 0}줄 중{" "}
               <span className="font-semibold text-emerald-300">{confirmed}줄</span>은 발음이 90% 이상 맞아
@@ -432,7 +432,7 @@ export function SyncPanel() {
                 return (
                   <li key={a.lineIdx} className="flex items-baseline gap-2">
                     <span className={`w-4 shrink-0 ${markColor}`}>{mark}</span>
-                    <span className="w-14 shrink-0 font-mono text-cue-300">
+                    <span className="w-14 shrink-0 font-mono text-tide-300">
                       {formatLrcTime(result.startTimes[a.lineIdx])}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-zinc-200" title={a.heard || undefined}>

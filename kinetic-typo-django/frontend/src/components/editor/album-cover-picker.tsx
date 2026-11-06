@@ -54,7 +54,7 @@ export function AlbumCoverPicker() {
           커버가 없으면 배경(그림이나 영상)이 커버와 레코드 안에 그려집니다.
         </Tip>
       </div>
-      <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-zinc-700 px-2 py-2 text-xs text-zinc-300 hover:border-cue-500 hover:text-zinc-100">
+      <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-zinc-700 px-2 py-2 text-xs text-zinc-300 hover:border-tide-500 hover:text-zinc-100">
         <input
           type="file"
           accept="image/*"
@@ -76,7 +76,7 @@ export function AlbumCoverPicker() {
               release();
               setImage("cover", null);
             }}
-            className="shrink-0 text-cue-400 hover:underline"
+            className="shrink-0 text-tide-400 hover:underline"
           >
             빼기
           </button>

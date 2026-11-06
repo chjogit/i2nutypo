@@ -12,7 +12,7 @@
       이 앱이 쓰는 라이브러리, 글꼴, 모델, 소재와 각각의 라이선스입니다. 모두 상업적 사용을 허락하는 라이선스이고,
       음원과 그림은 이 브라우저 안에서만 처리되어 서버로 보내지지 않습니다.
       전체 라이선스 원문은
-      <a class="text-cue-300 underline" href="{{ static('licenses/THIRD_PARTY_NOTICES.txt') }}?v={{ v }}">THIRD_PARTY_NOTICES.txt</a>에 있습니다.
+      <a class="text-tide-300 underline" href="{{ static('licenses/THIRD_PARTY_NOTICES.txt') }}?v={{ v }}">THIRD_PARTY_NOTICES.txt</a>에 있습니다.
     </p>
   </section>
 
@@ -36,7 +36,7 @@
         <tbody class="divide-y divide-zinc-800">
           {% for d in downloads %}
           <tr>
-            <td class="px-3 py-2"><a class="text-cue-300 underline" href="{{ d.source }}" rel="noopener">{{ d.name }}</a></td>
+            <td class="px-3 py-2"><a class="text-tide-300 underline" href="{{ d.source }}" rel="noopener">{{ d.name }}</a></td>
             <td class="px-3 py-2 text-zinc-400">{{ d.use }}</td>
             <td class="px-3 py-2">{{ d.license }}</td>
             <td class="px-3 py-2 text-zinc-400">{{ d.from }}</td>
@@ -63,7 +63,7 @@
         <tbody class="divide-y divide-zinc-800">
           {% for p in packages %}
           <tr>
-            <td class="px-3 py-2"><a class="text-cue-300 underline" href="https://www.npmjs.com/package/{{ p.name }}/v/{{ p.version }}" rel="noopener">{{ p.name }}</a></td>
+            <td class="px-3 py-2"><a class="text-tide-300 underline" href="https://www.npmjs.com/package/{{ p.name }}/v/{{ p.version }}" rel="noopener">{{ p.name }}</a></td>
             <td class="px-3 py-2 text-zinc-400">{{ p.version }}</td>
             <td class="px-3 py-2">{{ p.license }}</td>
           </tr>
@@ -87,7 +87,7 @@
     {% if fonts %}
     <ul class="grid gap-x-6 gap-y-1 sm:grid-cols-2 md:grid-cols-3">
       {% for f in fonts %}
-      <li><a class="text-cue-300 underline" href="{{ static('fonts/' ~ f.slug ~ '/LICENSE') }}">{{ f.family }}</a> <span class="text-zinc-400">{{ f.license }}</span></li>
+      <li><a class="text-tide-300 underline" href="{{ static('fonts/' ~ f.slug ~ '/LICENSE') }}">{{ f.family }}</a> <span class="text-zinc-400">{{ f.license }}</span></li>
       {% endfor %}
     </ul>
     {% endif %}

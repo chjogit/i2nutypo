@@ -94,10 +94,10 @@ function ColumnGrip({
       }}
       title={`끌어서 폭 조절 (두 번 클릭하면 원래 폭)`}
       onDoubleClick={() => onWidth(reset)}
-      className={`group absolute inset-y-0 ${side === "right" ? "-right-1.5" : "-left-1.5"} z-10 hidden w-3 cursor-ew-resize touch-none justify-center hover:bg-cue-500/10 focus:bg-cue-500/10 focus:outline-none lg:flex`}
+      className={`group absolute inset-y-0 ${side === "right" ? "-right-1.5" : "-left-1.5"} z-10 hidden w-3 cursor-ew-resize touch-none justify-center hover:bg-tide-500/10 focus:bg-tide-500/10 focus:outline-none lg:flex`}
     >
       {/* The grip stays in view while the long column scrolls */}
-      <span className="sticky top-[45vh] mt-[45vh] h-12 w-1 rounded-full bg-zinc-700 group-hover:bg-cue-400 group-focus:bg-cue-400" />
+      <span className="sticky top-[45vh] mt-[45vh] h-12 w-1 rounded-full bg-zinc-700 group-hover:bg-tide-400 group-focus:bg-tide-400" />
     </div>
   );
 }
@@ -172,7 +172,7 @@ function Toolbar() {
       <button
         type="button"
         onClick={() => set({ paletteOpen: true })}
-        className="ml-auto flex items-center gap-2 rounded-md border border-zinc-800 px-2 py-0.5 text-zinc-300 hover:border-cue-500"
+        className="ml-auto flex items-center gap-2 rounded-md border border-zinc-800 px-2 py-0.5 text-zinc-300 hover:border-tide-500"
       >
         빠른 작업
         <kbd className="rounded border border-zinc-700 px-1 font-mono text-[11px] text-zinc-400">Ctrl K</kbd>

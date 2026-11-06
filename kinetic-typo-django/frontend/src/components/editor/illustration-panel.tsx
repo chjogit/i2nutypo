@@ -50,7 +50,7 @@ function Slider(props: {
         disabled={props.disabled}
         onChange={(e) => props.onChange(Number(e.target.value))}
         aria-label={props.label}
-        className="w-24 accent-cue-500 disabled:opacity-30"
+        className="w-24 accent-tide-500 disabled:opacity-30"
       />
       <span className="w-10 text-right font-mono text-zinc-300">{props.format(props.value)}</span>
     </span>
@@ -280,7 +280,7 @@ export function IllustrationPanel() {
     const asset = images[slot];
     return (
       <div className="space-y-1">
-        <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-zinc-800 px-2 py-2 text-xs text-zinc-400 hover:border-cue-500 hover:text-zinc-200">
+        <label className="flex cursor-pointer items-center justify-center rounded-md border border-dashed border-zinc-800 px-2 py-2 text-xs text-zinc-400 hover:border-tide-500 hover:text-zinc-200">
           <input
             type="file"
             accept="image/*"
@@ -299,7 +299,7 @@ export function IllustrationPanel() {
             <button
               type="button"
               onClick={() => clear(slot)}
-              className="shrink-0 text-cue-400 hover:underline"
+              className="shrink-0 text-tide-400 hover:underline"
             >
               빼기
             </button>
@@ -336,7 +336,7 @@ export function IllustrationPanel() {
               role="radio"
               aria-checked={tool === id}
               onClick={() => setTool(id)}
-              className={`flex-1 px-2 py-1 ${tool === id ? "bg-zinc-200 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
+              className={`flex-1 px-2 py-1 ${tool === id ? "bg-zinc-100 font-semibold text-zinc-950" : "text-zinc-400 hover:text-zinc-100"}`}
             >
               {text}
             </button>
@@ -373,7 +373,7 @@ export function IllustrationPanel() {
               <button
                 type="button"
                 onClick={() => setIllustration({ noTextCells: Array<boolean>(CELLS).fill(false) })}
-                className="text-cue-400 hover:underline"
+                className="text-tide-400 hover:underline"
               >
                 모두 비우기
               </button>
@@ -432,7 +432,7 @@ export function IllustrationPanel() {
           type="button"
           disabled={ill.bgLocked}
           onClick={() => setIllustration({ bgX: 0, bgY: 0, bgZoom: 1 })}
-          className="text-xs text-cue-400 hover:underline disabled:opacity-40"
+          className="text-xs text-tide-400 hover:underline disabled:opacity-40"
         >
           배경 위치 가운데로
         </button>

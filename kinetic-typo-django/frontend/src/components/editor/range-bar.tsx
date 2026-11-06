@@ -89,20 +89,20 @@ export function RangeBar({
       <div
         onPointerDown={(e) => onDown(e, "move")}
         title="끌어서 구간 옮기기"
-        className="absolute inset-y-0 cursor-grab rounded border border-cue-500/60 bg-cue-500/15 active:cursor-grabbing"
+        className="absolute inset-y-0 cursor-grab rounded border border-tide-500/60 bg-tide-500/15 active:cursor-grabbing"
         style={{ left: pct(start), width: `calc(${pct(end)} - ${pct(start)})` }}
       >
         <span
           onPointerDown={(e) => onDown(e, "start")}
           title="시작 조절"
           aria-hidden
-          className="absolute inset-y-0 -left-1 w-2.5 cursor-ew-resize rounded-l bg-cue-400/70 hover:bg-cue-300"
+          className="absolute inset-y-0 -left-1 w-2.5 cursor-ew-resize rounded-l bg-tide-400/70 hover:bg-tide-300"
         />
         <span
           onPointerDown={(e) => onDown(e, "end")}
           title="끝 조절"
           aria-hidden
-          className="absolute inset-y-0 -right-1 w-2.5 cursor-ew-resize rounded-r bg-cue-400/70 hover:bg-cue-300"
+          className="absolute inset-y-0 -right-1 w-2.5 cursor-ew-resize rounded-r bg-tide-400/70 hover:bg-tide-300"
         />
       </div>
       <span

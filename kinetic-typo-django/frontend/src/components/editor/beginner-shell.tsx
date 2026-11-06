@@ -28,7 +28,7 @@ import { ContextMenuHost } from "@/components/ui/context-menu";
 
 /**
  * A numbered step. The steps are a real sequence, so the number leads each
- * one. The step to do next gets a cue-colored bar on its left edge and a
+ * one. The step to do next gets a tide (sky blue) bar on its left edge and a
  * "지금 할 차례" note; a finished one shows 완료. Every step stays open, so
  * the order is a guide and not a lock.
  */
@@ -53,11 +53,11 @@ function StepCard({
       aria-current={current ? "step" : undefined}
       className={`relative border-t border-zinc-800 ${current ? "bg-zinc-900" : ""}`}
     >
-      {current && <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-cue-400" />}
+      {current && <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-tide-400" />}
       <header className="flex items-start gap-3 px-4 pt-4">
         <span
           aria-hidden
-          className={`w-6 shrink-0 font-display text-2xl leading-7 ${current ? "text-cue-400" : done ? "text-zinc-500" : "text-zinc-400"}`}
+          className={`w-6 shrink-0 font-display text-2xl leading-7 ${current ? "text-tide-400" : done ? "text-zinc-500" : "text-zinc-400"}`}
         >
           {n}
         </span>
@@ -69,7 +69,7 @@ function StepCard({
           </h2>
           <p className="text-xs leading-relaxed text-zinc-400">{hint}</p>
         </div>
-        {current && <span className="shrink-0 pt-1.5 text-xs font-semibold text-cue-300">지금 할 차례</span>}
+        {current && <span className="shrink-0 pt-1.5 text-xs font-semibold text-tide-300">지금 할 차례</span>}
         {done && !current && (
           <span className="flex shrink-0 items-center gap-1 pt-1.5 text-xs font-semibold text-emerald-400">
             <span aria-hidden>✓</span>완료
@@ -103,9 +103,9 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
   return (
     <div className="space-y-2 px-4 py-4">
       {rec && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-l-2 border-cue-500/70 py-1 pl-3 text-xs">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-l-2 border-tide-500/70 py-1 pl-3 text-xs">
           <span className="min-w-0 flex-1 break-keep text-zinc-300">
-            <span className="font-semibold text-cue-200">추천: {getLookPreset(rec.lookPreset).label}</span>{" "}
+            <span className="font-semibold text-tide-200">추천: {getLookPreset(rec.lookPreset).label}</span>{" "}
             <span className="text-zinc-400">
               가사와 템포를 보면 {rec.tags.slice(0, 2).join(" · ")} 느낌이 어울려요.
             </span>
@@ -114,7 +114,7 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
             <button
               type="button"
               onClick={() => pick(rec.lookPreset)}
-              className="shrink-0 rounded-md border border-cue-500/70 px-2.5 py-1 font-semibold text-cue-200 hover:bg-cue-500 hover:text-zinc-950"
+              className="shrink-0 rounded-md border border-tide-500/70 px-2.5 py-1 font-semibold text-tide-200 hover:bg-tide-500 hover:text-zinc-950"
             >
               추천 테마로
             </button>
@@ -134,7 +134,7 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
               onClick={() => pick(id)}
               className={`relative rounded-lg border p-2 text-left ${
                 on
-                  ? "border-cue-400 bg-zinc-800/70 ring-1 ring-cue-400"
+                  ? "border-tide-400 bg-zinc-800/70 ring-1 ring-tide-400"
                   : "border-zinc-800 hover:border-zinc-500 hover:bg-zinc-900"
               }`}
             >
@@ -157,7 +157,7 @@ function ThemeChoice({ onPick }: { onPick: () => void }) {
               <span className="block px-1 text-sm font-bold text-zinc-100">
                 {p.label}
                 {rec?.lookPreset === id && (
-                  <span className="ml-1.5 align-middle text-xs font-semibold text-cue-300">추천</span>
+                  <span className="ml-1.5 align-middle text-xs font-semibold text-tide-300">추천</span>
                 )}
               </span>
               <span className="block break-keep px-1 pb-1 text-xs leading-snug text-zinc-400">
@@ -208,7 +208,7 @@ function LyricLook() {
             onChange={(e) => setStyle({ fontScale: Number(e.target.value) })}
             onDoubleClick={() => setStyle({ fontScale: 1 })}
             aria-label="영상 속 가사 크기"
-            className="w-32 accent-cue-500"
+            className="w-32 accent-tide-500"
           />
           <span className="w-10 text-right font-mono text-zinc-300">{Math.round(fontScale * 100)}%</span>
         </span>

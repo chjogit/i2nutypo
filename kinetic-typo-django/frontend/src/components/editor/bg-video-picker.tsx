@@ -14,7 +14,7 @@ import { useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
 import { BgVideoFilterControls } from "./bg-video-filter";
 
-const CHIP_ON = "border-cue-500 bg-cue-500/15 text-zinc-100";
+const CHIP_ON = "border-tide-500 bg-tide-500/15 text-zinc-100";
 const CHIP_OFF = "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200";
 
 /** Fetches a stock video into a local file (blob) so the canvas can draw and export it. */
@@ -115,7 +115,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="ml-auto rounded-md border border-zinc-800 px-2 py-1 text-zinc-300 hover:border-cue-500"
+          className="ml-auto rounded-md border border-zinc-800 px-2 py-1 text-zinc-300 hover:border-tide-500"
         >
           영상 올리기
         </button>
@@ -133,7 +133,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
       </div>
 
       {bgVideo && (
-        <div className="flex items-center gap-2 rounded-md border border-cue-500/50 bg-cue-500/10 px-2 py-1.5 text-xs">
+        <div className="flex items-center gap-2 rounded-md border border-tide-500/50 bg-tide-500/10 px-2 py-1.5 text-xs">
           <span className="min-w-0 flex-1 truncate text-zinc-200" title={bgVideo.fileName}>
             {bgVideo.stock ? bgVideo.stock.title : bgVideo.fileName}
             <span className="ml-1 text-zinc-400">{bgVideo.duration.toFixed(1)}초</span>
@@ -143,7 +143,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
               href={bgVideo.stock.pageUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-cue-300 hover:underline"
+              className="text-tide-300 hover:underline"
             >
               출처 ↗
             </a>
@@ -175,7 +175,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
         onChange={(e) => setQ(e.target.value)}
         placeholder="검색 (예: 비, 도쿄, 노을)"
         aria-label="무료 배경 영상 검색"
-        className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-cue-500 focus:outline-none"
+        className="w-full rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-tide-500 focus:outline-none"
       />
       {error && (
         <p
@@ -188,7 +188,7 @@ export function BgVideoPicker({ compact = false }: { compact?: boolean }) {
               href={error.video.pageUrl}
               target="_blank"
               rel="noreferrer"
-              className="ml-1 text-cue-300 underline"
+              className="ml-1 text-tide-300 underline"
             >
               {error.video.title} 페이지 ↗
             </a>
@@ -241,7 +241,7 @@ function StockCard({
   const [thumbOk, setThumbOk] = useState(true);
   return (
     <div
-      className={`group relative overflow-hidden rounded-md border ${picked ? "border-cue-400" : "border-zinc-800 hover:border-zinc-600"}`}
+      className={`group relative overflow-hidden rounded-md border ${picked ? "border-tide-400" : "border-zinc-800 hover:border-zinc-600"}`}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
@@ -286,7 +286,7 @@ function StockCard({
         target="_blank"
         rel="noreferrer"
         aria-label={`${video.title} Mixkit 페이지`}
-        className="absolute right-1 top-1 rounded bg-black/60 px-1 text-[11px] text-zinc-200 opacity-0 hover:text-cue-200 focus:opacity-100 group-hover:opacity-100"
+        className="absolute right-1 top-1 rounded bg-black/60 px-1 text-[11px] text-zinc-200 opacity-0 hover:text-tide-200 focus:opacity-100 group-hover:opacity-100"
       >
         ↗
       </a>

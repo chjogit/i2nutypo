@@ -153,8 +153,8 @@ export function ElementOverlay({
         const label = labelOf(preset, id);
         const shown = (on: boolean) =>
           on
-            ? "border-white bg-cue-500 text-zinc-950 opacity-100"
-            : "border-white/80 bg-cue-600/80 text-zinc-950 opacity-0 group-hover/preview:opacity-100 focus:opacity-100";
+            ? "border-white bg-tide-500 text-zinc-950 opacity-100"
+            : "border-white/80 bg-tide-600/80 text-zinc-950 opacity-0 group-hover/preview:opacity-100 focus:opacity-100";
         const sizeKey = `${k}#size`;
         return (
           <span key={k}>
