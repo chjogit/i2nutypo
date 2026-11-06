@@ -4,17 +4,19 @@
  * so resizing never re-renders a frame.
  */
 
-/** Tallest the preview may be drawn, in CSS px (the column width still caps it). */
-export const PREVIEW_HEIGHT_RANGE = [200, 1600] as const;
 export const DEFAULT_PREVIEW_HEIGHT = 480;
+/** How far past its default size the preview may grow. */
+export const MAX_GROWTH = 1.2;
+/** Height range of the preview, in CSS px: up to 20% past the default (the column width still caps it). */
+export const PREVIEW_HEIGHT_RANGE = [200, Math.round(DEFAULT_PREVIEW_HEIGHT * MAX_GROWTH)] as const;
 /** One arrow key press, and one with Shift held. */
 export const PREVIEW_HEIGHT_STEP = 20;
 export const PREVIEW_HEIGHT_BIG_STEP = 80;
 
-/** Width of the small floating window, in CSS px. */
-export const MINI_WIDTH_RANGE = [200, 720] as const;
-/** The three steps the size button cycles through. */
+/** The three steps the small window's size button cycles through. */
 export const MINI_PRESETS = [240, 360, 480] as const;
+/** Width of the small floating window, in CSS px: up to 20% past its largest step. */
+export const MINI_WIDTH_RANGE = [200, Math.round(MINI_PRESETS[2] * MAX_GROWTH)] as const;
 export const MINI_PRESET_LABELS = ["작게", "보통", "크게"] as const;
 export const MINI_WIDTH_STEP = 20;
 export const MINI_WIDTH_BIG_STEP = 80;

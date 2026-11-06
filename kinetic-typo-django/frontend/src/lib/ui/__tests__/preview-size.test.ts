@@ -16,10 +16,14 @@ describe("preview height", () => {
     expect(readPreviewHeight("600")).toBe(DEFAULT_PREVIEW_HEIGHT);
     expect(readPreviewHeight(Number.NaN)).toBe(DEFAULT_PREVIEW_HEIGHT);
   });
+  it("grows at most 20% past the default", () => {
+    expect(PREVIEW_HEIGHT_RANGE[1]).toBe(576);
+    expect(readPreviewHeight(1200)).toBe(576);
+  });
   it("keeps saved heights inside the range", () => {
     expect(readPreviewHeight(50)).toBe(PREVIEW_HEIGHT_RANGE[0]);
     expect(readPreviewHeight(99999)).toBe(PREVIEW_HEIGHT_RANGE[1]);
-    expect(readPreviewHeight(640.4)).toBe(640);
+    expect(readPreviewHeight(540.4)).toBe(540);
   });
 });
 
@@ -30,7 +34,7 @@ describe("mini window width", () => {
   });
   it("reads and clamps widths", () => {
     expect(readMiniWidth(300)).toBe(300);
-    expect(readMiniWidth(5000)).toBe(720);
+    expect(readMiniWidth(5000)).toBe(576);
     expect(readMiniWidth(null)).toBe(MINI_PRESETS[0]);
   });
   it("cycles the size button through the steps", () => {
