@@ -72,7 +72,7 @@ function StepCard({
         {current && <span className="shrink-0 pt-1.5 text-xs font-semibold text-tide-300">지금 할 차례</span>}
         {done && !current && (
           <span className="flex shrink-0 items-center gap-1 pt-1.5 text-xs font-semibold text-emerald-400">
-            <span aria-hidden>✓</span>완료
+            완료
           </span>
         )}
       </header>

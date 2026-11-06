@@ -54,7 +54,7 @@ export function TransitionLane({ pps, timeAt }: LaneProps) {
   return (
     <ClipLane
       {...groupProps}
-      label="✦ 전환"
+      label="전환"
       ariaLabel="트랜지션 타임라인"
       clips={clips ?? []}
       selectedId={fx?.lane === "transition" ? fx.id : null}
@@ -66,7 +66,7 @@ export function TransitionLane({ pps, timeAt }: LaneProps) {
       title={(c) => label(c.kind)}
       content={(c) => (
         <span className="pointer-events-none flex w-full items-center justify-center truncate text-[11px] text-zinc-100">
-          ⧖ {label(c.kind)}
+          {label(c.kind)}
         </span>
       )}
       tone={{
@@ -124,7 +124,7 @@ export function AdjustLane({ pps, timeAt }: LaneProps) {
   return (
     <ClipLane
       {...groupProps}
-      label="◐ 조정"
+      label="조정"
       ariaLabel="조정 레이어 타임라인"
       clips={clips ?? []}
       selectedId={fx?.lane === "adjust" ? fx.id : null}

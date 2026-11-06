@@ -270,9 +270,7 @@ function StockCard({
               onError={() => setThumbOk(false)}
               className="absolute inset-0 h-full w-full object-cover"
             />
-          ) : (
-            <span className="absolute inset-0 flex items-center justify-center text-lg text-zinc-700">🎞</span>
-          )}
+          ) : null}
           {busy && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs text-zinc-100">
               받는 중…

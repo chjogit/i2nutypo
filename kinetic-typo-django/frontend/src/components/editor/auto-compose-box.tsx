@@ -49,10 +49,10 @@ export function AutoComposeBox() {
           자동 구성
         </button>
         <button type="button" onClick={() => go(-1)} disabled={at <= 0} className={BTN}>
-          ◀ 이전 안
+          이전 안
         </button>
         <button type="button" onClick={() => go(1)} disabled={at >= entries.length - 1} className={BTN}>
-          다음 안 ▶
+          다음 안
         </button>
       </div>
       <div className="flex items-center gap-2 text-xs text-zinc-400">

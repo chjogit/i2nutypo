@@ -158,7 +158,7 @@ export function LineTimingRow({
         </div>
         {tapAt === null ? (
           <button type="button" onClick={startTapping} className={BTN} disabled={labels.length === 0}>
-            ⏺ 탭으로 찍기
+            탭으로 찍기
           </button>
         ) : (
           <>

@@ -135,7 +135,7 @@ function Toolbar() {
           title="왼쪽 영상 스타일 패널 열기·접기"
           className={`${SEG} ${sidesShown && leftOpen ? SEG_ON : SEG_OFF}`}
         >
-          ◧ 스타일
+          스타일
         </button>
         <button
           type="button"
@@ -146,7 +146,7 @@ function Toolbar() {
           title="오른쪽 효과·일러스트 패널 열기·접기"
           className={`${SEG} ${sidesShown && rightOpen ? SEG_ON : SEG_OFF}`}
         >
-          효과 ◨
+          효과
         </button>
       </div>
       <div className="flex items-center gap-1" role="group" aria-label="화면 대비">

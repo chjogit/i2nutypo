@@ -777,8 +777,11 @@ export function Timeline() {
                   >
                     <span className="truncate text-xs font-semibold text-zinc-100">
                       {line.lineStyle.lock ? (
-                        <span title="잠근 줄 (자동 구성이 바꾸지 않음)" className="mr-1">
-                          🔒
+                        <span
+                          title="잠근 줄 (자동 구성이 바꾸지 않음)"
+                          className="mr-1 font-medium text-tide-300"
+                        >
+                          잠금
                         </span>
                       ) : null}
                       {(line.offsetX !== 0 ||
@@ -871,7 +874,7 @@ export function Timeline() {
                           title="커서 자리에 줄 나눔(/n)을 넣습니다. Enter로 저장"
                           className={SMALL_BTN}
                         >
-                          ↵ 줄 나눔
+                          줄 나눔
                         </button>
                       </label>
                       <label className="flex items-center gap-2 text-zinc-400">
@@ -927,7 +930,7 @@ export function Timeline() {
                         }}
                         className="ml-2 rounded-md bg-tide-600 px-2 py-1 font-semibold text-zinc-950 hover:bg-tide-500"
                       >
-                        ▶ 구간 재생
+                        구간 재생
                       </button>
                       <button
                         type="button"
@@ -1048,7 +1051,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
           className={SMALL_BTN}
           title="고른 줄을 모두 0.1초 앞으로"
         >
-          ◀ 0.1초
+          −0.1초
         </button>
         <button
           type="button"
@@ -1056,7 +1059,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
           className={SMALL_BTN}
           title="고른 줄을 모두 0.1초 뒤로"
         >
-          0.1초 ▶
+          +0.1초
         </button>
         {FEATURES_NOW.themeMix && (
           <button
@@ -1116,7 +1119,7 @@ function GroupEditor({ indices, onDone }: { indices: readonly number[]; onDone: 
             onChange={(e) => toggle("lock", e.target.checked)}
             className="accent-tide-500"
           />
-          🔒 모두 잠금
+          모두 잠금
         </label>
         <label className="flex items-center gap-1">
           <input
@@ -1278,7 +1281,7 @@ function LineMotionRow({
           onChange={(e) => toggle("lock", e.target.checked)}
           className="accent-tide-500"
         />
-        🔒 잠금
+        잠금
       </label>
       <label
         className="flex items-center gap-1"

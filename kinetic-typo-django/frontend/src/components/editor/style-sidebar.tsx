@@ -735,7 +735,7 @@ function ElementMotionFold() {
       className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3"
       title={
         <>
-          ✎ 요소 움직임 · 가사 배치
+          요소 움직임 · 가사 배치
           <span className="ml-1 font-normal text-tide-300">
             {ELEMENT_MOTIONS.find(([mode]) => mode === em.mode)?.[1] ?? ""}
           </span>

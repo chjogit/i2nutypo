@@ -43,7 +43,7 @@ export function TimeField({
         title="재생 위치의 시간 넣기"
         className="ml-auto rounded border border-zinc-800 px-1.5 text-zinc-300 hover:border-tide-500"
       >
-        ⏱ 지금
+        지금
       </button>
     </span>
   );
