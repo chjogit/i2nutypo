@@ -65,7 +65,8 @@ export function washFrame(f: LookFrame, color: string, alpha: number, mode: Glob
   ctx.restore();
 }
 
-export type ParticleKind = "petal" | "snow" | "rain" | "ember" | "bubble" | "bokeh" | "heart" | "star";
+export type ParticleKind =
+  "petal" | "snow" | "rain" | "ember" | "bubble" | "bokeh" | "heart" | "star" | "dust" | "cyber";
 
 /**
  * Drifting particles. `layer` (0 back, 1 front) changes the seed, size and
@@ -81,9 +82,18 @@ export function drawParticles(
   if (amount <= 0) return;
   const { ctx, W, H } = f;
   const s = minSide(f);
-  const base = { petal: 40, snow: 90, rain: 140, ember: 50, bubble: 34, bokeh: 18, heart: 16, star: 40 }[
-    kind
-  ];
+  const base = {
+    petal: 40,
+    snow: 90,
+    rain: 140,
+    ember: 50,
+    bubble: 34,
+    bokeh: 18,
+    heart: 16,
+    star: 40,
+    dust: 70,
+    cyber: 36,
+  }[kind];
   const count = Math.round(base * amount * (layer ? 0.45 : 1));
   const t = f.timeSec;
   ctx.save();
@@ -101,6 +111,8 @@ export function drawParticles(
       bokeh: 0.004,
       heart: -0.02,
       star: 0,
+      dust: -0.006,
+      cyber: -0.03,
     }[kind];
     const sway = {
       petal: 0.06,
@@ -111,6 +123,8 @@ export function drawParticles(
       bokeh: 0.01,
       heart: 0.02,
       star: 0,
+      dust: 0.025,
+      cyber: 0,
     }[kind];
     const wind = kind === "petal" ? 0.04 : kind === "rain" ? 0.12 : 0;
     const yy = (((hash01(k, 2) + t * fall * depth) % 1) + 1) % 1;
@@ -177,6 +191,26 @@ export function drawParticles(
         ctx.bezierCurveTo(x - hr * 1.6, y - hr * 0.2, x - hr * 0.5, y - hr * 1.3, x, y - hr * 0.4);
         ctx.bezierCurveTo(x + hr * 0.5, y - hr * 1.3, x + hr * 1.6, y - hr * 0.2, x, y + hr * 0.9);
         ctx.fill();
+        break;
+      }
+      case "dust": {
+        // Motes drifting in a light beam: tiny, soft, twinkling as they turn
+        ctx.fillStyle = withAlpha(color, (0.18 + 0.4 * depth * 0.5) * tw);
+        ctx.beginPath();
+        ctx.arc(x, y, r * (0.0015 + hash01(k, 6) * 0.003), 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+      case "cyber": {
+        // Small squares and plus marks rising, blinking on a 1/12 s step
+        const on = hash01(k, Math.floor(t * 12)) > 0.25;
+        if (!on) break;
+        const q = r * (0.004 + hash01(k, 6) * 0.006);
+        ctx.fillStyle = withAlpha(color, 0.75 * tw);
+        if (k % 3 === 0) {
+          ctx.fillRect(x - q * 1.5, y - q * 0.2, q * 3, q * 0.4);
+          ctx.fillRect(x - q * 0.2, y - q * 1.5, q * 0.4, q * 3);
+        } else ctx.fillRect(x - q / 2, y - q / 2, q, q);
         break;
       }
       case "star": {

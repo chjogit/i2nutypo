@@ -54,6 +54,9 @@ const THEME_PATTERN: Record<ThemedPresetId, Exclude<BgPattern, "auto">> = {
   manga_panel: "scatter",
   deep_sea: "waves",
   neon_sign: "topo",
+  chat_room: "scatter",
+  social_feed: "blobs",
+  desktop_screen: "waves",
 };
 
 export function patternFor(f: LookFrame): Exclude<BgPattern, "auto"> {

@@ -30,6 +30,7 @@ import { sanitizeFinish } from "./finish/settings";
 import { hashSigned } from "./looks/noise";
 import { hopClock, type HopClock } from "./looks/element-motion";
 import { applyTimelineFx } from "@/lib/timeline-fx/render-fx";
+import { SCREEN_THEMES } from "./looks/screen-kit";
 // Glows and blurs keep their size at every output resolution
 import "./logical-blur";
 
@@ -211,6 +212,25 @@ export function lyricRoamOffset(
   return { x: (a.x + (b.x - a.x) * k) * roam * W, y: (a.y + (b.y - a.y) * k) * roam * H };
 }
 
+/** How many sung lines the history themes (chat, desktop windows) are given. */
+export const RECENT_LINES = 8;
+
+/** The main lines that started before timeSec, apart from the active one, oldest first. */
+export function recentLines(
+  lines: readonly LyricLine[],
+  timeSec: number,
+  active: LyricLine | null,
+  max = RECENT_LINES,
+): LyricLine[] {
+  const out: LyricLine[] = [];
+  for (let i = lines.length - 1; i >= 0 && out.length < max; i--) {
+    const l = lines[i];
+    if (l === active || l.overlap || l.startTime > timeSec) continue;
+    out.push(l);
+  }
+  return out.reverse();
+}
+
 /** Draws one frame of the kinetic typography video. Ported from renderFrame in the original studio. */
 function drawFrame(input: FrameInput): void {
   const { ctx, W, H, timeSec, lines, subtitles, introGateSec, particles, energy } = input;
@@ -296,13 +316,17 @@ function drawFrame(input: FrameInput): void {
         subtitleShift,
         textBounds: input.bounds,
         hop,
-        camera: cameraAt(
-          style,
-          [activeLine, activeLine ? (lines[lines.indexOf(activeLine) - 1] ?? null) : null],
-          timeSec,
-          W,
-          H,
-        ),
+        recent: recentLines(lines, timeSec, activeLine),
+        // The screen themes are a flat app screen: no drifting camera over them
+        camera: SCREEN_THEMES.has(style.lookPreset)
+          ? undefined
+          : cameraAt(
+              style,
+              [activeLine, activeLine ? (lines[lines.indexOf(activeLine) - 1] ?? null) : null],
+              timeSec,
+              W,
+              H,
+            ),
       },
       layer,
     );

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { MotionStyleControl } from "./motion-style-control";
+import { DirectionControl } from "./direction-control";
 import type { LookPresetId } from "@/types/project";
 import { BEGINNER_THEMES } from "@/lib/mode/mode";
 import { getLookPreset } from "@/lib/render/looks/presets";
@@ -213,6 +214,7 @@ function LyricLook() {
           <span className="w-10 text-right font-mono text-zinc-300">{Math.round(fontScale * 100)}%</span>
         </span>
       </label>
+      <DirectionControl compact />
       <MotionStyleControl compact />
       <LyricOrientationControl />
       <LyricSurfaceControl />

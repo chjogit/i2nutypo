@@ -329,7 +329,114 @@ function drawTransition(px: Px, c: TransitionClip, t: number, style: StyleSettin
   }
 }
 
-function drawAdjust(px: Px, c: AdjustClip, t: number, energy: number) {
+/**
+ * Dense graphic layer for fast songs: technical UI frame lines at the edges
+ * with a running counter, manga speed lines that flash in on each kick, and
+ * halftone dot wedges in two corners, in the accent color and its complement.
+ */
+function drawGraphicPack(px: Px, a: number, t: number, energy: number, style: StyleSettings, seed: number) {
+  const { ctx, w, h } = px;
+  const s = Math.min(w, h);
+  const accent = style.accentColor;
+  const second = complementOf(accent);
+  const hit = Math.min(1, Math.max(0, energy));
+  ctx.save();
+  // UI frame: corner brackets, tick rulers, a small counter
+  ctx.globalAlpha = 0.85 * a;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = Math.max(1, s * 0.004);
+  const m = s * 0.05;
+  const L = s * 0.08;
+  for (const [x, y, sx, sy] of [
+    [m, m, 1, 1],
+    [w - m, m, -1, 1],
+    [m, h - m, 1, -1],
+    [w - m, h - m, -1, -1],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + sy * L);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + sx * L, y);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#ffffff";
+  const ticks = 24;
+  for (let i = 0; i <= ticks; i++) {
+    const x = m + L * 1.4 + ((w - 2 * (m + L * 1.4)) * i) / ticks;
+    const tall = i % 4 === 0 ? s * 0.014 : s * 0.007;
+    ctx.fillRect(x, m - tall / 2, Math.max(1, s * 0.002), tall);
+  }
+  ctx.font = `700 ${(s * 0.022).toFixed(1)}px 'JetBrains Mono', monospace`;
+  ctx.textBaseline = "middle";
+  const frame = String(Math.floor(t * 24) % 100000).padStart(5, "0");
+  ctx.fillText(`REC ${frame}`, m + s * 0.012, h - m - L * 0.5);
+  ctx.fillStyle = accent;
+  ctx.fillRect(w - m - s * 0.12, h - m - L * 0.62, s * 0.12 * (0.25 + 0.75 * hit), s * 0.018);
+
+  // Speed lines toward the middle, flashing in on the kick
+  if (hit > 0.15) {
+    const n = 64;
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = Math.hypot(w, h) * 0.6;
+    const f = Math.floor(t * 24);
+    ctx.globalAlpha = a * Math.min(1, (hit - 0.15) * 1.6);
+    ctx.fillStyle = "#ffffff";
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2 + hashSigned(i, f + seed) * 0.05;
+      const inner = R * (0.55 + 0.25 * hash01(i, f));
+      const wid = 0.004 + 0.01 * hash01(i, f + 7);
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R);
+      ctx.lineTo(cx + Math.cos(ang - wid) * inner, cy + Math.sin(ang - wid) * inner);
+      ctx.lineTo(cx + Math.cos(ang + wid) * inner, cy + Math.sin(ang + wid) * inner);
+      ctx.fill();
+    }
+  }
+
+  // Halftone wedges: dots growing toward two opposite corners
+  ctx.globalAlpha = 0.7 * a;
+  const step = s * 0.022;
+  const span = s * 0.32;
+  for (const [ox, oy, sx, sy, col] of [
+    [w, 0, -1, 1, accent],
+    [0, h, 1, -1, second],
+  ] as const) {
+    ctx.fillStyle = col;
+    for (let gx = 0; gx < span; gx += step) {
+      for (let gy = 0; gy < span; gy += step) {
+        const d = 1 - (gx + gy) / span;
+        if (d <= 0) continue;
+        const r = step * 0.48 * d * (0.85 + 0.15 * hit);
+        ctx.beginPath();
+        ctx.arc(ox + sx * (gx + step / 2), oy + sy * (gy + step / 2), r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  ctx.restore();
+}
+
+/** The opposite hue of a "#rrggbb" color at the same lightness. */
+export function complementOf(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "#00e5ff";
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const hi = Math.max(r, g, b);
+  const lo = Math.min(r, g, b);
+  const to = (v: number) => (hi + lo - v).toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+/** Picture scale on a kick of strength hit (0..1) at effect strength a (0..1): 1 → 1.10. */
+export function beatPumpScale(a: number, hit: number): number {
+  return 1 + 0.1 * Math.min(1, Math.max(0, a)) * Math.min(1, Math.max(0, hit));
+}
+
+function drawAdjust(px: Px, c: AdjustClip, t: number, energy: number, style: StyleSettings) {
   const a = adjustStrength(c, t);
   if (a <= 0.001) return;
   const { ctx, w, h } = px;
@@ -419,6 +526,36 @@ function drawAdjust(px: Px, c: AdjustClip, t: number, energy: number) {
     case "beatFlash":
       fillAll(px, "#ffffff", Math.max(0, energy - 0.35) * a * 0.9);
       return;
+    case "graphicPack":
+      drawGraphicPack(px, a, t, energy, style, seed);
+      return;
+    case "beatPump":
+    case "beatImpact": {
+      const hit = Math.min(1, Math.max(0, energy));
+      if (hit < 0.02) {
+        if ((c.graphics ?? 0) > 0)
+          drawGraphicPack(px, (c.graphics ?? 0) * adjustStrength(c, t), t, 0, style, seed);
+        return;
+      }
+      const src = snapshot(ctx);
+      if (!src) return;
+      const impact = c.kind === "beatImpact";
+      // Up to +10% on a full kick: 105% at half strength, 110% at full
+      const pump = beatPumpScale(a, hit);
+      const f = Math.floor(t * 30);
+      const amp = impact ? Math.min(w, h) * 0.014 * a * hit : 0;
+      const dx = hashSigned(f, 11) * amp;
+      const dy = hashSigned(f, 12) * amp;
+      // A little extra zoom keeps the shaken edges covered
+      drawBack(px, src, { scale: pump + (amp * 2.2) / Math.min(w, h), dx, dy });
+      if (impact) {
+        rgbSplit(px, a * w * 0.009 * hit, a * h * 0.002 * hashSigned(f, 13));
+        fillAll(px, "#ffffff", Math.max(0, hit - 0.55) * a * 0.55);
+      }
+      if ((c.graphics ?? 0) > 0)
+        drawGraphicPack(px, (c.graphics ?? 0) * adjustStrength(c, t), t, energy, style, seed);
+      return;
+    }
   }
 }
 
@@ -437,7 +574,7 @@ export function applyTimelineFx(ctx: Ctx2D, style: StyleSettings, timeSec: numbe
   ctx.globalCompositeOperation = "source-over";
   ctx.filter = "none";
   const px = { ctx, w, h };
-  for (const c of live) drawAdjust(px, c, timeSec, energy);
+  for (const c of live) drawAdjust(px, c, timeSec, energy, style);
   if (tr) drawTransition(px, tr, timeSec, style);
   ctx.restore();
 }

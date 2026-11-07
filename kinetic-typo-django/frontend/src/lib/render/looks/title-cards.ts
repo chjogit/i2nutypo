@@ -44,6 +44,9 @@ export const CARD_KIND: Record<Exclude<ThemedPresetId, "album_jacket">, CardKind
   manga_panel: "balloon",
   deep_sea: "float",
   neon_sign: "neon",
+  chat_room: "label",
+  social_feed: "sticker",
+  desktop_screen: "terminal",
 };
 
 interface Card {

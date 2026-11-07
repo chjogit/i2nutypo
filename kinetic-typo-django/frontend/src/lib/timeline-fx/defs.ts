@@ -159,6 +159,24 @@ export const ADJUSTS: readonly AdjustDef[] = [
   { id: "mirror", label: "거울", hint: "왼쪽 반을 오른쪽에 비춤", initial: 1 },
   { id: "vhs", label: "VHS", hint: "비디오테이프처럼 줄이 흔들림", initial: 0.5 },
   { id: "beatFlash", label: "비트 번쩍", hint: "비트마다 화면이 번쩍", initial: 0.5 },
+  {
+    id: "beatPump",
+    label: "비트 펌핑",
+    hint: "킥마다 화면이 105~110% 커졌다 돌아옴 (강도 50%면 105%, 100%면 110%)",
+    initial: 0.6,
+  },
+  {
+    id: "beatImpact",
+    label: "비트 임팩트",
+    hint: "킥마다 확대 펌핑·흔들림·RGB 분리·번쩍을 한 번에. 후렴이나 빠른 구간에",
+    initial: 0.6,
+  },
+  {
+    id: "graphicPack",
+    label: "타격 그래픽",
+    hint: "화면 테두리 UI 프레임, 비트마다 번쩍이는 집중선, 모서리 망점 도형으로 빈 공간을 채움",
+    initial: 0.6,
+  },
 ];
 
 export const ADJUST_BY_ID = new Map(ADJUSTS.map((a) => [a.id, a]));
@@ -212,6 +230,7 @@ export function sanitizeAdjustClips(raw: unknown): AdjustClip[] {
       kind: r.kind as AdjustKind,
       amount: num(r.amount, 0, 1, 0.5),
       fade: num(r.fade, 0, 5, 0.3),
+      ...(r.graphics !== undefined ? { graphics: num(r.graphics, 0, 1, 0) } : {}),
     });
   }
   return sortClips(out);

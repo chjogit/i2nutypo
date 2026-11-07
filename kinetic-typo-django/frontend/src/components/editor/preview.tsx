@@ -1,6 +1,7 @@
 import {
   useEffect,
   useRef,
+  useState,
   type RefObject,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
@@ -25,6 +26,7 @@ import { IllustrationOverlay } from "./illustration-overlay";
 import { ElementOverlay } from "./element-overlay";
 import { MiniPreview, useMiniPreviewEnabled } from "./mini-preview";
 import { Tip } from "@/components/ui/tip";
+import { SHORTS_SAFE } from "@/lib/shorts/highlight";
 import {
   clampTo,
   DEFAULT_PREVIEW_HEIGHT,
@@ -52,6 +54,7 @@ export function Preview() {
   const frameRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const [miniEnabled, setMiniEnabled] = useMiniPreviewEnabled();
+  const [safeZone, setSafeZone] = useState(true);
   const aspectRatio = useProjectStore((s) => s.style.aspectRatio);
   const setStyle = useProjectStore((s) => s.setStyle);
   const size = CANVAS_SIZE[aspectRatio];
@@ -169,6 +172,7 @@ export function Preview() {
           <TextBoxOverlay canvasRef={canvasRef} boundsRef={boundsRef} overrideRef={overrideRef} />
           <ElementOverlay canvasRef={canvasRef} boundsRef={boundsRef} />
           {FEATURES_NOW.characters && <IllustrationOverlay canvasRef={canvasRef} />}
+          {safeZone && aspectRatio === "9:16" && <ShortsSafeZone />}
         </div>
         <PreviewSizeHandle
           boxRef={boxRef}
@@ -224,6 +228,20 @@ export function Preview() {
             ))}
           </select>
         </label>
+        {aspectRatio === "9:16" && (
+          <label
+            className="flex shrink-0 items-center gap-1 text-xs text-zinc-400"
+            title="쇼츠·릴스·틱톡의 버튼과 설명 글이 덮는 자리를 미리보기에만 표시합니다 (영상에는 안 들어감)"
+          >
+            <input
+              type="checkbox"
+              checked={safeZone}
+              onChange={(e) => setSafeZone(e.target.checked)}
+              className="accent-tide-500"
+            />
+            숏폼 안전 영역
+          </label>
+        )}
         <span className="shrink-0 text-xs text-zinc-400">화면 비율</span>
         <div className="flex flex-wrap rounded-md border border-zinc-800 text-xs">
           {ASPECT_RATIOS.map((r) => (
@@ -240,6 +258,34 @@ export function Preview() {
       </div>
       <MiniPreview sourceRef={canvasRef} frameRef={frameRef} enabled={miniEnabled} />
     </section>
+  );
+}
+
+/**
+ * Where a short platform's buttons and caption cover a 9:16 video, hatched over
+ * the preview only, so the lyrics can be kept out of them.
+ */
+function ShortsSafeZone() {
+  const pct = (v: number) => `${v * 100}%`;
+  const band =
+    "pointer-events-none absolute bg-red-500/15 outline outline-1 -outline-offset-1 outline-red-400/60";
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      <div className={band} style={{ left: 0, right: 0, top: 0, height: pct(SHORTS_SAFE.top) }} />
+      <div className={band} style={{ left: 0, right: 0, bottom: 0, height: pct(SHORTS_SAFE.bottom) }} />
+      <div
+        className={band}
+        style={{
+          right: 0,
+          top: pct(SHORTS_SAFE.top),
+          bottom: pct(SHORTS_SAFE.bottom),
+          width: pct(SHORTS_SAFE.right),
+        }}
+      />
+      <span className="absolute bottom-1 left-1 rounded-sm bg-zinc-950/80 px-1 text-[10px] text-red-200">
+        버튼·설명 글 자리
+      </span>
+    </div>
   );
 }
 

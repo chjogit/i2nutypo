@@ -36,6 +36,8 @@ import { FEATURES_NOW } from "@/lib/mode/mode";
 import { COLOR_FILTERS } from "@/lib/render/looks/color-filter";
 import { AutoComposeBox } from "./auto-compose-box";
 import { MotionStyleControl } from "./motion-style-control";
+import { DirectionControl } from "./direction-control";
+import { DepthFxControl } from "./depth-fx-control";
 import { Fold } from "./fold";
 import { Tip } from "@/components/ui/tip";
 import {
@@ -493,6 +495,13 @@ function MotionChips({ id, isLyric }: { id: ThemedPresetId; isLyric: boolean }) 
     setStyle({
       motionPicks: { ...style.motionPicks, [id]: THEME_MOTIONS[id].filter((m) => list.includes(m)) },
     });
+  // The screen themes move their own app pieces; they have no line motions to pick
+  if (THEME_MOTIONS[id].length === 0)
+    return (
+      <p className="rounded-md border border-zinc-800/70 px-2 py-1.5 text-xs text-zinc-400">
+        이 테마는 말풍선·게시물·창이 스스로 움직여서 가사 움직임과 모션 스타일을 쓰지 않습니다.
+      </p>
+    );
   return (
     <div className="space-y-1 rounded-md border border-zinc-800/70 px-2 py-1.5">
       <div className="flex items-center gap-2 text-xs">
@@ -815,8 +824,14 @@ function ThemeTab() {
       {target.clip && <ThemeClipBanner clip={target.clip} />}
       {!target.clip && FEATURES_NOW.themeMix && <AutoComposeBox />}
       {/* The motion style is one setting for the whole video, like the element motion below */}
+      <Fold className="space-y-2 border-t border-zinc-800/70 pt-3" title="연출 방향">
+        <DirectionControl />
+      </Fold>
       <Fold className="space-y-2 border-t border-zinc-800/70 pt-3" title="가사 모션 스타일">
         <MotionStyleControl />
+      </Fold>
+      <Fold className="space-y-2 border-t border-zinc-800/70 pt-3" title="카메라 깊이 · 입자 · 곡선">
+        <DepthFxControl />
       </Fold>
       {/* Element motion is one setting for the whole video, so it stays here even while a theme clip is picked */}
       <ElementMotionFold />

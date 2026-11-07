@@ -253,6 +253,12 @@ const HITS: Record<ThemedPresetId, Hit> = {
     bloom(f, k * 0.6, f.style.accentColor);
     shockRing(f, k, f.style.secondaryColor, { x: 0.5, y: 0.5 }, 0.008);
   },
+  chat_room: (f, k) => bloom(f, k * 0.5, f.style.accentColor, { x: 0.5, y: 0.8 }, 0.7),
+  social_feed: (f, k) => {
+    bloom(f, k * 0.5, f.style.accentColor, { x: 0.5, y: 0.45 }, 0.7);
+    shockRing(f, k, "#ffffff", { x: 0.5, y: 0.45 }, 0.005);
+  },
+  desktop_screen: (f, k) => shockRing(f, k, f.style.accentColor, { x: 0.5, y: 0.5 }, 0.006),
 };
 
 /** The theme's accent hit, scaled by its "climax" element. */

@@ -27,6 +27,8 @@ import { RangeBar } from "./range-bar";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useProjectStore } from "@/store/project-store";
 import { RightsNote } from "@/components/ui/rights-note";
+import { detectSections } from "@/lib/structure/sections";
+import { pickHighlight, SHORT_LENGTHS, type Highlight } from "@/lib/shorts/highlight";
 
 type VideoState =
   | { kind: "idle" }
@@ -125,6 +127,9 @@ export function ExportPanel() {
   const introGateSec = useProjectStore((s) => s.sync.introGateSec);
   const hasAudio = useProjectStore((s) => s.audio.kind === "upload");
   const duration = useProjectStore((s) => s.duration);
+  const beats = useProjectStore((s) => s.beats);
+  const sectionKinds = useProjectStore((s) => s.style.sectionKinds);
+  const setStyle = useProjectStore((s) => s.setStyle);
 
   const [quality, setQuality] = useState<VideoQuality>(1080);
   const [fps, setFps] = useState<VideoFps>(30);
@@ -134,6 +139,10 @@ export function ExportPanel() {
   const [sequence, setSequence] = useState<SequenceFormat>("png");
   /** Part of the song to save; null is the whole song. */
   const [range, setRange] = useState<{ start: number; end: number } | null>(null);
+  /** Shorts: render as 9:16 whatever the project's shape, fade the song at the cut, and why the part was picked. */
+  const [vertical, setVertical] = useState(false);
+  const [fadeEdges, setFadeEdges] = useState(true);
+  const [picked, setPicked] = useState<{ length: number; reason: Highlight["reason"] } | null>(null);
   const [video, setVideo] = useState<VideoState>({ kind: "idle" });
   const abortRef = useRef<AbortController | null>(null);
   const [supported, setSupported] = useState(true);
@@ -194,6 +203,8 @@ export function ExportPanel() {
         level,
         withAudio,
         range: range ?? undefined,
+        aspect: vertical ? "9:16" : undefined,
+        audioFade: range && fadeEdges ? { in: 0.4, out: 1.2 } : undefined,
         signal: controller.signal,
         sequence,
         saveTo,
@@ -263,7 +274,32 @@ export function ExportPanel() {
     );
   };
 
-  const size = outputSize(aspectRatio, quality);
+  const size = outputSize(vertical ? "9:16" : aspectRatio, quality);
+
+  /** Picks the chorus (or busiest lyrics) for a short of `length` seconds, vertical. */
+  const pickShort = (length: number) => {
+    const sections = detectSections(
+      lines.map((l) => ({
+        startTime: l.startTime,
+        endTime: l.endTime,
+        overlap: l.overlap,
+        text: l.cleanText,
+      })),
+      sectionKinds,
+    );
+    const h = pickHighlight(
+      {
+        lineStarts: lines.filter((l) => !l.overlap).map((l) => l.startTime),
+        sections,
+        duration,
+        beats: beats?.times,
+      },
+      length,
+    );
+    setRange({ start: h.start, end: h.end });
+    setPicked({ length, reason: h.reason });
+    setVertical(true);
+  };
   const cueCount = countSubtitleCues(lines, rows, introGateSec);
   const running = video.kind === "running";
   const elapsed = running ? (performance.now() - video.startedAt) / 1000 : 0;
@@ -370,13 +406,73 @@ export function ExportPanel() {
             </>
           )}
         </div>
+        <div className="space-y-1.5 border-t border-zinc-800 pt-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1.5 text-zinc-400">
+              숏폼 하이라이트
+              <Tip label="숏폼">
+                쇼츠·릴스·틱톡용으로 곡의 하이라이트만 세로 영상으로 만듭니다. 가사에서 찾은 첫 후렴(없으면
+                가사가 가장 촘촘한 부분)을 길이에 맞춰 고르고, 시작은 박자에 맞춥니다. 고른 뒤 아래
+                시작·끝으로 옮길 수 있어요.
+              </Tip>
+            </span>
+            <div className="flex rounded-md border border-zinc-800">
+              {SHORT_LENGTHS.map((len) => (
+                <button
+                  key={len}
+                  type="button"
+                  disabled={running || duration <= 0}
+                  onClick={() => pickShort(len)}
+                  className={chip(picked?.length === len && range !== null && vertical)}
+                >
+                  {len}초
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-1.5 text-zinc-200">
+              <input
+                type="checkbox"
+                checked={vertical}
+                disabled={running}
+                onChange={(e) => setVertical(e.target.checked)}
+                className="accent-tide-500"
+              />
+              세로 9:16로 저장
+            </label>
+          </div>
+          {picked && range && (
+            <p className="text-zinc-400">
+              {picked.reason === "chorus"
+                ? "첫 후렴에서 골랐어요."
+                : picked.reason === "dense"
+                  ? "후렴을 못 찾아 가사가 가장 촘촘한 부분을 골랐어요."
+                  : "곡 처음부터 잘랐어요."}
+            </p>
+          )}
+          {vertical && aspectRatio !== "9:16" && (
+            <p className="flex flex-wrap items-center gap-2 text-zinc-400">
+              가사와 테마가 세로 화면에 맞춰 다시 배치됩니다.
+              <button
+                type="button"
+                disabled={running}
+                onClick={() => setStyle({ aspectRatio: "9:16" })}
+                className="rounded-sm border border-zinc-700 px-2 py-0.5 text-zinc-200 hover:border-tide-500"
+              >
+                미리보기도 9:16로 보기
+              </button>
+            </p>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-zinc-200">
           <label className="flex items-center gap-1.5">
             <input
               type="checkbox"
               checked={range !== null}
               disabled={running}
-              onChange={(e) => setRange(e.target.checked ? { start: 0, end: duration } : null)}
+              onChange={(e) => {
+                setRange(e.target.checked ? { start: 0, end: duration } : null);
+                setPicked(null);
+              }}
               className="accent-tide-500"
             />
             일부 구간만
@@ -391,6 +487,18 @@ export function ExportPanel() {
                 className="accent-tide-500"
               />
               음원 넣기
+            </label>
+          )}
+          {isVideoKind(kind) && range && (
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={fadeEdges}
+                disabled={running || !hasAudio || !withAudio}
+                onChange={(e) => setFadeEdges(e.target.checked)}
+                className="accent-tide-500"
+              />
+              소리 페이드
             </label>
           )}
           <span className="text-zinc-400">

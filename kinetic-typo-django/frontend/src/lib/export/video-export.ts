@@ -33,6 +33,7 @@ import { openProResWriter, type ProResWriter } from "./prores";
 import { openPropVideoReaders } from "@/lib/media/prop-video";
 import { openVideoReader, type VideoFrameReader } from "@/lib/media/video-bg";
 import { beatGridPulse } from "@/lib/beats/detect";
+import { edgeGain } from "@/lib/shorts/highlight";
 
 export type VideoQuality = 720 | 1080 | 1440 | 2160;
 /** Every output size, short side in pixels. */
@@ -59,6 +60,13 @@ export interface VideoExportOptions {
   range?: { start: number; end: number };
   /** Put the song in the video (video kinds only). */
   withAudio: boolean;
+  /**
+   * Frame shape to render at instead of the project's own (a vertical 9:16
+   * short of a 16:9 project). The lyrics and themes lay themselves out again for it.
+   */
+  aspect?: Project["style"]["aspectRatio"];
+  /** Seconds the song fades in at the start of the part and out at its end (shorts). */
+  audioFade?: { in: number; out: number };
   /** Image format of the frames for "png" and "layers" (PNG, TGA or SGI). */
   sequence?: SequenceFormat;
   /** What the export is doing besides drawing frames (downloading the ProRes encoder, encoding). */
@@ -105,7 +113,12 @@ export function outputSize(aspect: Project["style"]["aspectRatio"], quality: Vid
 const AUDIO_CHUNK_SEC = 1;
 
 /** A copy of `durationSec` of the song from `startSec`, shorter at the end. */
-function sliceAudio(song: AudioBuffer, startSec: number, durationSec: number): AudioBuffer {
+function sliceAudio(
+  song: AudioBuffer,
+  startSec: number,
+  durationSec: number,
+  gain?: (sampleIndex: number) => number,
+): AudioBuffer {
   const from = Math.round(startSec * song.sampleRate);
   const length = Math.max(1, Math.min(song.length - from, Math.round(durationSec * song.sampleRate)));
   const piece = new AudioBuffer({
@@ -114,7 +127,14 @@ function sliceAudio(song: AudioBuffer, startSec: number, durationSec: number): A
     sampleRate: song.sampleRate,
   });
   for (let c = 0; c < song.numberOfChannels; c++) {
-    piece.copyToChannel(song.getChannelData(c).subarray(from, from + length), c);
+    const src = song.getChannelData(c).subarray(from, from + length);
+    if (!gain) {
+      piece.copyToChannel(src, c);
+      continue;
+    }
+    const faded = new Float32Array(length);
+    for (let i = 0; i < length; i++) faded[i] = src[i] * gain(i);
+    piece.copyToChannel(faded, c);
   }
   return piece;
 }
@@ -222,8 +242,15 @@ const canvasPng = (canvas: HTMLCanvasElement): Promise<Uint8Array<ArrayBuffer>> 
  * WebCodecs via mediabunny, MP4 (H.264 + AAC) when the browser can, otherwise
  * WebM. PNG kinds are written into a ZIP.
  */
-export async function exportVideo(project: Project, options: VideoExportOptions): Promise<VideoExportResult> {
+export async function exportVideo(
+  sourceProject: Project,
+  options: VideoExportOptions,
+): Promise<VideoExportResult> {
   let o = options;
+  const project =
+    o.aspect && o.aspect !== sourceProject.style.aspectRatio
+      ? { ...sourceProject, style: { ...sourceProject.style, aspectRatio: o.aspect } }
+      : sourceProject;
   const { width, height, scale, base } = outputSize(project.style.aspectRatio, o.quality);
   const song = await decodeSong(project);
   const songEnd = song?.duration ?? project.duration;
@@ -421,8 +448,13 @@ export async function exportVideo(project: Project, options: VideoExportOptions)
       const feedAudio = async (untilSec: number) => {
         if (!audioSource || !audio) return;
         while (audioSec < Math.min(untilSec, span)) {
+          const at = audioSec;
+          const fade = o.audioFade;
+          const gain = fade
+            ? (i: number) => edgeGain(at + i / audio.sampleRate, span, fade.in, fade.out)
+            : undefined;
           await audioSource.add(
-            sliceAudio(audio, from + audioSec, Math.min(AUDIO_CHUNK_SEC, span - audioSec)),
+            sliceAudio(audio, from + audioSec, Math.min(AUDIO_CHUNK_SEC, span - audioSec), gain),
           );
           audioSec += AUDIO_CHUNK_SEC;
         }

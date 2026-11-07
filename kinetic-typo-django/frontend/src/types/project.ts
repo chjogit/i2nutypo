@@ -147,7 +147,10 @@ export type LookPresetId =
   | "rain_window"
   | "manga_panel"
   | "deep_sea"
-  | "neon_sign";
+  | "neon_sign"
+  | "chat_room"
+  | "social_feed"
+  | "desktop_screen";
 
 export interface IllustrationSettings {
   /** Background: slow zoom/pan amount, 0..1. Ignored while locked. */
@@ -440,6 +443,18 @@ export interface StyleSettings {
   lyricGlass?: "off" | "clear" | "frost";
   /** 0..1: how far each line stands out in 2.5D (a tilted card coming forward, the picture behind softened). */
   lyricDepth?: number;
+  /**
+   * 0..1: 2.5D parallax camera. The background, the illustrations behind, the
+   * lyrics and the illustrations in front drift by different amounts, like
+   * layers set at different depths under a slowly moving camera.
+   */
+  parallax?: number;
+  /** Particles over any theme (dust, petals, sparks …); missing or "none" for none. */
+  ambientParticles?: AmbientParticles;
+  /** Timing curve of the motion styles' entrances; missing or "style" keeps each style's own. */
+  motionCurve?: MotionCurveId;
+  /** The direction last applied (calm, impact or both by section), shown as picked. */
+  direction?: DirectionId;
   /** Motion style of the kinetic lyric engine; missing means the default (smooth reveal). */
   motionStyle?: MotionStyleId;
   /** Background made from the user's colors; missing means the theme's own. */
@@ -477,6 +492,27 @@ export interface StyleSettings {
   letterbox: boolean;
   nextPreview: boolean;
 }
+
+export type AmbientParticleKind =
+  "none" | "dust" | "petal" | "snow" | "ember" | "bokeh" | "star" | "cyber" | "bubble" | "heart";
+
+export interface AmbientParticles {
+  kind: AmbientParticleKind;
+  /** 0..1 how many. */
+  amount: number;
+  /** Which of the user's colors they take. */
+  color: "secondary" | "accent" | "text";
+}
+
+/** Entrance curve choices for the motion styles. */
+export type MotionCurveId = "style" | "smooth" | "snappy" | "bouncy" | "elastic" | "linear";
+
+/**
+ * Overall direction: "calm" (slow parallax, glow, light leaks, particles),
+ * "impact" (beat pumping, shake, RGB split, glitch and zoom cuts, graphic
+ * frames), "hybrid" (calm verses, impact choruses), or "none".
+ */
+export type DirectionId = "none" | "calm" | "impact" | "hybrid";
 
 export type FxToggleKey =
   | "introBokeh"
@@ -592,7 +628,10 @@ export type AdjustKind =
   | "pixel"
   | "mirror"
   | "vhs"
-  | "beatFlash";
+  | "beatFlash"
+  | "beatPump"
+  | "beatImpact"
+  | "graphicPack";
 
 export interface AdjustClip {
   id: string;
@@ -603,6 +642,8 @@ export interface AdjustClip {
   amount: number;
   /** Seconds the effect takes to come in and go out. */
   fade: number;
+  /** Beat pumping and impact: also lay the graphic layer (UI frame, speed lines, halftone) at this strength, 0..1. */
+  graphics?: number;
 }
 
 /**

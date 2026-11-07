@@ -223,7 +223,7 @@ export interface PiecePose {
  */
 export function piecePose(def: MotionStyleDef, k: number, o: number, unit: number): PiecePose {
   if (k <= 0) return { dy: 0, scale: 1, rot: 0, blur: 0, alpha: 0, moving: true };
-  const e = EXPO_OUT(k / def.inDur);
+  const e = (def.ease ?? EXPO_OUT)(k / def.inDur);
   const s = springAt(k, def.spring);
   const fade = EXPO_OUT(k / def.fade);
   const settled = k >= Math.max(def.inDur, springSettle(def.spring)) && o <= 0;

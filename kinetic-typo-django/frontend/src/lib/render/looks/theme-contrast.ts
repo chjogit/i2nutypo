@@ -35,6 +35,11 @@ export const THEME_CONTRAST_DEFAULTS: Record<Exclude<LookPresetId, "classic">, T
   manga_panel: OFF,
   deep_sea: OUTLINE,
   neon_sign: OUTLINE,
+  // Lyrics sit on their own bubbles, photo shade and windows
+  chat_room: OFF,
+  // The line sits on the photo: an edge keeps it readable over any picture
+  social_feed: OUTLINE,
+  desktop_screen: OFF,
 };
 
 /** The auto contrast a theme's lyrics use: the user's choice for that theme, else the theme's default. */
