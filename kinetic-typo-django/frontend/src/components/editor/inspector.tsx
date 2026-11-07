@@ -221,6 +221,19 @@ export function Inspector() {
               onChange={(amount) => patchAdjusts({ amount })}
             />
           </Row>
+          {(adj.kind === "beatPump" || adj.kind === "beatImpact") && (
+            <Row label="그래픽">
+              <Slider
+                label="UI 프레임·집중선·망점 그래픽 함께 넣기"
+                value={adj.graphics ?? 0}
+                min={0}
+                max={1}
+                step={0.01}
+                format={pct}
+                onChange={(graphics) => patchAdjusts({ graphics })}
+              />
+            </Row>
+          )}
           <Row label="들고 나기">
             <Slider
               label="서서히 들어오고 나가는 시간"

@@ -1,4 +1,6 @@
-import type { TransitionKind } from "@/types/project";
+import type { DirectionId, TransitionKind } from "@/types/project";
+import { detectSections } from "@/lib/structure/sections";
+import { DIRECTION_ID_PREFIX, DIRECTIONS, planDirection } from "@/lib/direction/direction";
 import { useProjectStore } from "@/store/project-store";
 import { usePlaybackStore } from "@/store/playback-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
@@ -215,4 +217,101 @@ export function quickActions(): QuickAction[] {
       run: () => layout.set({ contrast: layout.contrast === "high" ? "normal" : "high" }),
     },
   ];
+}
+
+/** The chorus spans and section starts the section lane shows for the current lyrics. */
+export function songSections(): { choruses: { start: number; end: number }[]; starts: number[] } {
+  const s = project();
+  const sections = detectSections(
+    s.lines.map((l) => ({
+      startTime: l.startTime,
+      endTime: l.endTime,
+      overlap: l.overlap,
+      text: l.cleanText,
+    })),
+    s.style.sectionKinds,
+  );
+  return {
+    choruses: sections
+      .filter((x) => x.kind === "chorus")
+      .map((x) => ({ start: x.startTime, end: x.endTime })),
+    starts: sections.slice(1).map((x) => x.startTime),
+  };
+}
+
+const isDirectionClip = (c: { id: string }) => c.id.startsWith(DIRECTION_ID_PREFIX);
+
+/** Takes out the clips a direction added, leaving the user's own. */
+export function clearDirection(): void {
+  const s = project();
+  s.setStyle({
+    adjustClips: (s.style.adjustClips ?? []).filter((c) => !isDirectionClip(c)),
+    transitions: (s.style.transitions ?? []).filter((c) => !isDirectionClip(c)),
+    direction: "none",
+  });
+}
+
+/**
+ * Applies a direction (lib/direction): camera depth, particles, motion curve
+ * and finish filters, beat impact layers and transitions. Clips it made before
+ * are replaced; clips the user made stay, and no new clip goes over them.
+ */
+export function applyDirection(id: Exclude<DirectionId, "none">): string {
+  clearDirection();
+  const s = project();
+  const { choruses, starts } = songSections();
+  const plan = planDirection(id, {
+    duration: s.duration,
+    choruses,
+    sectionStarts: starts,
+    bars: barCuts(),
+    lineStarts: lineCuts(),
+  });
+
+  // Beat impact layers, marked as the direction's own
+  for (const span of plan.impact) {
+    const added = project().addAdjust("beatImpact", span.start, span.end);
+    if (!added) continue;
+    const list = project().style.adjustClips ?? [];
+    project().setStyle({
+      adjustClips: list.map((c) =>
+        c.id === added
+          ? {
+              ...c,
+              id: `${DIRECTION_ID_PREFIX}${c.id}`,
+              amount: plan.impactAmount,
+              graphics: plan.graphics,
+              fade: 0.2,
+            }
+          : c,
+      ),
+    });
+  }
+  // Transitions at the cuts, marked the same way
+  const before = new Set((project().style.transitions ?? []).map((c) => c.id));
+  addTransitionsAt(plan.cuts, plan.cutKinds, id === "impact" ? "white" : undefined);
+  project().setTransitions(
+    (project().style.transitions ?? []).map((c) =>
+      before.has(c.id) ? c : { ...c, id: `${DIRECTION_ID_PREFIX}${c.id}` },
+    ),
+  );
+
+  const base = sanitizeFinish(project().style.finish);
+  const filters = { ...base.filters };
+  for (const off of plan.filtersOff) if (filters[off]) filters[off] = { ...filters[off], on: false };
+  for (const [fid, amount] of Object.entries(plan.filters))
+    filters[fid as FilterId] = { on: true, amount: amount ?? 0.3 };
+  project().setStyle({
+    parallax: plan.parallax,
+    ambientParticles: plan.ambient,
+    motionCurve: plan.motionCurve,
+    kineticCamera: true,
+    finish: { ...base, filters },
+    direction: id,
+  });
+  const label = DIRECTIONS.find((d) => d.id === id)?.label ?? "";
+  const n = plan.impact.length;
+  return id === "hybrid" && n === 0
+    ? `'${label}'을 적용했지만 가사에서 후렴을 찾지 못해 타격 구간은 넣지 못했습니다.`
+    : `'${label}'을 적용했습니다.`;
 }

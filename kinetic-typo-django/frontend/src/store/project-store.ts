@@ -64,6 +64,7 @@ import {
 import { DEFAULT_DETAIL, sanitizeDetail } from "@/lib/render/detail";
 import { findLyricFont } from "@/lib/fonts/catalog";
 import { sanitizeCues } from "@/lib/render/looks/cues";
+import { DEFAULT_AMBIENT, sanitizeAmbient, sanitizeMotionCurve } from "@/lib/render/depth-fx";
 import { fitClip, freeAt, makeClip, MIN_CLIP, newId, sortClips } from "@/lib/props/clips";
 import { sanitizeThemeClips } from "@/lib/render/theme-clips";
 import { sanitizeCells } from "@/lib/render/looks/layout";
@@ -128,6 +129,10 @@ export const DEFAULT_STYLE: StyleSettings = {
   lyricOrientation: "auto",
   lyricGlass: "off",
   lyricDepth: 0,
+  parallax: 0,
+  ambientParticles: DEFAULT_AMBIENT,
+  motionCurve: "style",
+  direction: "none",
   motionStyle: DEFAULT_MOTION_STYLE,
   kineticBg: "theme",
   kineticReveal: "sung",
@@ -341,6 +346,13 @@ function restoreProject(persisted: unknown, current: ProjectStore): ProjectStore
       lyricGlass:
         p.style?.lyricGlass === "clear" || p.style?.lyricGlass === "frost" ? p.style.lyricGlass : "off",
       lyricDepth: sanitizeUnit(p.style?.lyricDepth, 0),
+      parallax: sanitizeUnit(p.style?.parallax, 0),
+      ambientParticles: sanitizeAmbient(p.style?.ambientParticles),
+      motionCurve: sanitizeMotionCurve(p.style?.motionCurve),
+      direction:
+        p.style?.direction === "calm" || p.style?.direction === "impact" || p.style?.direction === "hybrid"
+          ? p.style.direction
+          : "none",
       motionStyle: sanitizeMotionStyle(p.style?.motionStyle),
       kineticBg: sanitizeKineticBg(p.style?.kineticBg),
       kineticReveal: sanitizeKineticReveal(p.style?.kineticReveal),

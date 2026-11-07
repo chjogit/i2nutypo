@@ -1,5 +1,11 @@
-import type { KineticBackground, KineticReveal, MotionStyleId, StyleSettings } from "@/types/project";
-import { DEFAULT_SPRING, SNAPPY_SPRING, type SpringConfig } from "./easing";
+import type {
+  KineticBackground,
+  KineticReveal,
+  MotionCurveId,
+  MotionStyleId,
+  StyleSettings,
+} from "@/types/project";
+import { cubicBezier, DEFAULT_SPRING, SNAPPY_SPRING, type SpringConfig } from "./easing";
 
 // The four motion styles: how the lyrics move and are set, apart from their
 // colors. Every style paints with the user's palette (color.ts); switching
@@ -39,6 +45,8 @@ export interface MotionStyleDef {
   align: "center" | "left";
   /** Camera: slow zoom between 1 and 1 + drift, its period in seconds, and the punch on hits. */
   camera: { drift: number; period: number; punch: number; punchOnLine: boolean };
+  /** Entrance curve for position, blur and fade, when a curve choice replaces the expo-out. */
+  ease?: (x: number) => number;
 }
 
 export const MOTION_STYLES: readonly MotionStyleDef[] = [
@@ -132,11 +140,52 @@ export const MOTION_STYLE_IDS: readonly MotionStyleId[] = ["theme", ...MOTION_ST
 
 const BY_ID = new Map(MOTION_STYLES.map((s) => [s.id, s]));
 
+/** Elastic ease-out: rings a few times around 1 and settles. */
+const elasticOut = (x: number): number => {
+  const p = Math.min(1, Math.max(0, x));
+  if (p === 0 || p === 1) return p;
+  return Math.pow(2, -10 * p) * Math.sin((p * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1;
+};
+
+/** What each curve choice changes: the entrance curve, the spring, and how long the entrance takes. */
+const CURVES: Record<
+  Exclude<MotionCurveId, "style">,
+  { ease: (x: number) => number; spring: SpringConfig; dur: number }
+> = {
+  smooth: { ease: cubicBezier(0.22, 1, 0.36, 1), spring: { stiffness: 120, damping: 24, mass: 1 }, dur: 1.3 },
+  snappy: { ease: cubicBezier(0.05, 0.9, 0.1, 1), spring: SNAPPY_SPRING, dur: 0.7 },
+  bouncy: {
+    ease: cubicBezier(0.34, 1.56, 0.64, 1),
+    spring: { stiffness: 260, damping: 11, mass: 1 },
+    dur: 1,
+  },
+  elastic: { ease: elasticOut, spring: { stiffness: 320, damping: 7, mass: 1 }, dur: 1.4 },
+  linear: {
+    ease: (x) => Math.min(1, Math.max(0, x)),
+    spring: { stiffness: 200, damping: 40, mass: 1 },
+    dur: 1,
+  },
+};
+
+const CURVED = new Map<string, MotionStyleDef>();
+
 /** The motion style that draws the lyrics, or null when the theme draws them its own way. */
-export function motionStyleOf(style: Pick<StyleSettings, "motionStyle">): MotionStyleDef | null {
+export function motionStyleOf(
+  style: Pick<StyleSettings, "motionStyle" | "motionCurve">,
+): MotionStyleDef | null {
   const id = style.motionStyle;
   if (!id || id === "theme") return null;
-  return BY_ID.get(id) ?? null;
+  const def = BY_ID.get(id) ?? null;
+  const curve = style.motionCurve;
+  if (!def || !curve || curve === "style" || !(curve in CURVES)) return def;
+  const key = `${id}:${curve}`;
+  let out = CURVED.get(key);
+  if (!out) {
+    const c = CURVES[curve];
+    out = { ...def, ease: c.ease, spring: c.spring, inDur: def.inDur * c.dur };
+    CURVED.set(key, out);
+  }
+  return out;
 }
 
 export const DEFAULT_MOTION_STYLE: MotionStyleId = "smooth_reveal";

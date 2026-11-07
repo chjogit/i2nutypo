@@ -1715,6 +1715,10 @@ export const THEME_MOTIONS: Record<ThemedPresetId, readonly string[]> = {
     "shatter_gather",
     "dust_gather",
   ],
+  // The screen themes move their lyrics as app pieces (bubbles, posts, windows), not with line motions
+  chat_room: [],
+  social_feed: [],
+  desktop_screen: [],
 };
 
 /** How many of a theme's twelve motions a song uses. */

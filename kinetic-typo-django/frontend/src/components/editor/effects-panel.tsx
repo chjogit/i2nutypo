@@ -9,6 +9,7 @@ import { useProjectStore } from "@/store/project-store";
 import { usePlaybackStore } from "@/store/playback-store";
 import { usePropUiStore } from "@/store/prop-ui-store";
 import { Tip } from "@/components/ui/tip";
+import { detectSections } from "@/lib/structure/sections";
 import { BgVideoPicker } from "./bg-video-picker";
 
 /** Drag data for a library item dropped on a timeline lane. */
@@ -104,7 +105,11 @@ export function EffectsPanel() {
       </div>
       {open && (
         <>
-          <div role="tablist" aria-label="효과 종류" className="flex overflow-hidden rounded-md border border-zinc-800 text-xs">
+          <div
+            role="tablist"
+            aria-label="효과 종류"
+            className="flex overflow-hidden rounded-md border border-zinc-800 text-xs"
+          >
             {TABS.map(([id, label]) => (
               <button
                 key={id}
@@ -300,11 +305,45 @@ function TransitionsTab() {
   );
 }
 
+/** Puts a beat impact layer over every chorus the lyrics show; returns how many went in. */
+function impactOnChoruses(): number {
+  const { lines, style, addAdjust } = useProjectStore.getState();
+  const sections = detectSections(
+    lines.map((l) => ({ startTime: l.startTime, endTime: l.endTime, overlap: l.overlap, text: l.cleanText })),
+    style.sectionKinds,
+  );
+  let n = 0;
+  for (const s of sections) if (s.kind === "chorus" && addAdjust("beatImpact", s.startTime, s.endTime)) n++;
+  return n;
+}
+
 function AdjustTab() {
   const addAdjust = useProjectStore((s) => s.addAdjust);
   const selectFx = usePropUiStore((s) => s.selectFx);
+  const [msg, flash] = useFlash();
   return (
     <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            const n = impactOnChoruses();
+            flash(
+              n > 0
+                ? `후렴 ${n}곳에 비트 임팩트를 넣었습니다.`
+                : "가사에서 후렴을 찾지 못했거나 이미 효과가 있습니다.",
+            );
+          }}
+          className="rounded-sm border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:border-tide-500"
+        >
+          후렴마다 비트 임팩트
+        </button>
+        <Tip label="후렴마다 비트 임팩트">
+          가사에서 찾은 후렴 구간마다 비트 임팩트(킥에 맞춘 확대 펌핑·흔들림·RGB 분리·번쩍)를 넣습니다. 비트
+          탭에서 비트를 분석해 두면 박자에 정확히 맞습니다.
+        </Tip>
+      </div>
+      <Flash text={msg} />
       <p className="flex items-center gap-1.5 text-xs text-zinc-400">
         조정 레이어
         <Tip>

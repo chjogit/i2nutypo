@@ -1,3 +1,4 @@
+import { SCREEN_THEMES } from "../screen-kit";
 import { describe, expect, it } from "vitest";
 import { parseLyrics } from "@/lib/lyrics/parse";
 import { defaultFxToggles } from "@/lib/fx/toggles";
@@ -98,6 +99,10 @@ const EXTRA_IDS: Record<string, string[]> = {
   manga_panel: ["streaks", "bursts", "sfx"],
   deep_sea: ["marine", "fish", "jelly"],
   neon_sign: ["signs", "rain", "sparks"],
+  // The screen themes carry only the shared hit and pattern extras
+  chat_room: [],
+  social_feed: [],
+  desktop_screen: [],
 };
 
 describe("theme extras", () => {
@@ -111,7 +116,10 @@ describe("theme extras", () => {
   for (const [preset, ids] of Object.entries(EXTRA_IDS) as [ThemedPresetId, string[]][]) {
     it(`draws each of ${preset}'s extras only when switched on`, () => {
       const none = totalDraws(preset, null);
-      for (const id of [...ids, "climax", "accent", "beat", "pattern"]) {
+      const shared = SCREEN_THEMES.has(preset)
+        ? ["climax", "pattern"]
+        : ["climax", "accent", "beat", "pattern"];
+      for (const id of [...ids, ...shared]) {
         if (NO_EXTRA_CALLS.has(id)) continue;
         expect(totalDraws(preset, id), id).toBeGreaterThan(none);
       }

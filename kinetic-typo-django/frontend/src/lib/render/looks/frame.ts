@@ -68,6 +68,11 @@ export interface LookFrame {
   gap?: { from: number; to: number } | null;
   /** Virtual camera of the motion styles (kinetic/camera.ts); missing or identity means none. */
   camera?: CameraPose;
+  /**
+   * Lines already sung before this one (main lines only, oldest first, at most
+   * RECENT_LINES), for themes that keep a history on screen such as a chat.
+   */
+  recent?: readonly LyricLine[];
   /** Drawn once right before the character (theme extras that belong behind it); see render-look. */
   beforeCharacter?: () => void;
 }

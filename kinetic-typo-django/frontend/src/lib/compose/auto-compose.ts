@@ -1,6 +1,7 @@
 import type { LineStyle, LookElementState, StyleSettings } from "@/types/project";
 import type { TimedLyric } from "@/lib/lyrics/parse";
 import { mulberry32, pickSome } from "@/lib/random";
+import { SCREEN_THEMES } from "@/lib/render/looks/screen-kit";
 import { detectSections, sectionOfLines } from "@/lib/structure/sections";
 import { themeAt } from "@/lib/render/theme-clips";
 import {
@@ -23,7 +24,11 @@ const GLITCHY: readonly ThemedPresetId[] = ["digital_crt", "dark_glitch", "neon_
 const between = (rand: () => number, lo: number, hi: number) => lo + (hi - lo) * rand();
 const round2 = (n: number) => Number(n.toFixed(2));
 
-const THEMED = LOOK_PRESET_IDS.filter((id): id is ThemedPresetId => id !== "classic");
+// The screen themes (chat, feed, desktop) are a format the user picks on purpose, and leaving
+// them out keeps every seed composing the same video it did before they were added
+const THEMED = LOOK_PRESET_IDS.filter(
+  (id): id is ThemedPresetId => id !== "classic" && !SCREEN_THEMES.has(id),
+);
 
 /** The style picks for a seed: one to three themes, their colors, elements, strengths and motions. */
 export function composeStyle(style: StyleSettings, seed: number): Partial<StyleSettings> {

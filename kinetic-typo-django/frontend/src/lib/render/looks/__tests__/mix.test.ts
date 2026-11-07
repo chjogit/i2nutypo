@@ -45,7 +45,7 @@ function fakeCtx(): { ctx: Ctx2D; draws: () => number; images: unknown[] } {
 }
 
 /** Total looks offered (album jacket took the retired classic look's place). */
-const EXPECTED_LOOKS = 20;
+const EXPECTED_LOOKS = 23;
 
 const lines = parseLyrics("[00:01.00] 君が いない 夜\n[00:03.00] 光の 中で", {
   duration: 10,

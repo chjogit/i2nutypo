@@ -25,6 +25,10 @@ import { deepSea } from "./deep-sea";
 import { neonSign } from "./neon-sign";
 import { drawOverlapLines } from "./overlap-layer";
 import { albumJacket } from "./album-jacket";
+import { chatRoom } from "./chat-room";
+import { socialFeed } from "./social-feed";
+import { desktopScreen } from "./desktop-screen";
+import { SCREEN_THEMES } from "./screen-kit";
 import { drawProps } from "./props";
 import { applyMotion, motionForLine } from "./motions";
 import { applyColorFilter } from "./color-filter";
@@ -39,6 +43,8 @@ import { capture } from "./pieces";
 import { clamp01 } from "./noise";
 import { transformScale } from "../logical-blur";
 import { applyCamera } from "../kinetic/camera";
+import { applyParallax, PARALLAX_DEPTH, parallaxPose, type ParallaxLayer } from "../depth-fx";
+import { drawParticles } from "./kit";
 import { derivePalette } from "../kinetic/color";
 import { drawKineticBackground } from "../kinetic/background";
 import { drawCinematicBase } from "../kinetic/post";
@@ -80,6 +86,9 @@ const RENDERERS: Record<Exclude<LookPresetId, "classic">, LookRenderer> = {
   manga_panel: mangaPanel,
   deep_sea: deepSea,
   neon_sign: neonSign,
+  chat_room: chatRoom,
+  social_feed: socialFeed,
+  desktop_screen: desktopScreen,
 };
 
 /** The other picked themes, drawn over the background theme: their decor and overlay only. */
@@ -123,17 +132,34 @@ export function renderLookFrame(
   const mixes = mixFrames(f);
   const lyr = lyricFrame(f, r);
   const { ctx } = f;
+  // 2.5D parallax: each part of the frame at its own depth under a slowly moving camera
+  const plx = SCREEN_THEMES.has(f.preset) ? 0 : Math.min(1, Math.max(0, f.style.parallax ?? 0));
+  const at = (layer: ParallaxLayer, draw: () => void) => {
+    if (plx <= 0) {
+      draw();
+      return;
+    }
+    ctx.save();
+    applyParallax(ctx, parallaxPose(plx, PARALLAX_DEPTH[layer], f.timeSec, f.W, f.H), f.W, f.H);
+    draw();
+    ctx.restore();
+  };
   ctx.save();
   if (transparentBg) {
     ctx.clearRect(0, 0, f.W, f.H);
     ctx.save();
     ctx.translate(f.frameShake.x, f.frameShake.y);
     if (f.camera) applyCamera(ctx, f.camera, f.W, f.H);
-    if (showsKineticLyrics(f.subtitles)) drawAccentMark(lyr.f, drawLyrics(lyr.r, lyr.f, false));
-    // The title card is type too, so it goes with the lyrics on the clear layer
-    drawThemeTitleCard(lyr.f);
-    drawInterlude(lyr.f);
-    drawProps(f, true);
+    at("lyrics", () => {
+      if (showsKineticLyrics(f.subtitles)) drawAccentMark(lyr.f, drawLyrics(lyr.r, lyr.f, false));
+      // The title card is type too, so it goes with the lyrics on the clear layer
+      drawThemeTitleCard(lyr.f);
+      drawInterlude(lyr.f);
+    });
+    at("front", () => {
+      drawAmbient(f, 1);
+      drawProps(f, true);
+    });
     ctx.restore();
   } else {
     // Fill first so the beat shake never uncovers the previous frame at the edges
@@ -143,20 +169,30 @@ export function renderLookFrame(
     ctx.translate(f.frameShake.x, f.frameShake.y);
     if (f.camera) applyCamera(ctx, f.camera, f.W, f.H);
     const kineticBg = sanitizeKineticBg(f.style.kineticBg);
-    if (kineticBg === "theme") drawScene(r, f);
-    else drawUserBackground(f, kineticBg);
-    for (const m of mixes) {
-      m.r.decor?.(m.f);
-      mixedExtra(ctx, () => THEME_EXTRAS[m.f.preset]?.back?.(m.f));
-    }
-    drawProps(f, false);
+    at("back", () => {
+      if (kineticBg === "theme") drawScene(r, f);
+      else drawUserBackground(f, kineticBg);
+      for (const m of mixes) {
+        m.r.decor?.(m.f);
+        mixedExtra(ctx, () => THEME_EXTRAS[m.f.preset]?.back?.(m.f));
+      }
+    });
+    at("behind", () => {
+      drawAmbient(f, 0);
+      drawProps(f, false);
+    });
     THEME_EXTRAS[f.preset]?.mid?.(f);
     if (layer === "full") {
-      // In the bottom-only display the line is shown in the subtitles alone
-      if (showsKineticLyrics(f.subtitles)) drawAccentMark(lyr.f, drawLyrics(lyr.r, lyr.f));
-      drawThemeTitleCard(lyr.f);
-      drawInterlude(lyr.f);
-      drawProps(f, true);
+      at("lyrics", () => {
+        // In the bottom-only display the line is shown in the subtitles alone
+        if (showsKineticLyrics(f.subtitles)) drawAccentMark(lyr.f, drawLyrics(lyr.r, lyr.f));
+        drawThemeTitleCard(lyr.f);
+        drawInterlude(lyr.f);
+      });
+      at("front", () => {
+        drawAmbient(f, 1);
+        drawProps(f, true);
+      });
     }
     THEME_EXTRAS[f.preset]?.front?.(f);
     for (const m of mixes) mixedExtra(ctx, () => THEME_EXTRAS[m.f.preset]?.front?.(m.f));
@@ -190,6 +226,22 @@ export function renderLookFrame(
     ctx.restore();
   }
   ctx.restore();
+}
+
+/**
+ * The particle layer the user picked for the whole video (any theme): most of
+ * it behind the lyrics (layer 0), a few bigger ones in front of them (layer 1).
+ */
+function drawAmbient(f: LookFrame, layer: 0 | 1): void {
+  const p = f.style.ambientParticles;
+  if (!p || p.kind === "none" || p.amount <= 0) return;
+  const color =
+    p.color === "accent"
+      ? f.style.accentColor
+      : p.color === "text"
+        ? f.style.textColor
+        : f.style.secondaryColor;
+  drawParticles(f, p.kind, layer ? p.amount * 0.5 : p.amount, color, layer);
 }
 
 /**
@@ -234,8 +286,10 @@ function drawScene(r: LookRenderer, f: LookFrame): void {
  * the transparent layer there is no picture to read against, so they are not.
  */
 function drawLyrics(r: LookRenderer, f: LookFrame, overPicture = true): Box | null {
-  const hasOverlaps = (f.overlaps?.length ?? 0) > 0;
-  const surface = f.line ? surfaceOf(f.style) : null;
+  // Screen themes lay the overlapping lines out themselves (as replies), on no lyric surface
+  const screen = SCREEN_THEMES.has(f.preset);
+  const hasOverlaps = !screen && (f.overlaps?.length ?? 0) > 0;
+  const surface = f.line && !screen ? surfaceOf(f.style) : null;
   const measure = !!f.textBounds || hasOverlaps || wantsAccentMark(f) || !!surface;
   f.ctx.save();
   f.ctx.translate(f.lyricShift.x, f.lyricShift.y);
@@ -346,11 +400,13 @@ function drawOnSurface(
 
 /** True when a motion style draws this frame's line (across; columns stay with the theme). */
 function kineticDraws(f: LookFrame): boolean {
+  if (SCREEN_THEMES.has(f.preset)) return false;
   return !!motionStyleOf(f.style) && effectiveOrientation(f.preset, f.style, f.line) === "horizontal";
 }
 
 /** The motion style's lyrics, or the theme's own (in the direction picked) when none draws them. */
 function kineticOr(r: LookRenderer, f: LookFrame, part: KineticPart = "all"): (g: LookFrame) => void {
+  if (SCREEN_THEMES.has(f.preset)) return r.lyrics;
   const def = motionStyleOf(f.style);
   if (!def || !kineticDraws(f)) return orientedLyrics(r, f);
   return (g) => drawKineticLyrics(g, def, part);
@@ -361,7 +417,7 @@ function withMotion(f: LookFrame, make: (g: LookFrame) => () => void): () => voi
   const draw = make(f);
   const line = f.line;
   // A motion style moves each piece itself, coming in and leaving; no whole-line motion over it
-  if (!line || kineticDraws(f)) return draw;
+  if (!line || kineticDraws(f) || SCREEN_THEMES.has(f.preset)) return draw;
   const motion = motionForLine(f.style, line);
   const exits = f.style.exitMotion !== false;
   if (!motion && !exits) return draw;
