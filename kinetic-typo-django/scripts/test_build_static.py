@@ -53,7 +53,7 @@ class BuildStaticTest(unittest.TestCase):
 
     def test_internal_links_resolve(self):
         checked = 0
-        for rel in PAGES.values():
+        for rel in [*PAGES.values(), "404.html"]:
             html = (self.out / rel).read_text(encoding="utf-8")
             for link in LINK_RE.findall(html):
                 path = link.split("#")[0].split("?")[0]
@@ -73,6 +73,42 @@ class BuildStaticTest(unittest.TestCase):
 
     def test_404_page_written(self):
         self.assertTrue((self.out / "404.html").is_file())
+
+    def test_404_page_is_styled_and_has_required_text(self):
+        html = (self.out / "404.html").read_text(encoding="utf-8")
+        self.assertIn("페이지를 찾을 수 없습니다.", html)
+        self.assertIn('<a href="/"', html)
+        self.assertIn("처음으로", html)
+        self.assertIn("/static/css/studio.css", html)
+        self.assertIn("/static/favicon.ico", html)
+
+
+class OutDirGuardTest(unittest.TestCase):
+    def assert_refused(self, out):
+        before = sorted(p.relative_to(ROOT) for p in ROOT.rglob("*") if ".git" not in p.parts and "__pycache__" not in p.parts)
+        result = subprocess.run(
+            [sys.executable, "scripts/build_static.py", "--out", str(out)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("refusing", result.stderr)
+        after = sorted(p.relative_to(ROOT) for p in ROOT.rglob("*") if ".git" not in p.parts and "__pycache__" not in p.parts)
+        self.assertEqual(before, after)
+        self.assertTrue((ROOT / "static" / "js" / "studio.js").is_file())
+
+    def test_refuses_project_root(self):
+        self.assert_refused(".")
+
+    def test_refuses_parent_of_root(self):
+        self.assert_refused("..")
+
+    def test_refuses_static_dir(self):
+        self.assert_refused("static")
+
+    def test_refuses_inside_static_dir(self):
+        self.assert_refused("static/js")
 
 
 if __name__ == "__main__":
