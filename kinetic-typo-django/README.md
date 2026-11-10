@@ -171,3 +171,18 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 음원·소재를 올리는 칸과 내보내기 칸에 "권리가 있는 소재만" 안내가 있습니다(`components/ui/rights-note.tsx`).
 - `onnxruntime-node`는 `frontend/stubs/`의 빈 패키지로 대체했습니다(브라우저 전용 앱이라 쓰지 않음).
 - 린트는 `eslint-config-next` 대신 `typescript-eslint` + `eslint-plugin-react-hooks`, CSS는 Tailwind CLI 대신 `@tailwindcss/postcss`를 씁니다. 둘 다 취약한 `braces` 패키지를 끌어오던 의존성을 없애기 위해서이며, `npm audit` 결과는 0건입니다.
+
+## Cloudflare 배포
+
+아래 명령은 모두 `kinetic-typo-django/` 디렉터리에서 실행합니다.
+
+페이지를 정적 파일로 내보내 Cloudflare Workers 정적 자산으로 올립니다. Worker 코드는 없고, 설정은 `wrangler.jsonc` 하나입니다.
+
+- 사전 준비: `pip install -r requirements.txt`, Node 20 이상.
+- 빌드: `python scripts/build_static.py` 를 실행하면 페이지와 `static/`이 `dist/`에 만들어집니다(`dist/`는 커밋하지 않습니다).
+- 처음 한 번 로그인: `npx wrangler login`
+- 배포: `npx wrangler deploy`
+- 배포 주소: `https://i2nutypo.<계정 서브도메인>.workers.dev`
+- 페이지나 `static/`을 바꾼 뒤에는 빌드와 배포를 다시 해야 반영됩니다.
+- Vercel 배포는 이전과 같이 동작하며, 되돌아갈 때 쓰는 경로입니다.
+- `*.workers.dev` 주소는 `*.vercel.app`과 다른 출처라서, `*.vercel.app`에서 브라우저에 저장한 프로젝트와 내려받아 캐시된 모델은 새 주소에 나타나지 않습니다.
