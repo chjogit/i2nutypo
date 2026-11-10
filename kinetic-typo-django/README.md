@@ -171,3 +171,15 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 음원·소재를 올리는 칸과 내보내기 칸에 "권리가 있는 소재만" 안내가 있습니다(`components/ui/rights-note.tsx`).
 - `onnxruntime-node`는 `frontend/stubs/`의 빈 패키지로 대체했습니다(브라우저 전용 앱이라 쓰지 않음).
 - 린트는 `eslint-config-next` 대신 `typescript-eslint` + `eslint-plugin-react-hooks`, CSS는 Tailwind CLI 대신 `@tailwindcss/postcss`를 씁니다. 둘 다 취약한 `braces` 패키지를 끌어오던 의존성을 없애기 위해서이며, `npm audit` 결과는 0건입니다.
+
+## Cloudflare 배포
+
+페이지를 정적 파일로 내보내 Cloudflare Workers 정적 자산으로 올립니다. Worker 코드는 없고, 설정은 `wrangler.jsonc` 하나입니다.
+
+- 사전 준비: `pip install -r requirements.txt`, Node 20 이상.
+- 빌드: `python scripts/build_static.py` 를 실행하면 페이지와 `static/`이 `dist/`에 만들어집니다(`dist/`는 커밋하지 않습니다).
+- 처음 한 번 로그인: `npx wrangler login`
+- 배포: `npx wrangler deploy`
+- 배포 주소: `https://i2nutypo.<계정 서브도메인>.workers.dev`
+- 페이지나 `static/`을 바꾼 뒤에는 빌드와 배포를 다시 해야 반영됩니다.
+- Vercel 배포는 그대로 남아 있습니다(`vercel.json`을 바꾸지 않았습니다).
