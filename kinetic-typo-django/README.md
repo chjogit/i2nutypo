@@ -174,6 +174,8 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 
 ## Cloudflare 배포
 
+아래 명령은 모두 `kinetic-typo-django/` 디렉터리에서 실행합니다.
+
 페이지를 정적 파일로 내보내 Cloudflare Workers 정적 자산으로 올립니다. Worker 코드는 없고, 설정은 `wrangler.jsonc` 하나입니다.
 
 - 사전 준비: `pip install -r requirements.txt`, Node 20 이상.
@@ -182,4 +184,5 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 배포: `npx wrangler deploy`
 - 배포 주소: `https://i2nutypo.<계정 서브도메인>.workers.dev`
 - 페이지나 `static/`을 바꾼 뒤에는 빌드와 배포를 다시 해야 반영됩니다.
-- Vercel 배포는 그대로 남아 있습니다(`vercel.json`을 바꾸지 않았습니다).
+- Vercel 배포는 이전과 같이 동작하며, 되돌아갈 때 쓰는 경로입니다.
+- `*.workers.dev` 주소는 `*.vercel.app`과 다른 출처라서, `*.vercel.app`에서 브라우저에 저장한 프로젝트와 내려받아 캐시된 모델은 새 주소에 나타나지 않습니다.

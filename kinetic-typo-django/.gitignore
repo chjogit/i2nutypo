@@ -9,3 +9,4 @@ staticfiles/
 
 frontend/node_modules/
 dist/
+.wrangler/

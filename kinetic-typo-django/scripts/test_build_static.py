@@ -83,6 +83,20 @@ class BuildStaticTest(unittest.TestCase):
         self.assertIn("/static/favicon.ico", html)
 
 
+class DefaultOutTest(unittest.TestCase):
+    def test_default_out_is_project_dist_regardless_of_cwd(self):
+        with tempfile.TemporaryDirectory() as cwd:
+            subprocess.run(
+                [sys.executable, str(ROOT / "scripts/build_static.py")],
+                cwd=cwd,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertTrue((ROOT / "dist/index.html").is_file())
+            self.assertEqual(list(Path(cwd).iterdir()), [])
+
+
 class OutDirGuardTest(unittest.TestCase):
     def assert_refused(self, out):
         before = sorted(p.relative_to(ROOT) for p in ROOT.rglob("*") if ".git" not in p.parts and "__pycache__" not in p.parts)

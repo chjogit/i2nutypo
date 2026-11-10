@@ -1,6 +1,6 @@
 """Export the Django pages as a static site (for Cloudflare Workers static assets).
 
-Usage: python scripts/build_static.py [--out DIR]   (default: dist)
+Usage: python scripts/build_static.py [--out DIR]   (default: dist/ inside the project)
 
 Importing this module has no side effects; Django is set up inside main().
 """
@@ -113,7 +113,11 @@ def build(out):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--out", default="dist", help="output directory (default: dist)")
+    parser.add_argument(
+        "--out",
+        default=str(ROOT / "dist"),
+        help="output directory (default: dist/ inside the project, whatever the current directory)",
+    )
     args = parser.parse_args(argv)
     setup_django()
     return build(Path(args.out).resolve())
