@@ -68,7 +68,9 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 
 편집기를 고치면서 보려면 다른 터미널에서 `cd frontend && npm run watch`를 켜 두세요.
 
-## Vercel 배포
+## Vercel 배포 (이전 방식)
+
+> 지금은 Cloudflare Workers에 배포합니다(아래 **Cloudflare 배포**). 이 절은 되돌아갈 때를 위해 남겨 둔 방법입니다.
 
 1. 이 폴더를 GitHub 저장소로 올립니다(`frontend/node_modules`는 `.gitignore`로 빠집니다).
 2. Vercel에서 **Add New → Project**로 저장소를 가져옵니다. Framework Preset은 **Other**, 나머지 빌드 설정은 비워 둡니다(`vercel.json`이 정합니다).
@@ -182,7 +184,7 @@ DJANGO_DEBUG=1 python manage.py runserver   # http://127.0.0.1:8000
 - 빌드: `python scripts/build_static.py` 를 실행하면 페이지와 `static/`이 `dist/`에 만들어집니다(`dist/`는 커밋하지 않습니다).
 - 처음 한 번 로그인: `npx wrangler login`
 - 배포: `npx wrangler deploy`
-- 배포 주소: `https://i2nutypo.<계정 서브도메인>.workers.dev`
+- 배포 주소: https://i2nutypo.i2nu.workers.dev (형식은 `https://i2nutypo.<계정 서브도메인>.workers.dev`)
 - 페이지나 `static/`을 바꾼 뒤에는 빌드와 배포를 다시 해야 반영됩니다.
-- Vercel 배포는 이전과 같이 동작하며, 되돌아갈 때 쓰는 경로입니다.
+- 이전에 쓰던 Vercel 배포 방법은 위 **Vercel 배포 (이전 방식)** 에 남겨 두었습니다.
 - `*.workers.dev` 주소는 `*.vercel.app`과 다른 출처라서, `*.vercel.app`에서 브라우저에 저장한 프로젝트와 내려받아 캐시된 모델은 새 주소에 나타나지 않습니다.
