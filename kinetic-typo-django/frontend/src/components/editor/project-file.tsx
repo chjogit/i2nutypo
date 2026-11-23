@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { savedPart, useProjectStore } from "@/store/project-store";
 import { Tip } from "@/components/ui/tip";
+import { toast } from "@/components/ui/toast";
 
 const FILE_KIND = "kinetic-typo-project";
 
@@ -19,7 +19,6 @@ function fileBase(): string {
  */
 export function ProjectFile() {
   const importProject = useProjectStore((s) => s.importProject);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const save = () => {
     const data = {
@@ -34,7 +33,7 @@ export function ProjectFile() {
     a.download = `${fileBase()}.ktproj.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setMessage({ ok: true, text: "프로젝트 파일을 저장했습니다." });
+    toast("프로젝트 파일을 저장했습니다.");
   };
 
   const open = async (file: File) => {
@@ -42,12 +41,20 @@ export function ProjectFile() {
       const data = JSON.parse(await file.text()) as { kind?: unknown; project?: unknown };
       if (data.kind !== FILE_KIND || !data.project || typeof data.project !== "object")
         throw new Error("이 앱에서 저장한 프로젝트 파일이 아닙니다.");
+      // What was open before, so the toast can put it back
+      const before = savedPart(useProjectStore.getState());
       importProject(data.project);
-      setMessage({ ok: true, text: `${file.name}을 불러왔습니다. 음원과 그림은 다시 골라 주세요.` });
+      toast(`${file.name}을 불러왔습니다. 음원과 그림은 다시 골라 주세요.`, {
+        life: 8000,
+        action: {
+          label: "되돌리기",
+          doneText: "불러오기 전으로 되돌렸습니다.",
+          run: () => useProjectStore.getState().importProject(before),
+        },
+      });
     } catch (e) {
-      setMessage({
-        ok: false,
-        text: e instanceof SyntaxError ? "JSON 파일을 읽지 못했습니다." : String((e as Error).message),
+      toast(e instanceof SyntaxError ? "JSON 파일을 읽지 못했습니다." : String((e as Error).message), {
+        tone: "error",
       });
     }
   };
@@ -84,9 +91,6 @@ export function ProjectFile() {
           />
         </label>
       </div>
-      {message && (
-        <p className={`text-xs ${message.ok ? "text-emerald-400" : "text-red-400"}`}>{message.text}</p>
-      )}
     </div>
   );
 }

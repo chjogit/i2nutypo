@@ -21,6 +21,8 @@ import {
 } from "@/lib/export/video-export";
 import type { SequenceFormat } from "@/lib/export/image-formats";
 import { Tip } from "@/components/ui/tip";
+import { ProgressTrack } from "@/components/ui/progress-track";
+import { toast } from "@/components/ui/toast";
 import { ProjectFile } from "./project-file";
 import { TimeField } from "./time-field";
 import { RangeBar } from "./range-bar";
@@ -230,6 +232,7 @@ export function ExportPanel() {
           fileName: savedName || fileName,
           note: `${result.width}×${result.height} MP4`,
         });
+        toast(`${savedName || fileName}에 영상을 저장했습니다.`);
         return;
       }
       setVideo({
@@ -246,10 +249,14 @@ export function ExportPanel() {
                 ? `${result.width}×${result.height} MP4`
                 : `${result.width}×${result.height} WebM (이 브라우저는 MP4 인코딩을 지원하지 않아 WebM으로 저장)`,
       });
+      toast("영상을 다 만들었습니다. 내보내기 칸에서 저장하세요.");
     } catch (e) {
       await saveTo?.abort().catch(() => undefined);
       if (controller.signal.aborted) setVideo({ kind: "idle" });
-      else setVideo({ kind: "error", message: e instanceof Error ? e.message : String(e) });
+      else {
+        setVideo({ kind: "error", message: e instanceof Error ? e.message : String(e) });
+        toast("영상을 만들지 못했습니다. 내보내기 칸에서 이유를 확인하세요.", { tone: "error" });
+      }
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
       usePlaybackStore.getState().setExporting(false);
@@ -564,18 +571,8 @@ export function ExportPanel() {
           </p>
         ) : running ? (
           <div className="space-y-1.5">
-            <div
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(video.progress * 100)}
-              className="h-2 overflow-hidden rounded-full bg-zinc-800"
-            >
-              <div
-                className="h-full bg-tide-500 transition-[width]"
-                style={{ width: `${video.progress * 100}%` }}
-              />
-            </div>
+            {/* Before the first frame (encoder loading, file picked) the length is unknown */}
+            <ProgressTrack value={video.progress > 0 ? video.progress : null} label="영상 만드는 진행률" />
             <div className="flex items-center justify-between text-xs text-zinc-400">
               <span>
                 {video.stage ?? `만드는 중 ${Math.round(video.progress * 100)}%`}

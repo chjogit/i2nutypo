@@ -111,6 +111,11 @@ async function writeNotices(results) {
     if (p.notice) parts.push("", p.notice.trim());
     parts.push("");
   }
+  // Interface elements ported into src/ux (toast, progress bar) keep their MIT licence here
+  if (existsSync(`${root}src/ux/LICENSE`)) {
+    parts.push("=".repeat(72), "Lucian UX/UI Prompt elements #083, #435 (MIT), ported into src/ux", "=".repeat(72));
+    parts.push((await readFile(`${root}src/ux/LICENSE`, "utf8")).trim(), "");
+  }
   const fontsDir = `${staticDir}fonts/`;
   if (existsSync(`${fontsDir}fonts.json`)) {
     const fonts = JSON.parse(await readFile(`${fontsDir}fonts.json`, "utf8"));

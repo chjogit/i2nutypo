@@ -1,6 +1,10 @@
 @import "tailwindcss" source("./");
 /* The page templates (intro, base, header) use the same stylesheet */
 @source "../../templates";
+/* Ported interface elements (toast, progress bar) and the tokens they read */
+@import "./ux/tokens.css";
+@import "./ux/toast.css";
+@import "./ux/progress.css";
 
 /*
  * Editor palette, from the navy / teal / sky blue / beige reference:

@@ -1,0 +1,66 @@
+/* Lucian UX/UI Prompt theme tokens · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/ */
+/*
+ * The --ux-* tokens that the ported elements (toast.css, progress.css) read,
+ * pointed at the editor's own palette instead of the library's defaults. The
+ * editor is dark only, so there is one set. Zinc values are variables, so the
+ * screen contrast setting (html[data-contrast]) changes these too.
+ */
+:root {
+  --ux-page: var(--color-zinc-950);
+  --ux-surface: var(--color-zinc-900);
+  --ux-surface-2: var(--color-zinc-800);
+  --ux-surface-3: var(--color-zinc-700);
+  --ux-ink: var(--color-zinc-100);
+  --ux-ink-2: var(--color-zinc-300);
+  --ux-ink-3: var(--color-zinc-400);
+  --ux-line: rgb(200 217 230 / 0.1);
+  --ux-line-2: rgb(200 217 230 / 0.2);
+  --ux-accent: var(--color-tide-500);
+  --ux-accent-ink: var(--color-zinc-950);
+  --ux-mint: var(--color-emerald-400);
+  --ux-warn: var(--color-amber-400);
+  --ux-danger: var(--color-red-400);
+  --ux-shadow: rgb(0 0 0 / 0.45);
+  --ux-shadow-strong: rgb(0 0 0 / 0.72);
+  --ux-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ux-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+/* Shared base for every ported element: put .ux on its root */
+.ux,
+.ux *,
+.ux *::before,
+.ux *::after {
+  box-sizing: border-box;
+}
+.ux {
+  /* The editor's own font (Pretendard), not the library's stack */
+  font-family: inherit;
+  color: var(--ux-ink);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+  -webkit-tap-highlight-color: transparent;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+:where(.ux) :is(button, input, textarea, select) {
+  font: inherit;
+  color: inherit;
+}
+:where(.ux) button {
+  cursor: pointer;
+}
+.ux [hidden] {
+  display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ux,
+  .ux *,
+  .ux *::before,
+  .ux *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
