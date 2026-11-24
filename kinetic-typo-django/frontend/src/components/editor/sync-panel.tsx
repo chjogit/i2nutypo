@@ -23,6 +23,8 @@ import { useEngineStore } from "@/store/engine-store";
 import { useProjectStore } from "@/store/project-store";
 import { LocalEnginePanel } from "./local-engine-panel";
 import { Tip } from "@/components/ui/tip";
+import { ProgressTrack } from "@/components/ui/progress-track";
+import { toast } from "@/components/ui/toast";
 
 type Phase =
   | { kind: "idle" }
@@ -51,6 +53,20 @@ type Phase =
  * alignment estimated for them, so a strict bar does not cost placement.
  */
 const CONFIRM_THRESHOLD = 0.9;
+
+/** Known share of the current step for the progress bar, or null while it is unknown. */
+function phaseShare(phase: Phase): number | null {
+  switch (phase.kind) {
+    case "loading-separator":
+    case "separating":
+    case "loading-model":
+      return phase.progress > 0 ? phase.progress : null;
+    case "transcribing":
+      return phase.progress ?? null;
+    default:
+      return null;
+  }
+}
 
 type SyncMode = "fast" | "normal" | "power";
 
@@ -229,13 +245,18 @@ export function SyncPanel() {
         separated,
         separationError,
       });
+      toast("음성 인식으로 싱크를 맞췄습니다. 결과를 확인하세요.");
     } catch (err) {
       jobRef.current = null;
       const message = err instanceof Error ? err.message : String(err);
-      if (message === "cancelled") setPhase({ kind: "idle" });
-      else if (/fetch|network/i.test(message))
+      if (message === "cancelled") {
+        setPhase({ kind: "idle" });
+        return;
+      }
+      if (/fetch|network/i.test(message))
         setPhase({ kind: "error", message: "모델 파일을 내려받지 못했습니다. 인터넷 연결을 확인하세요." });
       else setPhase({ kind: "error", message });
+      toast("음성 인식에 실패했습니다.", { tone: "error" });
     }
   };
 
@@ -394,6 +415,8 @@ export function SyncPanel() {
                 : "인식 중… (곡 길이에 따라 몇 분 걸릴 수 있음)")}
           </span>
         </div>
+
+        {busy && <ProgressTrack value={phaseShare(phase)} label="음성 인식 진행률" />}
 
         {phase.kind === "error" && <p className="text-red-400">인식 실패: {phase.message}</p>}
 

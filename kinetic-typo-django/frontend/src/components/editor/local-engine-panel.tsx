@@ -8,6 +8,7 @@ import {
   type LocalWhisperInfo,
 } from "@/lib/desktop/local-whisper";
 import { useEngineStore } from "@/store/engine-store";
+import { ProgressTrack } from "@/components/ui/progress-track";
 
 const formatSize = (mb: number) => (mb >= 1000 ? `${(mb / 1024).toFixed(1)}GB` : `${mb}MB`);
 
@@ -132,6 +133,12 @@ export function LocalEnginePanel({ disabled }: { disabled: boolean }) {
                 </button>
               )}
             </div>
+          )}
+          {model && !model.installed && download && (
+            <ProgressTrack
+              value={download.progress > 0 ? download.progress : null}
+              label="모델 내려받기 진행률"
+            />
           )}
           {model?.installed && (
             <p className="flex items-center gap-2 text-zinc-400">

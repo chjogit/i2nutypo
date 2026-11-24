@@ -1,0 +1,91 @@
+/* Lucian UX/UI Prompt #083 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#083 */
+/*
+ * The bar of "대기에서 진행으로 바뀌는 막대": two sliding segments while the
+ * length of the work is unknown, then the same track fills once it is known.
+ * Only the track is ported (the deploy card around it is not). Motion values
+ * are the original's; the track is 4px instead of 6px to sit in a panel row.
+ */
+.u083-trk {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ux-surface-3);
+  overflow: hidden;
+}
+.u083-seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: var(--ux-accent);
+  transition: opacity 0.4s;
+}
+.u083-seg.a {
+  animation: u083-a 1.6s cubic-bezier(0.65, 0.05, 0.35, 1) infinite;
+}
+.u083-seg.b {
+  animation: u083-b 1.6s cubic-bezier(0.25, 0.6, 0.4, 1) 0.55s infinite;
+}
+@keyframes u083-a {
+  0% {
+    left: -35%;
+    right: 100%;
+  }
+  60% {
+    left: 100%;
+    right: -90%;
+  }
+  100% {
+    left: 100%;
+    right: -90%;
+  }
+}
+@keyframes u083-b {
+  0% {
+    left: -200%;
+    right: 100%;
+  }
+  60% {
+    left: 107%;
+    right: -8%;
+  }
+  100% {
+    left: 107%;
+    right: -8%;
+  }
+}
+.u083-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: inherit;
+  background: var(--ux-accent);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--p, 0));
+  opacity: 0;
+  transition:
+    transform 0.5s var(--ux-ease),
+    opacity 0.3s,
+    background-color 0.4s;
+}
+.u083.is-det .u083-seg {
+  opacity: 0;
+}
+.u083.is-det .u083-fill {
+  opacity: 1;
+}
+.u083.is-done .u083-fill {
+  background: var(--ux-mint);
+}
+/* Reduced motion: the sliding segments would stop off the track, so a still, partly filled bar says "working" instead */
+@media (prefers-reduced-motion: reduce) {
+  .u083:not(.is-det) .u083-seg {
+    display: none;
+  }
+  .u083:not(.is-det) .u083-fill {
+    opacity: 0.45;
+    transform: scaleX(0.35);
+  }
+}
